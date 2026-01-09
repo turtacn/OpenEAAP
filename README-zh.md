@@ -1,6 +1,8 @@
+<!--
 <p align="center">
   <img src="logo.png" alt="OpenEAAP Logo" width="200" height="200">
 </p>
+-->
 
 <p align="center">
   <strong>开放企业级 AI Agent 平台</strong><br>
@@ -20,7 +22,6 @@
   <a href="#快速开始">快速开始</a> •
   <a href="docs/architecture.md">架构设计</a> •
   <a href="#文档">文档</a> •
-  <a href="#贡献">贡献</a>
 </p>
 
 ---
@@ -87,7 +88,6 @@ OpenEAAP 通过独特的架构设计解决这些问题：
    * **简洁 API**：所有 SDK 提供直观接口
    * **丰富示例**：生产就绪的模板和样例
    * **完整文档**：架构指南、教程、API 参考
-   * **活跃社区**：开放治理，快速响应
 
 ## 核心特性
 
@@ -388,7 +388,7 @@ graph TB
     end
     
     subgraph INF["基础设施层（Infrastructure Layer）"]
-        ST["存储（Storage）<br/>• PostgreSQL<br/>• MySQL<br/>• 国产数据库（Domestic DB）"]
+        ST["存储（Storage）<br/>• 关系SQL<br/>• 向量DB<br/>• 国产数据库（Domestic DB）"]
         MQ["消息队列（Message Queue）<br/>• Kafka<br/>• RabbitMQ<br/>• 国产MQ（Domestic MQ）"]
         OB["可观测性（Observability）<br/>• 日志（Logging）<br/>• 指标（Metrics）<br/>• 追踪（Tracing）"]
     end
@@ -462,7 +462,7 @@ make lint
 | **学习曲线**      | 陡峭         | 中等           | 平缓         | 陡峭         | **平缓（多 SDK）**     |
 | **生产就绪度**     | 中等         | 研究级          | 中等         | 研究级        | **生产级**           |
 | **扩展性**       | 中等         | 有限           | 有限         | 有限         | **高（插件系统）**       |
-| **社区活跃度**     | ⭐⭐⭐⭐⭐      | ⭐⭐⭐⭐         | ⭐⭐⭐        | ⭐⭐⭐        |  (新项目)         |
+| **活跃度**     | ⭐⭐⭐⭐⭐      | ⭐⭐⭐⭐         | ⭐⭐⭐        | ⭐⭐⭐        |  (新项目)         |
 
 
 #### **定位差异**：完整平台 vs 开发工具
