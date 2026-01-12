@@ -10,11 +10,11 @@
 | --- | --- | --- | --- |
 | **OpenEAAP** | Open Enterprise AI Agent Platform | 开放企业级 AI 智能体平台 | 平台名称 |
 | **PoC** | Proof of Concept | 概念验证 | 项目初期的原型验证阶段 |
-| **AEP** | Agent Engineering Platform | 智能体工程平台 | 五大支柱之一，负责 Agent 编排与管理 |
-| **DIKF** | Data Intelligence & Knowledge Fabric | 数据智能与知识编织 | 五大支柱之一，负责数据处理与 RAG |
-| **ADI** | AI Developer Infrastructure | AI 开发者基础设施 | 五大支柱之一，提供开发环境与算力调度 |
-| **MSIG** | Model Serving & Inference Gateway | 模型服务与推理网关 | 五大支柱之一，负责模型推理与路由 |
-| **MTFS** | Model Training & Fine-tuning Service | 模型训练与微调服务 | 五大支柱之一，负责模型训练与优化 |
+| **AEP** | Agent Engineering Platform | 智能体工程平台 | 负责 Agent 编排与管理 |
+| **DIKF** | Data Intelligence & Knowledge Fabric | 数据智能与知识编织 | 负责数据处理与 RAG |
+| **ADI** | AI Developer Infrastructure | AI 开发者基础设施 | 提供开发环境与算力调度 |
+| **MSIG** | Model Serving & Inference Gateway | 模型服务与推理网关 | 负责模型推理与路由 |
+| **MTFS** | Model Training & Fine-tuning Service | 模型训练与微调服务 | 负责模型训练与优化 |
 | **RAG** | Retrieval-Augmented Generation | 检索增强生成 | 结合外部知识库提升 LLM 生成质量的技术 |
 | **ReAct** | Reason + Act | 推理 + 行动 | 一种让 Agent 结合推理与工具调用的模式 |
 | **COT** | Chain of Thought | 思维链 | 引导 LLM 一步步推理的 Prompt 技术 |
@@ -72,7 +72,7 @@ OpenEAAP 旨在构建一个**企业级 AI 智能体编排与交付底座**，解
 
 ---
 
-## 2. 平台能力全景（五大支柱）
+## 2. 平台能力全景（五个子方向）
 
 基于业务战略，OpenEAAP 划分为五个核心能力中台：
 
@@ -90,7 +90,7 @@ OpenEAAP 旨在构建一个**企业级 AI 智能体编排与交付底座**，解
 
 * **定位**：面向 AI 的数据生产力平台。
 * **关键能力**：
-  * **高阶 RAG**：混合检索（Dense+Sparse）与重排序（Re-ranking）。
+  * **高阶RAG**：混合检索（Dense+Sparse）与重排序（Re-ranking）。
   * **数据治理**：自动化数据分级分类（Data Sensitivity）、血缘追踪。
   * **回流管道**：将业务反馈（Feedback）转化为训练数据集。
 
@@ -363,7 +363,7 @@ OpenEAAP/
 
 ### 交付形态
 
-1. **Docker 镜像**：`openeaap/control-plane` (轻量), `openeaap/runtime-python` (包含常用 ML 库)。
+1. **容器镜像**：`openeaap/control-plane` (轻量), `openeaap/runtime-python` (包含常用 ML 库)。
 2. **SDK**：提供 Python 和 Go SDK，允许业务方开发自定义 Agent 并注册到平台。
 3. **Web 模板**：提供开箱即用的 React 聊天组件，支持流式响应与工具调用卡片渲染。
 
@@ -403,7 +403,7 @@ gantt
 * **关键交付**：
   * Go 语言编写的 Orchestrator 与 API Gateway。
   * Python 编写的 `langchain-bridge` 运行时插件。
-  * 基于 Docker 的 vLLM 部署脚本。
+  * 基于 Container 的 vLLM 部署脚本。
 
 
 
