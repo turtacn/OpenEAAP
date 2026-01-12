@@ -2,6 +2,39 @@
 
 我们这里通过 `OpenEAAP` 企业级(AI Agent / Agentic AI)平台，来阐述AI赋能业务这个任务
 
+以下是基于 OpenEAAP 架构设计文档整理的英文缩写术语表格：
+
+**OpenEAAP 术语缩写表**
+
+| 缩写 | 全称 | 中文含义 | 备注 |
+| --- | --- | --- | --- |
+| **OpenEAAP** | Open Enterprise AI Agent Platform | 开放企业级 AI 智能体平台 | 平台名称 |
+| **PoC** | Proof of Concept | 概念验证 | 项目初期的原型验证阶段 |
+| **AEP** | Agent Engineering Platform | 智能体工程平台 | 五大支柱之一，负责 Agent 编排与管理 |
+| **DIKF** | Data Intelligence & Knowledge Fabric | 数据智能与知识编织 | 五大支柱之一，负责数据处理与 RAG |
+| **ADI** | AI Developer Infrastructure | AI 开发者基础设施 | 五大支柱之一，提供开发环境与算力调度 |
+| **MSIG** | Model Serving & Inference Gateway | 模型服务与推理网关 | 五大支柱之一，负责模型推理与路由 |
+| **MTFS** | Model Training & Fine-tuning Service | 模型训练与微调服务 | 五大支柱之一，负责模型训练与优化 |
+| **RAG** | Retrieval-Augmented Generation | 检索增强生成 | 结合外部知识库提升 LLM 生成质量的技术 |
+| **ReAct** | Reason + Act | 推理 + 行动 | 一种让 Agent 结合推理与工具调用的模式 |
+| **COT** | Chain of Thought | 思维链 | 引导 LLM 一步步推理的 Prompt 技术 |
+| **TOT** | Tree of Thoughts | 思维树 | 引导 LLM 进行多路径探索的推理技术 |
+| **APE** | Automatic Prompt Engineering | 自动提示词工程 | 自动优化 Prompt 的技术 |
+| **RLHF** | Reinforcement Learning from Human Feedback | 基于人类反馈的强化学习 | 利用人工反馈微调模型的技术 |
+| **DPO** | Direct Preference Optimization | 直接偏好优化 | 一种无需训练奖励模型的偏好对齐算法 |
+| **vLLM** | vLLM (Versatile Large Language Model serving) | vLLM 推理引擎 | 一个高吞吐、低延迟的 LLM 推理库 |
+| **PDP** | Policy Decision Point | 策略决策点 | 负责安全策略判定与拦截的组件 |
+| **RBAC** | Role-Based Access Control | 基于角色的访问控制 | 一种权限管理模型 |
+| **PII** | Personally Identifiable Information | 个人身份信息 | 需脱敏的敏感数据（如手机号、身份证号） |
+| **HITL** | Human-in-the-Loop | 人在回路 | 关键环节需人工介入确认的机制 |
+| **SIEM** | Security Information and Event Management | 安全信息与事件管理 | 安全运营中的核心监控与告警系统 |
+| **SOP** | Standard Operating Procedure | 标准作业程序 | 标准化的操作流程文档 |
+| **SSE** | Server-Sent Events | 服务器推送事件 | 用于流式传输数据的 HTTP 技术 |
+| **HPA** | Horizontal Pod Autoscaler | 水平 Pod 自动扩缩容 | Kubernetes 中根据负载自动调整副本数的机制 |
+| **HA** | High Availability | 高可用 | 系统持续无中断运行的能力 |
+| **DR** | Disaster Recovery | 灾难恢复 | 系统在灾难发生后恢复数据的能力 |
+
+
 ## 目录
 
 1. [概述](https://www.google.com/search?q=%231-%E6%A6%82%E8%BF%B0)
