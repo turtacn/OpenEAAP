@@ -100,7 +100,7 @@ OpenEAAP 旨在构建一个**企业级 AI 智能体编排与交付底座**，解
 
 ```mermaid
 graph TD
-    subgraph CP[控制面 (Control Plane) - Go]
+    subgraph CP[控制面 （Control Plane） - Go]
         API[API Gateway]
         Orch[编排器 Orchestrator]
         PDP[策略决策点 PDP]
@@ -108,7 +108,7 @@ graph TD
         Registry[插件注册中心]
     end
 
-    subgraph DP[执行面 (Data Plane) - Polyglot]
+    subgraph DP[执行面 （Data Plane） - Polyglot]
         subgraph Runtimes[运行时容器]
             Native[原生运行时]
             LCA[LangChain 适配器]
@@ -139,7 +139,6 @@ graph TD
     Workers --> VectorDB
     
     MSIG --> Model[vLLM / External API]
-
 ```
 
 ### 3.2 插件与生态适配设计
