@@ -38,7 +38,7 @@
 ## 目录
 
 1. [概述](https://www.google.com/search?q=%231-%E6%A6%82%E8%BF%B0)
-2. [平台能力全景（五大支柱）](https://www.google.com/search?q=%232-%E5%B9%B3%E5%8F%B0%E8%83%BD%E5%8A%9B%E5%85%A8%E6%99%AF%E4%BA%94%E5%A4%A7%E6%94%AF%E6%9F%B1)
+2. [平台能力全景（五个子方向）](https://www.google.com/search?q=%232-%E5%B9%B3%E5%8F%B0%E8%83%BD%E5%8A%9B%E5%85%A8%E6%99%AF%E4%BA%94%E5%A4%A7%E6%94%AF%E6%9F%B1)
 3. [系统架构设计](https://www.google.com/search?q=%233-%E7%B3%BB%E7%BB%9F%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1)
 4. [核心组件详细设计](https://www.google.com/search?q=%234-%E6%A0%B8%E5%BF%83%E7%BB%84%E4%BB%B6%E8%AF%A6%E7%BB%86%E8%AE%BE%E8%AE%A1)
 5. [关键技术设计：高性能与闭环](https://www.google.com/search?q=%235-%E5%85%B3%E9%94%AE%E6%8A%80%E6%9C%AF%E8%AE%BE%E8%AE%A1%E9%AB%98%E6%80%A7%E8%83%BD%E4%B8%8E%E9%97%AD%E7%8E%AF)
