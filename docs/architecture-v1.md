@@ -43,7 +43,7 @@
 4. [核心组件详细设计](https://www.google.com/search?q=%234-%E6%A0%B8%E5%BF%83%E7%BB%84%E4%BB%B6%E8%AF%A6%E7%BB%86%E8%AE%BE%E8%AE%A1)
 5. [关键技术设计：高性能与闭环](https://www.google.com/search?q=%235-%E5%85%B3%E9%94%AE%E6%8A%80%E6%9C%AF%E8%AE%BE%E8%AE%A1%E9%AB%98%E6%80%A7%E8%83%BD%E4%B8%8E%E9%97%AD%E7%8E%AF)
 6. [安全与治理架构](https://www.google.com/search?q=%236-%E5%AE%89%E5%85%A8%E4%B8%8E%E6%B2%BB%E7%90%86%E6%9E%B6%E6%9E%84)
-7. [关键业务场景：安全运营](https://www.google.com/search?q=%237-%E5%85%B3%E9%94%AE%E4%B8%9A%E5%8A%A1%E5%9C%BA%E6%99%AF%E5%AE%89%E5%85%A8%E8%BF%90%E8%90%A5-copilot)
+7. [关键业务场景：举例 安全运营](https://www.google.com/search?q=%237-%E5%85%B3%E9%94%AE%E4%B8%9A%E5%8A%A1%E5%9C%BA%E6%99%AF%E5%AE%89%E5%85%A8%E8%BF%90%E8%90%A5-copilot)
 8. [部署架构](https://www.google.com/search?q=%238-%E9%83%A8%E7%BD%B2%E6%9E%B6%E6%9E%84)
 9. [项目结构与交付](https://www.google.com/search?q=%239-%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84%E4%B8%8E%E4%BA%A4%E4%BB%98)
 
@@ -225,7 +225,7 @@ graph TD
 
 ```mermaid
 flowchart LR
-    subgraph Ops[安全运营]
+    subgraph Ops[举例 安全运营]
         Agent[Agent 执行]
         Human[人工审核/反馈]
     end
@@ -286,7 +286,7 @@ flowchart LR
 
 ---
 
-## 7. 关键业务场景：安全运营
+## 7. 关键业务场景：举例 安全运营
 
 **场景描述**：自动响应 SIEM 告警，进行研判和处置。
 
