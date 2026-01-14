@@ -2913,7 +2913,7 @@ openeeap/
 | **internal/app/**            | 应用层    | 应用服务、DTO、业务流程编排        |
 | **internal/domain/**         | 领域层    | 领域实体、值对象、领域服务、仓储接口     |
 | **internal/infrastructure/** | 基础设施层  | 仓储实现、外部服务集成            |
-| **internal/platform/**       | 平台核心   | 编排器、运行时、推理、RAG、训练等核心组件 |
+| **internal/platform/**       | 平台核心   | Security Information and Event Management |
 | **internal/governance/**     | 治理层    | 策略引擎、审计、合规             |
 | **internal/observability/**  | 可观测性   | 追踪、指标、日志               |
 | **internal/api/**            | 接口层    | HTTP/gRPC/CLI 接口       |
