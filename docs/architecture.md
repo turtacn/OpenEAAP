@@ -2984,32 +2984,33 @@ graph TB
 ```mermaid
 gantt
     title OpenEAAP 技术演进路线图
-    dateFormat  YYYY-Q
-    
+    dateFormat  YYYY-MM-DD
+
     section Phase 1 基础平台
-    核心框架搭建          :2026-Q1, 2026-Q2
-    编排器与运行时        :2026-Q1, 2026-Q2
-    推理网关（vLLM）      :2026-Q2, 2026-Q2
-    
+    核心框架搭建          :p1a, 2026-01-01, 2026-06-30
+    编排器与运行时        :p1b, 2026-01-01, 2026-06-30
+    推理网关（vLLM）      :p1c, 2026-04-01, 2026-06-30
+
     section Phase 2 数据智能
-    RAG 引擎              :2026-Q2, 2026-Q3
-    向量数据库集成        :2026-Q2, 2026-Q3
-    知识图谱构建          :2026-Q3, 2026-Q3
-    
+    RAG 引擎              :p2a, 2026-04-01, 2026-09-30
+    向量数据库集成        :p2b, 2026-04-01, 2026-09-30
+    知识图谱构建          :p2c, 2026-07-01, 2026-09-30
+
     section Phase 3 持续优化
-    在线学习引擎          :2026-Q3, 2026-Q4
-    RLHF/DPO 训练流       :2026-Q3, 2026-Q4
-    Prompt 自动优化       :2026-Q4, 2026-Q4
-    
+    在线学习引擎          :p3a, 2026-07-01, 2026-12-31
+    RLHF/DPO 训练流       :p3b, 2026-07-01, 2026-12-31
+    Prompt 自动优化       :p3c, 2026-10-01, 2026-12-31
+
     section Phase 4 治理增强
-    策略引擎              :2026-Q4, 2027-Q1
-    隐私计算网关          :2026-Q4, 2027-Q1
-    审计与合规            :2027-Q1, 2027-Q1
-    
+    策略引擎              :p4a, 2026-10-01, 2027-03-31
+    隐私计算网关          :p4b, 2026-10-01, 2027-03-31
+    审计与合规            :p4c, 2027-01-01, 2027-03-31
+
     section Phase 5 生态集成
-    LangChain 适配器      :2027-Q1, 2027-Q2
-    AutoGPT 适配器        :2027-Q1, 2027-Q2
-    插件市场              :2027-Q2, 2027-Q2
+    LangChain 适配器      :p5a, 2027-01-01, 2027-06-30
+    AutoGPT 适配器        :p5b, 2027-01-01, 2027-06-30
+    插件市场              :p5c, 2027-04-01, 2027-06-30
+
 ```
 
 ### 12.3 未来展望
@@ -3052,13 +3053,13 @@ gantt
 
 ## 13. 参考资料
 
-[1] Go 项目布局规范. [https://github.com/golang-standards/project-layout](https://github.com/golang-standards/project-layout)
-[2] LangChain 官方文档. [https://python.langchain.com/docs/get_started/introduction](https://python.langchain.com/docs/get_started/introduction)
-[3] vLLM 官方文档. [https://docs.vllm.ai/en/latest/](https://docs.vllm.ai/en/latest/)
-[4] OpenTelemetry 规范. [https://opentelemetry.io/docs/](https://opentelemetry.io/docs/)
-[5] RLHF 论文. [https://arxiv.org/abs/2203.02155](https://arxiv.org/abs/2203.02155)
-[6] DPO 论文. [https://arxiv.org/abs/2305.18290](https://arxiv.org/abs/2305.18290)
-[7] RAG 综述论文. [https://arxiv.org/abs/2312.10997](https://arxiv.org/abs/2312.10997)
-[8] Prompt 注入攻击与防护. [https://github.com/Azure/PyRIT](https://github.com/Azure/PyRIT)
-[9] Kubernetes 最佳实践. [https://kubernetes.io/docs/concepts/](https://kubernetes.io/docs/concepts/)
-[10] SOC2 合规指南. [https://www.aicpa.org/soc](https://www.aicpa.org/soc)
+* [1] Go 项目布局规范. [https://github.com/golang-standards/project-layout](https://github.com/golang-standards/project-layout)
+* [2] LangChain 官方文档. [https://python.langchain.com/docs/get_started/introduction](https://python.langchain.com/docs/get_started/introduction)
+* [3] vLLM 官方文档. [https://docs.vllm.ai/en/latest/](https://docs.vllm.ai/en/latest/)
+* [4] OpenTelemetry 规范. [https://opentelemetry.io/docs/](https://opentelemetry.io/docs/)
+* [5] RLHF 论文. [https://arxiv.org/abs/2203.02155](https://arxiv.org/abs/2203.02155)
+* [6] DPO 论文. [https://arxiv.org/abs/2305.18290](https://arxiv.org/abs/2305.18290)
+* [7] RAG 综述论文. [https://arxiv.org/abs/2312.10997](https://arxiv.org/abs/2312.10997)
+* [8] Prompt 注入攻击与防护. [https://github.com/Azure/PyRIT](https://github.com/Azure/PyRIT)
+* [9] Kubernetes 最佳实践. [https://kubernetes.io/docs/concepts/](https://kubernetes.io/docs/concepts/)
+* [10] SOC2 合规指南. [https://www.aicpa.org/soc](https://www.aicpa.org/soc)
