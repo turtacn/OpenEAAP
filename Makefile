@@ -17,7 +17,7 @@ GO := go
 GOFLAGS := -v
 LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.GitCommit=$(GIT_COMMIT)"
 GO_FILES := $(shell find . -name '*.go' -type f -not -path './vendor/*')
-GO_PACKAGES := $(shell go list ./... | grep -v /vendor/)
+GO_PACKAGES := $(shell go list ./... | grep -v /vendor/ | grep -v '^github.com/openeeap/openeeap$$')
 
 # 构建目录
 BUILD_DIR := ./build

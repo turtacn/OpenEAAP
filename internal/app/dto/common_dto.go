@@ -188,6 +188,10 @@ type ErrorResponse struct {
 	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
 
+func (e *ErrorResponse) Error() string {
+	return e.Message
+}
+
 // NewErrorResponse 创建错误响应
 func NewErrorResponse(code int, message string, details string) *ErrorResponse {
 	return &ErrorResponse{
