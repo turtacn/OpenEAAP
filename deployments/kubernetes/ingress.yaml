@@ -1,0 +1,439 @@
+# deployments/kubernetes/ingress.yaml
+# OpenEAAP Kubernetes Ingress 配置
+# 定义 HTTP/HTTPS 路由规则、TLS 证书配置、API Gateway 集成
+
+---
+# OpenEAAP Main Ingress (NGINX Ingress Controller)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openeeap-ingress
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: ingress
+  annotations:
+    # NGINX Ingress Controller 配置
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+    # 速率限制
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/limit-connections: "10"
+
+    # 超时配置
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+
+    # CORS 配置
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://*.openeeap.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
+
+    # 请求体大小限制
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+
+    # WebSocket 支持
+    nginx.ingress.kubernetes.io/websocket-services: "openeeap-http"
+
+    # 会话保持
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "openeeap-session"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "10800"
+
+    # 证书管理器 (cert-manager)
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    # 安全头部
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: SAMEORIGIN";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
+spec:
+  tls:
+    - hosts:
+        - api.openeeap.com
+        - rag.openeeap.com
+        - admin.openeeap.com
+      secretName: openeeap-tls-cert
+  rules:
+    # API 路由
+    - host: api.openeeap.com
+      http:
+        paths:
+          - path: /v1/agents
+            pathType: Prefix
+            backend:
+              service:
+                name: openeeap-http
+                port:
+                  number: 80
+          - path: /v1/workflows
+            pathType: Prefix
+            backend:
+              service:
+                name: openeeap-http
+                port:
+                  number: 80
+          - path: /v1/models
+            pathType: Prefix
+            backend:
+              service:
+                name: openeeap-http
+                port:
+                  number: 80
+          - path: /v1/inference
+            pathType: Prefix
+            backend:
+              service:
+                name: openeeap-inference
+                port:
+                  number: 80
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: openeeap-http
+                port:
+                  number: 80
+
+    # RAG 专用路由
+    - host: rag.openeeap.com
+      http:
+        paths:
+          - path: /v1/documents
+            pathType: Prefix
+            backend:
+              service:
+                name: openeeap-http
+                port:
+                  number: 80
+          - path: /v1/search
+            pathType: Prefix
+            backend:
+              service:
+                name: openeeap-rag
+                port:
+                  number: 80
+          - path: /v1/embeddings
+            pathType: Prefix
+            backend:
+              service:
+                name: openeeap-rag
+                port:
+                  number: 80
+
+    # 管理后台路由
+    - host: admin.openeeap.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: openeeap-admin
+                port:
+                  number: 8888
+
+---
+# OpenEAAP gRPC Ingress (NGINX Ingress with gRPC support)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openeeap-grpc-ingress
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: grpc-ingress
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    nginx.ingress.kubernetes.io/grpc-backend: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+    - hosts:
+        - grpc.openeeap.com
+      secretName: openeeap-grpc-tls-cert
+  rules:
+    - host: grpc.openeeap.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: openeeap-grpc
+                port:
+                  number: 9090
+
+---
+# OpenEAAP Istio Gateway (Optional - for Service Mesh)
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: openeeap-gateway
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: istio-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    # HTTP 重定向到 HTTPS
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*.openeeap.com"
+      tls:
+        httpsRedirect: true
+
+    # HTTPS
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      hosts:
+        - "*.openeeap.com"
+      tls:
+        mode: SIMPLE
+        credentialName: openeeap-tls-cert
+
+    # gRPC over TLS
+    - port:
+        number: 9090
+        name: grpc
+        protocol: GRPC
+      hosts:
+        - "grpc.openeeap.com"
+      tls:
+        mode: SIMPLE
+        credentialName: openeeap-grpc-tls-cert
+
+---
+# OpenEAAP Istio VirtualService
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: openeeap-virtualservice
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: istio-virtualservice
+spec:
+  hosts:
+    - "api.openeeap.com"
+    - "rag.openeeap.com"
+    - "admin.openeeap.com"
+  gateways:
+    - openeeap-gateway
+  http:
+    # API 路由
+    - match:
+        - uri:
+            prefix: "/v1/agents"
+        - uri:
+            prefix: "/v1/workflows"
+        - uri:
+            prefix: "/v1/models"
+      route:
+        - destination:
+            host: openeeap-http
+            port:
+              number: 80
+      timeout: 300s
+      retries:
+        attempts: 3
+        perTryTimeout: 60s
+        retryOn: "5xx,reset,connect-failure,refused-stream"
+
+    # 推理路由
+    - match:
+        - uri:
+            prefix: "/v1/inference"
+      route:
+        - destination:
+            host: openeeap-inference
+            port:
+              number: 80
+      timeout: 300s
+
+    # RAG 路由
+    - match:
+        - uri:
+            prefix: "/v1/documents"
+        - uri:
+            prefix: "/v1/search"
+        - uri:
+            prefix: "/v1/embeddings"
+      route:
+        - destination:
+            host: openeeap-rag
+            port:
+              number: 80
+      timeout: 120s
+
+    # 管理后台路由
+    - match:
+        - uri:
+            prefix: "/"
+          headers:
+            host:
+              exact: "admin.openeeap.com"
+      route:
+        - destination:
+            host: openeeap-admin
+            port:
+              number: 8888
+
+---
+# OpenEAAP Istio DestinationRule (流量策略)
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: openeeap-destinationrule
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: istio-destinationrule
+spec:
+  host: openeeap-http
+  trafficPolicy:
+    # 连接池配置
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 50
+        http2MaxRequests: 100
+        maxRequestsPerConnection: 10
+
+    # 负载均衡策略
+    loadBalancer:
+      simple: LEAST_REQUEST
+
+    # 异常检测
+    outlierDetection:
+      consecutiveErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 50
+
+---
+# TLS Certificate (cert-manager Certificate)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: openeeap-tls-cert
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: certificate
+spec:
+  secretName: openeeap-tls-cert
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - api.openeeap.com
+    - rag.openeeap.com
+    - admin.openeeap.com
+    - "*.openeeap.com"
+
+---
+# gRPC TLS Certificate
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: openeeap-grpc-tls-cert
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: certificate
+spec:
+  secretName: openeeap-grpc-tls-cert
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - grpc.openeeap.com
+
+---
+# ClusterIssuer for Let's Encrypt (Production)
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  labels:
+    app: openeeap
+    component: cluster-issuer
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@openeeap.com
+    privateKeySecretRef:
+      name: letsencrypt-prod-key
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+
+---
+# NetworkPolicy for Ingress Security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: openeeap-ingress-policy
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: openeeap
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # 允许来自 Ingress Controller 的流量
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 9090
+  egress:
+    # 允许访问内部服务
+    - to:
+        - podSelector:
+            matchLabels:
+              app: openeeap
+      ports:
+        - protocol: TCP
+          port: 5432  # PostgreSQL
+        - protocol: TCP
+          port: 6379  # Redis
+        - protocol: TCP
+          port: 19530 # Milvus
+    # 允许访问外部 DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+
+# Personal.AI order the ending

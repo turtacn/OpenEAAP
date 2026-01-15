@@ -1,0 +1,515 @@
+// api/proto/model.proto
+// OpenEAAP Model Service gRPC Protocol Buffers Definition
+// Defines ModelService, Model, ModelConfig and related messages for model management
+
+syntax = "proto3";
+
+package openeeap.model.v1;
+
+option go_package = "github.com/openeeap/openeeap/api/proto/model;modelpb";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+// ModelService provides model lifecycle management operations
+service ModelService {
+ // RegisterModel registers a new model in the system
+ rpc RegisterModel(RegisterModelRequest) returns (RegisterModelResponse);
+
+ // GetModel retrieves model details by ID
+ rpc GetModel(GetModelRequest) returns (GetModelResponse);
+
+ // ListModels lists all models with optional filtering
+ rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+
+ // UpdateModel updates model configuration or metadata
+ rpc UpdateModel(UpdateModelRequest) returns (UpdateModelResponse);
+
+ // DeleteModel removes a model from the system
+ rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse);
+
+ // DeployModel deploys a model to inference service
+ rpc DeployModel(DeployModelRequest) returns (DeployModelResponse);
+
+ // UndeployModel removes a model from inference service
+ rpc UndeployModel(UndeployModelRequest) returns (UndeployModelResponse);
+
+ // GetModelMetrics retrieves real-time model performance metrics
+ rpc GetModelMetrics(GetModelMetricsRequest) returns (GetModelMetricsResponse);
+
+ // StreamModelMetrics streams real-time model metrics
+ rpc StreamModelMetrics(StreamModelMetricsRequest) returns (stream ModelMetricsEvent);
+
+ // HealthCheck checks if a deployed model is healthy
+ rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+
+ // ValidateModel validates model configuration before deployment
+ rpc ValidateModel(ValidateModelRequest) returns (ValidateModelResponse);
+}
+
+// Model represents a machine learning model entity
+message Model {
+ // Unique model identifier
+ string id = 1;
+
+ // Model name (must be unique)
+ string name = 2;
+
+ // Model type (e.g., LLM, EMBEDDING, RERANKER)
+ ModelType type = 3;
+
+ // Model version (semantic versioning)
+ string version = 4;
+
+ // Human-readable description
+ string description = 5;
+
+ // Model configuration
+ ModelConfig config = 6;
+
+ // Model capabilities
+ ModelCapabilities capabilities = 7;
+
+ // Model resource requirements
+ ResourceRequirements resources = 8;
+
+ // Current deployment status
+ DeploymentStatus status = 9;
+
+ // Model endpoint (if deployed)
+ string endpoint = 10;
+
+ // Model provider (e.g., OPENAI, ANTHROPIC, VLLM)
+ string provider = 11;
+
+ // Cost per 1K tokens (in USD)
+ double cost_per_1k_tokens = 12;
+
+ // Model metadata (tags, labels, etc.)
+ map<string, string> metadata = 13;
+
+ // Creation timestamp
+ google.protobuf.Timestamp created_at = 14;
+
+ // Last update timestamp
+ google.protobuf.Timestamp updated_at = 15;
+
+ // Created by user ID
+ string created_by = 16;
+}
+
+// ModelType defines the type of model
+enum ModelType {
+ MODEL_TYPE_UNSPECIFIED = 0;
+ MODEL_TYPE_LLM = 1;           // Large Language Model
+ MODEL_TYPE_EMBEDDING = 2;      // Embedding Model
+ MODEL_TYPE_RERANKER = 3;       // Reranking Model
+ MODEL_TYPE_CLASSIFIER = 4;     // Classification Model
+ MODEL_TYPE_VISION = 5;         // Vision Model
+ MODEL_TYPE_MULTIMODAL = 6;     // Multimodal Model
+}
+
+// ModelConfig contains model-specific configuration
+message ModelConfig {
+ // Model file path or URL
+ string model_path = 1;
+
+ // Inference engine (VLLM, TGI, TENSORRT, etc.)
+ string inference_engine = 2;
+
+ // Inference parameters
+ InferenceConfig inference_config = 3;
+
+ // Quantization settings
+ QuantizationConfig quantization = 4;
+
+ // Tokenizer configuration
+ TokenizerConfig tokenizer = 5;
+
+ // Custom configuration (engine-specific)
+ google.protobuf.Struct custom_config = 6;
+}
+
+// InferenceConfig defines inference parameters
+message InferenceConfig {
+ // Maximum sequence length
+ int32 max_seq_length = 1;
+
+ // Batch size for inference
+ int32 batch_size = 2;
+
+ // GPU memory utilization (0.0 - 1.0)
+ float gpu_memory_utilization = 3;
+
+ // Enable KV cache
+ bool enable_kv_cache = 4;
+
+ // Tensor parallelism degree
+ int32 tensor_parallel_size = 5;
+
+ // Pipeline parallelism degree
+ int32 pipeline_parallel_size = 6;
+
+ // Default temperature
+ float default_temperature = 7;
+
+ // Default top_p
+ float default_top_p = 8;
+
+ // Default max_tokens
+ int32 default_max_tokens = 9;
+}
+
+// QuantizationConfig defines model quantization settings
+message QuantizationConfig {
+ // Enable quantization
+ bool enabled = 1;
+
+ // Quantization method (AWQ, GPTQ, SmoothQuant, etc.)
+ string method = 2;
+
+ // Quantization bits (4, 8, 16)
+ int32 bits = 3;
+
+ // Group size for quantization
+ int32 group_size = 4;
+}
+
+// TokenizerConfig defines tokenizer settings
+message TokenizerConfig {
+ // Tokenizer type (HF, SENTENCEPIECE, TIKTOKEN)
+ string type = 1;
+
+ // Tokenizer path or identifier
+ string path = 2;
+
+ // Special tokens
+ map<string, string> special_tokens = 3;
+}
+
+// ModelCapabilities defines what the model can do
+message ModelCapabilities {
+ // Supports streaming responses
+ bool supports_streaming = 1;
+
+ // Supports function calling
+ bool supports_function_calling = 2;
+
+ // Supports vision inputs
+ bool supports_vision = 3;
+
+ // Supports audio inputs
+ bool supports_audio = 4;
+
+ // Maximum context window
+ int32 max_context_window = 5;
+
+ // Supported languages (ISO 639-1 codes)
+ repeated string supported_languages = 6;
+
+ // Supported tasks
+ repeated string supported_tasks = 7;
+}
+
+// ResourceRequirements defines resource requirements
+message ResourceRequirements {
+ // Minimum GPU memory (in GB)
+ float min_gpu_memory = 1;
+
+ // Number of GPUs required
+ int32 num_gpus = 2;
+
+ // Minimum CPU cores
+ int32 min_cpu_cores = 3;
+
+ // Minimum RAM (in GB)
+ float min_ram = 4;
+
+ // Disk space required (in GB)
+ float disk_space = 5;
+
+ // GPU type requirement (optional)
+ string gpu_type = 6;
+}
+
+// DeploymentStatus defines model deployment status
+enum DeploymentStatus {
+ DEPLOYMENT_STATUS_UNSPECIFIED = 0;
+ DEPLOYMENT_STATUS_REGISTERED = 1;    // Registered but not deployed
+ DEPLOYMENT_STATUS_DEPLOYING = 2;     // Deployment in progress
+ DEPLOYMENT_STATUS_DEPLOYED = 3;      // Successfully deployed
+ DEPLOYMENT_STATUS_FAILED = 4;        // Deployment failed
+ DEPLOYMENT_STATUS_UNDEPLOYING = 5;   // Undeployment in progress
+ DEPLOYMENT_STATUS_UNDEPLOYED = 6;    // Successfully undeployed
+ DEPLOYMENT_STATUS_UNHEALTHY = 7;     // Deployed but unhealthy
+}
+
+// RegisterModelRequest is the request for registering a model
+message RegisterModelRequest {
+ string name = 1;
+ ModelType type = 2;
+ string version = 3;
+ string description = 4;
+ ModelConfig config = 5;
+ ModelCapabilities capabilities = 6;
+ ResourceRequirements resources = 7;
+ string provider = 8;
+ double cost_per_1k_tokens = 9;
+ map<string, string> metadata = 10;
+}
+
+// RegisterModelResponse is the response for registering a model
+message RegisterModelResponse {
+ Model model = 1;
+}
+
+// GetModelRequest is the request for getting a model
+message GetModelRequest {
+ string id = 1;
+}
+
+// GetModelResponse is the response for getting a model
+message GetModelResponse {
+ Model model = 1;
+}
+
+// ListModelsRequest is the request for listing models
+message ListModelsRequest {
+ // Filter by model type
+ ModelType type = 1;
+
+ // Filter by deployment status
+ DeploymentStatus status = 2;
+
+ // Filter by provider
+ string provider = 3;
+
+ // Search query (name or description)
+ string query = 4;
+
+ // Pagination: page number (1-indexed)
+ int32 page = 5;
+
+ // Pagination: page size
+ int32 page_size = 6;
+
+ // Sort by field (created_at, name, cost_per_1k_tokens)
+ string sort_by = 7;
+
+ // Sort order (asc, desc)
+ string sort_order = 8;
+}
+
+// ListModelsResponse is the response for listing models
+message ListModelsResponse {
+ repeated Model models = 1;
+ int32 total_count = 2;
+ int32 page = 3;
+ int32 page_size = 4;
+}
+
+// UpdateModelRequest is the request for updating a model
+message UpdateModelRequest {
+ string id = 1;
+
+ // Fields to update (partial update)
+ optional string name = 2;
+ optional string description = 3;
+ optional ModelConfig config = 4;
+ optional double cost_per_1k_tokens = 5;
+ optional map<string, string> metadata = 6;
+}
+
+// UpdateModelResponse is the response for updating a model
+message UpdateModelResponse {
+ Model model = 1;
+}
+
+// DeleteModelRequest is the request for deleting a model
+message DeleteModelRequest {
+ string id = 1;
+
+ // Force delete even if deployed
+ bool force = 2;
+}
+
+// DeleteModelResponse is the response for deleting a model
+message DeleteModelResponse {
+ bool success = 1;
+ string message = 2;
+}
+
+// DeployModelRequest is the request for deploying a model
+message DeployModelRequest {
+ string id = 1;
+
+ // Deployment configuration
+ DeploymentConfig deployment_config = 2;
+}
+
+// DeploymentConfig defines deployment-specific configuration
+message DeploymentConfig {
+ // Number of replicas
+ int32 replicas = 1;
+
+ // Resource allocation (overrides model defaults)
+ ResourceAllocation resource_allocation = 2;
+
+ // Auto-scaling configuration
+ AutoScalingConfig auto_scaling = 3;
+
+ // Health check configuration
+ HealthCheckConfig health_check = 4;
+
+ // Deployment namespace (for K8s)
+ string namespace = 5;
+}
+
+// ResourceAllocation defines actual resource allocation
+message ResourceAllocation {
+ int32 gpu_count = 1;
+ string gpu_type = 2;
+ int32 cpu_cores = 3;
+ float memory_gb = 4;
+}
+
+// AutoScalingConfig defines auto-scaling rules
+message AutoScalingConfig {
+ bool enabled = 1;
+ int32 min_replicas = 2;
+ int32 max_replicas = 3;
+ int32 target_cpu_utilization = 4;
+ int32 target_qps = 5;
+}
+
+// HealthCheckConfig defines health check settings
+message HealthCheckConfig {
+ int32 initial_delay_seconds = 1;
+ int32 period_seconds = 2;
+ int32 timeout_seconds = 3;
+ int32 failure_threshold = 4;
+}
+
+// DeployModelResponse is the response for deploying a model
+message DeployModelResponse {
+ Model model = 1;
+ string deployment_id = 2;
+ string message = 3;
+}
+
+// UndeployModelRequest is the request for undeploying a model
+message UndeployModelRequest {
+ string id = 1;
+
+ // Graceful shutdown timeout (seconds)
+ int32 timeout_seconds = 2;
+}
+
+// UndeployModelResponse is the response for undeploying a model
+message UndeployModelResponse {
+ bool success = 1;
+ string message = 2;
+}
+
+// GetModelMetricsRequest is the request for getting model metrics
+message GetModelMetricsRequest {
+ string id = 1;
+
+ // Time range for metrics
+ google.protobuf.Timestamp start_time = 2;
+ google.protobuf.Timestamp end_time = 3;
+
+ // Metrics to retrieve
+ repeated string metric_names = 4;
+}
+
+// GetModelMetricsResponse is the response for getting model metrics
+message GetModelMetricsResponse {
+ ModelMetrics metrics = 1;
+}
+
+// ModelMetrics contains model performance metrics
+message ModelMetrics {
+ string model_id = 1;
+ google.protobuf.Timestamp timestamp = 2;
+
+ // Throughput metrics
+ double qps = 3;                    // Queries per second
+ double tokens_per_second = 4;      // Tokens generated per second
+
+ // Latency metrics (in milliseconds)
+ double avg_latency = 5;
+ double p50_latency = 6;
+ double p95_latency = 7;
+ double p99_latency = 8;
+
+ // Resource utilization
+ float gpu_utilization = 9;         // 0.0 - 1.0
+ float gpu_memory_utilization = 10; // 0.0 - 1.0
+ float cpu_utilization = 11;        // 0.0 - 1.0
+ float memory_utilization = 12;     // 0.0 - 1.0
+
+ // Cache metrics
+ double cache_hit_rate = 13;        // 0.0 - 1.0
+
+ // Error metrics
+ double error_rate = 14;            // 0.0 - 1.0
+ int64 total_requests = 15;
+ int64 failed_requests = 16;
+
+ // Cost metrics
+ double total_cost = 17;            // In USD
+ double cost_per_request = 18;
+}
+
+// StreamModelMetricsRequest is the request for streaming metrics
+message StreamModelMetricsRequest {
+ string id = 1;
+
+ // Metrics update interval (seconds)
+ int32 interval_seconds = 2;
+
+ // Metrics to stream
+ repeated string metric_names = 3;
+}
+
+// ModelMetricsEvent is a single metrics event in the stream
+message ModelMetricsEvent {
+ ModelMetrics metrics = 1;
+}
+
+// HealthCheckRequest is the request for health check
+message HealthCheckRequest {
+ string id = 1;
+}
+
+// HealthCheckResponse is the response for health check
+message HealthCheckResponse {
+ bool healthy = 1;
+ string status = 2;
+ string message = 3;
+ map<string, string> details = 4;
+ google.protobuf.Timestamp last_check_time = 5;
+}
+
+// ValidateModelRequest is the request for validating model configuration
+message ValidateModelRequest {
+ ModelConfig config = 1;
+ ResourceRequirements resources = 2;
+}
+
+// ValidateModelResponse is the response for validating model configuration
+message ValidateModelResponse {
+ bool valid = 1;
+ repeated ValidationError errors = 2;
+ repeated string warnings = 3;
+}
+
+// ValidationError represents a validation error
+message ValidationError {
+ string field = 1;
+ string message = 2;
+ string code = 3;
+}
+
+// Personal.AI order the ending

@@ -1,0 +1,467 @@
+# OpenEAAP Default Configuration
+# 默认配置文件 - 用于开发和测试环境
+# 版本: v1.0.0
+
+# ============================================================================
+# 服务器配置
+# ============================================================================
+server:
+  # HTTP 服务器配置
+  http:
+    host: "0.0.0.0"
+    port: 8080
+    read_timeout: 30s
+    write_timeout: 30s
+    idle_timeout: 120s
+    max_header_bytes: 1048576  # 1MB
+
+  # gRPC 服务器配置
+  grpc:
+    host: "0.0.0.0"
+    port: 9090
+    max_recv_msg_size: 4194304  # 4MB
+    max_send_msg_size: 4194304  # 4MB
+    connection_timeout: 10s
+    keepalive:
+      time: 30s
+      timeout: 10s
+
+  # 优雅关闭配置
+  graceful_shutdown:
+    timeout: 30s
+    wait_time: 5s
+
+# ============================================================================
+# 数据库配置
+# ============================================================================
+database:
+  # PostgreSQL 配置
+  postgres:
+    host: "localhost"
+    port: 5432
+    database: "openeeap"
+    username: "openeeap"
+    password: "openeeap123"
+    ssl_mode: "disable"
+
+    # 连接池配置
+    pool:
+      max_open_conns: 50
+      max_idle_conns: 10
+      conn_max_lifetime: 1h
+      conn_max_idle_time: 10m
+
+    # 超时配置
+    timeout:
+      connect: 5s
+      query: 10s
+      exec: 30s
+
+    # 日志配置
+    log:
+      level: "info"  # debug, info, warn, error
+      slow_threshold: 200ms
+
+# ============================================================================
+# 缓存配置
+# ============================================================================
+cache:
+  # Redis 配置
+  redis:
+    # 单机模式
+    mode: "standalone"  # standalone, cluster, sentinel
+    host: "localhost"
+    port: 6379
+    password: ""
+    database: 0
+
+    # 集群模式配置（当 mode=cluster 时使用）
+    cluster:
+      addrs:
+        - "localhost:6379"
+        - "localhost:6380"
+        - "localhost:6381"
+
+    # 哨兵模式配置（当 mode=sentinel 时使用）
+    sentinel:
+      master_name: "mymaster"
+      addrs:
+        - "localhost:26379"
+        - "localhost:26380"
+        - "localhost:26381"
+
+    # 连接池配置
+    pool:
+      max_idle: 10
+      max_active: 100
+      idle_timeout: 5m
+      wait: true
+      max_conn_lifetime: 1h
+
+    # 超时配置
+    timeout:
+      dial: 5s
+      read: 3s
+      write: 3s
+
+  # L1 本地缓存配置
+  local:
+    enabled: true
+    max_size: 10000
+    ttl: 5m
+    cleanup_interval: 10m
+
+# ============================================================================
+# 向量数据库配置
+# ============================================================================
+vector:
+  # Milvus 配置
+  milvus:
+    host: "localhost"
+    port: 19530
+    username: ""
+    password: ""
+
+    # 连接配置
+    connection:
+      timeout: 10s
+      max_idle_conns: 10
+      max_open_conns: 50
+
+    # 默认集合配置
+    collection:
+      shard_num: 2
+      replica_num: 1
+      consistency_level: "Strong"  # Strong, Bounded, Eventually
+
+    # 索引配置
+    index:
+      type: "HNSW"  # HNSW, IVF_FLAT, IVF_SQ8, IVF_PQ
+      metric_type: "L2"  # L2, IP, COSINE
+      params:
+        M: 16
+        efConstruction: 256
+
+    # 搜索配置
+    search:
+      top_k: 10
+      nprobe: 16
+      ef: 64
+
+# ============================================================================
+# 对象存储配置
+# ============================================================================
+storage:
+  # MinIO 配置
+  minio:
+    endpoint: "localhost:9000"
+    access_key_id: "minioadmin"
+    secret_access_key: "minioadmin"
+    use_ssl: false
+
+    # 默认存储桶
+    default_bucket: "openeeap"
+
+    # 上传配置
+    upload:
+      max_file_size: 104857600  # 100MB
+      allowed_extensions:
+        - ".txt"
+        - ".pdf"
+        - ".docx"
+        - ".xlsx"
+        - ".pptx"
+        - ".md"
+        - ".json"
+        - ".csv"
+
+    # 下载配置
+    download:
+      presigned_url_expiry: 1h
+
+# ============================================================================
+# 消息队列配置
+# ============================================================================
+message:
+  # Kafka 配置
+  kafka:
+    brokers:
+      - "localhost:9092"
+
+    # 生产者配置
+    producer:
+      acks: "all"  # 0, 1, all
+      compression: "snappy"  # none, gzip, snappy, lz4, zstd
+      max_message_bytes: 1048576  # 1MB
+      retry_max: 3
+      retry_backoff: 100ms
+
+    # 消费者配置
+    consumer:
+      group_id: "openeeap-consumer-group"
+      auto_offset_reset: "earliest"  # earliest, latest
+      enable_auto_commit: true
+      auto_commit_interval: 5s
+      session_timeout: 30s
+
+    # Topic 配置
+    topics:
+      training_tasks: "openeeap.training.tasks"
+      feedback_events: "openeeap.feedback.events"
+      audit_logs: "openeeap.audit.logs"
+
+# ============================================================================
+# 推理引擎配置
+# ============================================================================
+inference:
+  # vLLM 配置
+  vllm:
+    endpoints:
+      - name: "default"
+        url: "http://localhost:8000"
+        model: "meta-llama/Llama-2-7b-chat-hf"
+        max_tokens: 2048
+        temperature: 0.7
+        top_p: 0.9
+
+    # 负载均衡策略
+    load_balancing:
+      strategy: "round_robin"  # round_robin, least_connections, weighted
+      health_check_interval: 10s
+
+    # 超时配置
+    timeout:
+      connection: 5s
+      request: 30s
+      stream: 300s
+
+  # 缓存配置
+  cache:
+    enabled: true
+    ttl:
+      l1: 5m
+      l2: 1h
+      l3: 24h
+    similarity_threshold: 0.95
+
+  # 隐私保护配置
+  privacy:
+    enabled: true
+    pii_detection:
+      enabled: true
+      confidence_threshold: 0.8
+    masking:
+      strategy: "redact"  # redact, hash, tokenize
+
+# ============================================================================
+# RAG 引擎配置
+# ============================================================================
+rag:
+  # 检索配置
+  retrieval:
+    top_k: 10
+    similarity_threshold: 0.7
+    strategies:
+      - "vector"      # 向量检索
+      - "keyword"     # 关键词检索
+      - "hybrid"      # 混合检索
+    rerank:
+      enabled: true
+      model: "cross-encoder"
+      top_n: 5
+
+  # 生成配置
+  generation:
+    max_context_length: 4096
+    chunk_size: 512
+    chunk_overlap: 50
+
+  # 验证配置
+  validation:
+    hallucination_detection: true
+    citation_check: true
+
+# ============================================================================
+# 训练服务配置
+# ============================================================================
+training:
+  # RLHF 配置
+  rlhf:
+    learning_rate: 1e-5
+    batch_size: 32
+    num_epochs: 3
+    reward_model:
+      checkpoint: ""
+
+  # DPO 配置
+  dpo:
+    learning_rate: 5e-6
+    batch_size: 16
+    num_epochs: 2
+    beta: 0.1
+
+  # 分布式训练配置
+  distributed:
+    enabled: false
+    backend: "nccl"  # nccl, gloo, mpi
+    world_size: 4
+
+# ============================================================================
+# 策略引擎配置
+# ============================================================================
+governance:
+  # 策略配置
+  policy:
+    enabled: true
+    default_decision: "deny"  # allow, deny
+    policy_files:
+      - "policies/default.yaml"
+
+  # 审计配置
+  audit:
+    enabled: true
+    log_level: "info"
+    retention_days: 90
+
+  # 合规配置
+  compliance:
+    frameworks:
+      - "SOC2"
+      - "GDPR"
+    data_classification:
+      enabled: true
+      levels:
+        - "public"
+        - "internal"
+        - "confidential"
+        - "restricted"
+
+# ============================================================================
+# 可观测性配置
+# ============================================================================
+observability:
+  # 日志配置
+  logging:
+    level: "info"  # debug, info, warn, error, fatal
+    format: "json"  # json, text
+    output: "stdout"  # stdout, stderr, file
+    file:
+      path: "logs/openeeap.log"
+      max_size: 100  # MB
+      max_backups: 7
+      max_age: 30  # days
+      compress: true
+
+  # 追踪配置
+  tracing:
+    enabled: true
+    provider: "jaeger"  # jaeger, zipkin, otlp
+    jaeger:
+      endpoint: "http://localhost:14268/api/traces"
+      sampler:
+        type: "probabilistic"  # const, probabilistic, ratelimiting
+        param: 0.1
+
+  # 指标配置
+  metrics:
+    enabled: true
+    provider: "prometheus"
+    prometheus:
+      endpoint: "/metrics"
+      namespace: "openeeap"
+      subsystem: ""
+
+# ============================================================================
+# 安全配置
+# ============================================================================
+security:
+  # JWT 配置
+  jwt:
+    secret: "your-secret-key-change-in-production"
+    issuer: "openeeap"
+    expiry: 24h
+    refresh_expiry: 168h  # 7 days
+
+  # API Key 配置
+  api_key:
+    enabled: true
+    header: "X-API-Key"
+
+  # CORS 配置
+  cors:
+    enabled: true
+    allowed_origins:
+      - "http://localhost:3000"
+      - "http://localhost:8080"
+    allowed_methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "PATCH"
+    allowed_headers:
+      - "Content-Type"
+      - "Authorization"
+      - "X-API-Key"
+    max_age: 3600
+
+  # 限流配置
+  rate_limit:
+    enabled: true
+    requests_per_second: 100
+    burst: 200
+
+# ============================================================================
+# 功能开关配置
+# ============================================================================
+features:
+  # Web 搜索
+  web_search:
+    enabled: true
+    provider: "brave"  # brave, google, bing
+
+  # 深度研究
+  deep_research:
+    enabled: true
+    max_iterations: 10
+
+  # 代码执行
+  code_execution:
+    enabled: true
+    sandbox: "docker"  # docker, wasm
+    timeout: 60s
+
+  # 工件生成
+  artifacts:
+    enabled: true
+    max_size: 1048576  # 1MB
+
+  # 在线学习
+  online_learning:
+    enabled: true
+    feedback_threshold: 10
+    update_interval: 24h
+
+# ============================================================================
+# 开发者配置
+# ============================================================================
+developer:
+  # 调试模式
+  debug: true
+
+  # Profiling
+  profiling:
+    enabled: true
+    cpu: true
+    memory: true
+    endpoint: "/debug/pprof"
+
+  # 热重载
+  hot_reload:
+    enabled: true
+    watch_paths:
+      - "internal/"
+      - "pkg/"
+      - "configs/"
+
+# Personal.AI order the ending

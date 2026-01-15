@@ -1,0 +1,416 @@
+// api/proto/agent.proto
+// OpenEAAP Agent Service gRPC Protocol Definition
+// This file defines the gRPC service interface and message types for Agent management
+
+syntax = "proto3";
+
+package openeeap.agent.v1;
+
+option go_package = "github.com/openeeap/openeeap/api/proto/agent;agentpb";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// AgentService defines the gRPC service for Agent operations
+service AgentService {
+ // CreateAgent creates a new Agent
+ rpc CreateAgent(CreateAgentRequest) returns (CreateAgentResponse);
+
+ // GetAgent retrieves an Agent by ID
+ rpc GetAgent(GetAgentRequest) returns (GetAgentResponse);
+
+ // UpdateAgent updates an existing Agent
+ rpc UpdateAgent(UpdateAgentRequest) returns (UpdateAgentResponse);
+
+ // DeleteAgent deletes an Agent by ID
+ rpc DeleteAgent(DeleteAgentRequest) returns (google.protobuf.Empty);
+
+ // ListAgents lists all Agents with pagination
+ rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
+
+ // ExecuteAgent executes an Agent with given input
+ rpc ExecuteAgent(ExecuteAgentRequest) returns (ExecuteAgentResponse);
+
+ // ExecuteAgentStream executes an Agent with streaming output
+ rpc ExecuteAgentStream(ExecuteAgentRequest) returns (stream ExecuteAgentStreamResponse);
+
+ // GetAgentStatus retrieves the runtime status of an Agent
+ rpc GetAgentStatus(GetAgentStatusRequest) returns (GetAgentStatusResponse);
+
+ // DeployAgent deploys an Agent to runtime
+ rpc DeployAgent(DeployAgentRequest) returns (DeployAgentResponse);
+
+ // UndeployAgent removes an Agent from runtime
+ rpc UndeployAgent(UndeployAgentRequest) returns (google.protobuf.Empty);
+}
+
+// RuntimeType defines the type of runtime environment
+enum RuntimeType {
+ RUNTIME_TYPE_UNSPECIFIED = 0;
+ RUNTIME_TYPE_NATIVE = 1;      // Native OpenEAAP runtime
+ RUNTIME_TYPE_LANGCHAIN = 2;   // LangChain adapter
+ RUNTIME_TYPE_AUTOGPT = 3;     // AutoGPT adapter
+ RUNTIME_TYPE_PLUGIN = 4;      // Custom plugin runtime
+}
+
+// AgentStatus defines the lifecycle status of an Agent
+enum AgentStatus {
+ AGENT_STATUS_UNSPECIFIED = 0;
+ AGENT_STATUS_DRAFT = 1;       // Agent is in draft state
+ AGENT_STATUS_ACTIVE = 2;      // Agent is active and deployable
+ AGENT_STATUS_DEPLOYED = 3;    // Agent is deployed to runtime
+ AGENT_STATUS_PAUSED = 4;      // Agent execution is paused
+ AGENT_STATUS_DEPRECATED = 5;  // Agent is deprecated
+ AGENT_STATUS_FAILED = 6;      // Agent deployment/execution failed
+}
+
+// Agent represents the core Agent entity
+message Agent {
+ string id = 1;                                  // Unique identifier
+ string name = 2;                                // Agent name
+ string description = 3;                         // Agent description
+ RuntimeType runtime_type = 4;                   // Runtime environment type
+ AgentStatus status = 5;                         // Current status
+ AgentConfig config = 6;                         // Agent configuration
+ map<string, string> metadata = 7;               // Custom metadata
+ google.protobuf.Timestamp created_at = 8;       // Creation timestamp
+ google.protobuf.Timestamp updated_at = 9;       // Last update timestamp
+ string created_by = 10;                         // Creator user ID
+ string version = 11;                            // Agent version
+}
+
+// AgentConfig defines the configuration for an Agent
+message AgentConfig {
+ ModelConfig model_config = 1;                   // Model configuration
+ PromptConfig prompt_config = 2;                 // Prompt configuration
+ MemoryConfig memory_config = 3;                 // Memory configuration
+ ToolsConfig tools_config = 4;                   // Tools configuration
+ ExecutionConfig execution_config = 5;           // Execution constraints
+ RAGConfig rag_config = 6;                       // RAG configuration
+ PrivacyConfig privacy_config = 7;               // Privacy settings
+}
+
+// ModelConfig defines model-related configuration
+message ModelConfig {
+ string model_id = 1;                            // Model identifier
+ string model_name = 2;                          // Model name (e.g., "gpt-4", "llama-2-70b")
+ float temperature = 3;                          // Sampling temperature (0.0-2.0)
+ int32 max_tokens = 4;                           // Maximum output tokens
+ float top_p = 5;                                // Nucleus sampling parameter
+ float frequency_penalty = 6;                    // Frequency penalty
+ float presence_penalty = 7;                     // Presence penalty
+ repeated string stop_sequences = 8;             // Stop sequences
+ map<string, string> custom_params = 9;          // Provider-specific parameters
+}
+
+// PromptConfig defines prompt template configuration
+message PromptConfig {
+ string system_prompt = 1;                       // System prompt template
+ string user_prompt_template = 2;                // User prompt template
+ repeated PromptExample few_shot_examples = 3;   // Few-shot examples
+ map<string, string> template_variables = 4;     // Template variables
+ bool enable_prompt_optimization = 5;            // Enable automatic prompt optimization
+}
+
+// PromptExample represents a few-shot learning example
+message PromptExample {
+ string input = 1;                               // Example input
+ string output = 2;                              // Example output
+ map<string, string> metadata = 3;               // Example metadata
+}
+
+// MemoryConfig defines memory management configuration
+message MemoryConfig {
+ MemoryType memory_type = 1;                     // Type of memory
+ int32 max_history_length = 2;                   // Maximum conversation history length
+ bool enable_long_term_memory = 3;               // Enable long-term memory storage
+ string vector_store_id = 4;                     // Vector store for semantic memory
+ SummarizationConfig summarization_config = 5;   // Memory summarization settings
+}
+
+// MemoryType defines the type of memory mechanism
+enum MemoryType {
+ MEMORY_TYPE_UNSPECIFIED = 0;
+ MEMORY_TYPE_BUFFER = 1;                         // Simple buffer memory
+ MEMORY_TYPE_SUMMARY = 2;                        // Summarized memory
+ MEMORY_TYPE_SEMANTIC = 3;                       // Semantic vector memory
+ MEMORY_TYPE_HYBRID = 4;                         // Hybrid memory (buffer + semantic)
+}
+
+// SummarizationConfig defines memory summarization settings
+message SummarizationConfig {
+ int32 trigger_token_count = 1;                  // Token count to trigger summarization
+ string summarization_model = 2;                 // Model for summarization
+ string summarization_prompt = 3;                // Prompt for summarization
+}
+
+// ToolsConfig defines tool usage configuration
+message ToolsConfig {
+ repeated ToolDefinition tools = 1;              // Available tools
+ bool enable_auto_tool_selection = 2;            // Enable automatic tool selection
+ int32 max_tool_iterations = 3;                  // Maximum tool invocation iterations
+ map<string, string> tool_credentials = 4;       // Tool API credentials (encrypted)
+}
+
+// ToolDefinition defines a single tool
+message ToolDefinition {
+ string name = 1;                                // Tool name
+ string description = 2;                         // Tool description
+ string endpoint = 3;                            // Tool endpoint URL
+ ToolType tool_type = 4;                         // Tool type
+ map<string, ParameterSchema> parameters = 5;    // Tool parameters schema
+ bool requires_auth = 6;                         // Whether authentication is required
+}
+
+// ToolType defines the type of tool
+enum ToolType {
+ TOOL_TYPE_UNSPECIFIED = 0;
+ TOOL_TYPE_HTTP_API = 1;                         // HTTP API call
+ TOOL_TYPE_FUNCTION = 2;                         // Native function
+ TOOL_TYPE_PYTHON = 3;                           // Python script
+ TOOL_TYPE_SQL = 4;                              // SQL query
+ TOOL_TYPE_PLUGIN = 5;                           // Custom plugin
+}
+
+// ParameterSchema defines the schema for a parameter
+message ParameterSchema {
+ string type = 1;                                // Parameter type (string, number, boolean, etc.)
+ string description = 2;                         // Parameter description
+ bool required = 3;                              // Whether parameter is required
+ string default_value = 4;                       // Default value
+ repeated string enum_values = 5;                // Allowed enum values
+}
+
+// ExecutionConfig defines execution constraints
+message ExecutionConfig {
+ int32 max_execution_time_seconds = 1;           // Maximum execution time
+ int32 max_retries = 2;                          // Maximum retry attempts on failure
+ int32 rate_limit_per_minute = 3;                // Rate limit (requests per minute)
+ float cost_budget_usd = 4;                      // Cost budget in USD
+ bool enable_caching = 5;                        // Enable response caching
+ int32 cache_ttl_seconds = 6;                    // Cache time-to-live
+}
+
+// RAGConfig defines RAG (Retrieval-Augmented Generation) configuration
+message RAGConfig {
+ bool enable_rag = 1;                            // Enable RAG
+ repeated string knowledge_base_ids = 2;         // Knowledge base identifiers
+ int32 top_k = 3;                                // Number of documents to retrieve
+ float similarity_threshold = 4;                 // Minimum similarity threshold
+ RetrievalStrategy retrieval_strategy = 5;       // Retrieval strategy
+ RerankingConfig reranking_config = 6;           // Reranking configuration
+}
+
+// RetrievalStrategy defines the retrieval strategy
+enum RetrievalStrategy {
+ RETRIEVAL_STRATEGY_UNSPECIFIED = 0;
+ RETRIEVAL_STRATEGY_VECTOR = 1;                  // Pure vector similarity
+ RETRIEVAL_STRATEGY_KEYWORD = 2;                 // Keyword-based search
+ RETRIEVAL_STRATEGY_HYBRID = 3;                  // Hybrid vector + keyword
+ RETRIEVAL_STRATEGY_GRAPH = 4;                   // Knowledge graph traversal
+}
+
+// RerankingConfig defines reranking configuration
+message RerankingConfig {
+ bool enable_reranking = 1;                      // Enable reranking
+ string reranking_model = 2;                     // Reranking model identifier
+ int32 reranking_top_n = 3;                      // Number of documents after reranking
+}
+
+// PrivacyConfig defines privacy and security settings
+message PrivacyConfig {
+ bool enable_pii_detection = 1;                  // Enable PII detection
+ bool enable_pii_masking = 2;                    // Enable PII masking
+ repeated string allowed_pii_types = 3;          // Allowed PII types to retain
+ bool enable_audit_logging = 4;                  // Enable audit logging
+ SensitivityLevel sensitivity_level = 5;         // Data sensitivity level
+}
+
+// SensitivityLevel defines data sensitivity levels
+enum SensitivityLevel {
+ SENSITIVITY_LEVEL_UNSPECIFIED = 0;
+ SENSITIVITY_LEVEL_PUBLIC = 1;                   // Public data
+ SENSITIVITY_LEVEL_INTERNAL = 2;                 // Internal data
+ SENSITIVITY_LEVEL_CONFIDENTIAL = 3;             // Confidential data
+ SENSITIVITY_LEVEL_RESTRICTED = 4;               // Highly restricted data
+}
+
+// CreateAgentRequest represents a request to create an Agent
+message CreateAgentRequest {
+ string name = 1;                                // Agent name (required)
+ string description = 2;                         // Agent description
+ RuntimeType runtime_type = 3;                   // Runtime type (required)
+ AgentConfig config = 4;                         // Agent configuration (required)
+ map<string, string> metadata = 5;               // Custom metadata
+}
+
+// CreateAgentResponse represents the response for CreateAgent
+message CreateAgentResponse {
+ Agent agent = 1;                                // Created Agent
+}
+
+// GetAgentRequest represents a request to retrieve an Agent
+message GetAgentRequest {
+ string id = 1;                                  // Agent ID (required)
+}
+
+// GetAgentResponse represents the response for GetAgent
+message GetAgentResponse {
+ Agent agent = 1;                                // Retrieved Agent
+}
+
+// UpdateAgentRequest represents a request to update an Agent
+message UpdateAgentRequest {
+ string id = 1;                                  // Agent ID (required)
+ string name = 2;                                // Updated name
+ string description = 3;                         // Updated description
+ AgentConfig config = 4;                         // Updated configuration
+ AgentStatus status = 5;                         // Updated status
+ map<string, string> metadata = 6;               // Updated metadata
+}
+
+// UpdateAgentResponse represents the response for UpdateAgent
+message UpdateAgentResponse {
+ Agent agent = 1;                                // Updated Agent
+}
+
+// DeleteAgentRequest represents a request to delete an Agent
+message DeleteAgentRequest {
+ string id = 1;                                  // Agent ID (required)
+}
+
+// ListAgentsRequest represents a request to list Agents
+message ListAgentsRequest {
+ int32 page = 1;                                 // Page number (1-indexed)
+ int32 page_size = 2;                            // Number of items per page
+ string filter = 3;                              // Filter expression (e.g., "status=ACTIVE")
+ string sort_by = 4;                             // Sort field (e.g., "created_at")
+ bool sort_desc = 5;                             // Sort in descending order
+}
+
+// ListAgentsResponse represents the response for ListAgents
+message ListAgentsResponse {
+ repeated Agent agents = 1;                      // List of Agents
+ int32 total_count = 2;                          // Total number of Agents matching filter
+ int32 page = 3;                                 // Current page number
+ int32 page_size = 4;                            // Page size
+}
+
+// ExecuteAgentRequest represents a request to execute an Agent
+message ExecuteAgentRequest {
+ string agent_id = 1;                            // Agent ID (required)
+ string input = 2;                               // User input (required)
+ map<string, string> context = 3;                // Execution context
+ string session_id = 4;                          // Session ID for conversation continuity
+ bool enable_streaming = 5;                      // Enable streaming response
+}
+
+// ExecuteAgentResponse represents the response for ExecuteAgent (non-streaming)
+message ExecuteAgentResponse {
+ string execution_id = 1;                        // Unique execution identifier
+ string output = 2;                              // Agent output
+ repeated IntermediateStep intermediate_steps = 3; // Intermediate reasoning steps
+ ExecutionMetadata metadata = 4;                 // Execution metadata
+}
+
+// ExecuteAgentStreamResponse represents a streaming response chunk
+message ExecuteAgentStreamResponse {
+ string execution_id = 1;                        // Execution identifier
+ StreamChunkType chunk_type = 2;                 // Type of chunk
+ string content = 3;                             // Chunk content
+ IntermediateStep intermediate_step = 4;         // Intermediate step (if applicable)
+ ExecutionMetadata metadata = 5;                 // Final metadata (in last chunk)
+}
+
+// StreamChunkType defines the type of streaming chunk
+enum StreamChunkType {
+ STREAM_CHUNK_TYPE_UNSPECIFIED = 0;
+ STREAM_CHUNK_TYPE_TOKEN = 1;                    // Token chunk (incremental output)
+ STREAM_CHUNK_TYPE_INTERMEDIATE_STEP = 2;        // Intermediate reasoning step
+ STREAM_CHUNK_TYPE_FINAL = 3;                    // Final chunk with metadata
+}
+
+// IntermediateStep represents a reasoning step
+message IntermediateStep {
+ string step_type = 1;                           // Step type (e.g., "thought", "tool_call", "observation")
+ string content = 2;                             // Step content
+ string tool_name = 3;                           // Tool name (if tool_call)
+ string tool_input = 4;                          // Tool input (if tool_call)
+ string tool_output = 5;                         // Tool output (if observation)
+ google.protobuf.Timestamp timestamp = 6;        // Step timestamp
+}
+
+// ExecutionMetadata contains metadata about the execution
+message ExecutionMetadata {
+ int32 total_tokens = 1;                         // Total tokens consumed
+ int32 prompt_tokens = 2;                        // Prompt tokens
+ int32 completion_tokens = 3;                    // Completion tokens
+ float cost_usd = 4;                             // Execution cost in USD
+ int64 duration_ms = 5;                          // Execution duration in milliseconds
+ bool cache_hit = 6;                             // Whether response was from cache
+ string model_used = 7;                          // Model identifier used
+ int32 tool_calls_count = 8;                     // Number of tool invocations
+}
+
+// GetAgentStatusRequest represents a request to get Agent status
+message GetAgentStatusRequest {
+ string agent_id = 1;                            // Agent ID (required)
+}
+
+// GetAgentStatusResponse represents the response for GetAgentStatus
+message GetAgentStatusResponse {
+ string agent_id = 1;                            // Agent ID
+ AgentStatus status = 2;                         // Current status
+ RuntimeStatus runtime_status = 3;               // Runtime status
+ AgentMetrics metrics = 4;                       // Agent metrics
+}
+
+// RuntimeStatus represents the runtime status of an Agent
+message RuntimeStatus {
+ bool is_healthy = 1;                            // Health check status
+ google.protobuf.Timestamp last_health_check = 2; // Last health check timestamp
+ int32 active_executions = 3;                    // Number of active executions
+ string error_message = 4;                       // Error message (if unhealthy)
+}
+
+// AgentMetrics contains performance metrics for an Agent
+message AgentMetrics {
+ int64 total_executions = 1;                     // Total number of executions
+ int64 successful_executions = 2;                // Number of successful executions
+ int64 failed_executions = 3;                    // Number of failed executions
+ float average_latency_ms = 4;                   // Average execution latency
+ float p95_latency_ms = 5;                       // P95 latency
+ float total_cost_usd = 6;                       // Total cost incurred
+ float cache_hit_rate = 7;                       // Cache hit rate (0.0-1.0)
+}
+
+// DeployAgentRequest represents a request to deploy an Agent
+message DeployAgentRequest {
+ string agent_id = 1;                            // Agent ID (required)
+ DeploymentConfig deployment_config = 2;         // Deployment configuration
+}
+
+// DeploymentConfig defines deployment settings
+message DeploymentConfig {
+ int32 replicas = 1;                             // Number of replicas
+ string deployment_environment = 2;              // Environment (e.g., "production", "staging")
+ map<string, string> resource_limits = 3;        // Resource limits (cpu, memory, gpu)
+ bool enable_auto_scaling = 4;                   // Enable auto-scaling
+ int32 min_replicas = 5;                         // Minimum replicas for auto-scaling
+ int32 max_replicas = 6;                         // Maximum replicas for auto-scaling
+}
+
+// DeployAgentResponse represents the response for DeployAgent
+message DeployAgentResponse {
+ string deployment_id = 1;                       // Deployment identifier
+ AgentStatus status = 2;                         // Updated status
+ google.protobuf.Timestamp deployed_at = 3;      // Deployment timestamp
+}
+
+// UndeployAgentRequest represents a request to undeploy an Agent
+message UndeployAgentRequest {
+ string agent_id = 1;                            // Agent ID (required)
+ bool force = 2;                                 // Force undeploy even with active executions
+}
+
+// Personal.AI order the ending

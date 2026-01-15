@@ -1,0 +1,181 @@
+# OpenEAAP Helm Chart 元数据定义
+# 此文件定义了 OpenEAAP 的 Helm Chart 基本信息和依赖关系
+
+apiVersion: v2
+name: openeeap
+description: |
+  OpenEAAP (Open Enterprise AI Agent Platform) - 企业级 AI Agent 平台
+  提供 Agent 编排、模型推理、RAG、在线学习、治理合规等完整能力
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+# 项目关键字，便于搜索和分类
+keywords:
+  - ai
+  - agent
+  - llm
+  - rag
+  - orchestration
+  - enterprise
+
+# 项目维护者信息
+maintainers:
+  - name: OpenEAAP Team
+    email: team@openeeap.org
+    url: https://github.com/openeeap/openeeap
+
+# 项目主页和源码仓库
+home: https://openeeap.org
+sources:
+  - https://github.com/openeeap/openeeap
+  - https://github.com/openeeap/openeeap-helm
+
+# Chart 图标 URL
+icon: https://openeeap.org/assets/logo.svg
+
+# 依赖的子 Charts
+dependencies:
+  # PostgreSQL 数据库（用于存储元数据）
+  - name: postgresql
+    version: "^12.0.0"
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+    tags:
+      - database
+    import-values:
+      - child: auth
+        parent: postgresql.auth
+
+  # Redis 缓存（用于 L2 缓存和会话管理）
+  - name: redis
+    version: "^18.0.0"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+    tags:
+      - cache
+    import-values:
+      - child: auth
+        parent: redis.auth
+
+  # Kafka 消息队列（用于异步任务和事件驱动）
+  - name: kafka
+    version: "^26.0.0"
+    repository: https://charts.bitnami.com/bitnami
+    condition: kafka.enabled
+    tags:
+      - messaging
+
+  # MinIO 对象存储（用于文件存储）
+  - name: minio
+    version: "^12.0.0"
+    repository: https://charts.bitnami.com/bitnami
+    condition: minio.enabled
+    tags:
+      - storage
+
+  # Prometheus 监控（用于指标收集）
+  - name: kube-prometheus-stack
+    version: "^54.0.0"
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: monitoring.prometheus.enabled
+    tags:
+      - monitoring
+
+  # Jaeger 分布式追踪
+  - name: jaeger
+    version: "^0.71.0"
+    repository: https://jaegertracing.github.io/helm-charts
+    condition: tracing.jaeger.enabled
+    tags:
+      - tracing
+
+  # Elasticsearch（用于日志存储和审计）
+  - name: elasticsearch
+    version: "^19.0.0"
+    repository: https://helm.elastic.co
+    condition: logging.elasticsearch.enabled
+    tags:
+      - logging
+
+# Chart 注解（用于提供额外元数据）
+annotations:
+  # Artifact Hub 分类
+  artifacthub.io/category: ai-ml
+  artifacthub.io/license: Apache-2.0
+
+  # 变更日志
+  artifacthub.io/changes: |
+    - kind: added
+      description: 初始版本发布
+      links:
+        - name: GitHub Release
+          url: https://github.com/openeeap/openeeap/releases/tag/v1.0.0
+
+  # 安装说明
+  artifacthub.io/install: |
+    # 添加 Helm 仓库
+    helm repo add openeeap https://charts.openeeap.org
+    helm repo update
+
+    # 安装 OpenEAAP
+    helm install openeeap openeeap/openeeap \
+      --namespace openeeap \
+      --create-namespace \
+      --values values.yaml
+
+  # 预安装说明
+  artifacthub.io/preinstall: |
+    # 确保 Kubernetes 集群版本 >= 1.24
+    # 确保已安装 NVIDIA GPU Operator（如需 GPU 推理）
+    # 确保已配置 StorageClass（用于持久化存储）
+
+  # 推荐资源配置
+  artifacthub.io/recommendations: |
+    - url: https://artifacthub.io/packages/helm/bitnami/postgresql
+    - url: https://artifacthub.io/packages/helm/bitnami/redis
+    - url: https://artifacthub.io/packages/helm/bitnami/minio
+
+  # 安全报告联系方式
+  artifacthub.io/containsSecurityUpdates: "false"
+  artifacthub.io/operator: "false"
+  artifacthub.io/signKey: |
+    fingerprint: 1234567890ABCDEF1234567890ABCDEF12345678
+    url: https://keys.openeeap.org/openeeap-sign.asc
+
+# Kubernetes 版本兼容性
+kubeVersion: ">=1.24.0-0"
+
+# Chart 类型（application 或 library）
+# application: 可直接安装的应用
+# library: 供其他 Chart 引用的库
+
+# Chart 依赖锁定（自动生成，不需手动编辑）
+# 运行 `helm dependency update` 后生成 Chart.lock 文件
+
+# 条件标签说明
+# - database: 数据库相关组件
+# - cache: 缓存相关组件
+# - messaging: 消息队列相关组件
+# - storage: 存储相关组件
+# - monitoring: 监控相关组件
+# - tracing: 追踪相关组件
+# - logging: 日志相关组件
+
+# 使用示例：
+# 1. 仅安装核心组件（不安装依赖）：
+#    helm install openeeap ./openeeap --set postgresql.enabled=false --set redis.enabled=false
+#
+# 2. 完整安装（包含所有依赖）：
+#    helm install openeeap ./openeeap
+#
+# 3. 仅安装数据库相关组件：
+#    helm install openeeap ./openeeap --set tags.database=true --set tags.cache=false
+#
+# 4. 升级 Chart：
+#    helm upgrade openeeap ./openeeap --reuse-values
+#
+# 5. 卸载 Chart：
+#    helm uninstall openeeap --namespace openeeap
+
+# Personal.AI order the ending

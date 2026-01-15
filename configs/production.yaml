@@ -1,0 +1,546 @@
+# OpenEAAP 生产环境配置
+# 文件: configs/production.yaml
+# 说明: 生产环境配置，覆盖 default.yaml 默认配置
+
+# ============================================================================
+# 服务器配置
+# ============================================================================
+server:
+  mode: "release"  # 发布模式: release / debug / test
+  host: "0.0.0.0"
+  http_port: 8080
+  grpc_port: 9090
+
+  # 优雅关闭配置
+  shutdown_timeout: 30s
+
+  # 限流配置
+  rate_limit:
+    enabled: true
+    requests_per_second: 1000  # 每秒请求数限制
+    burst: 2000  # 突发流量限制
+
+  # TLS 配置
+  tls:
+    enabled: true
+    cert_file: "/etc/openeeap/tls/server.crt"
+    key_file: "/etc/openeeap/tls/server.key"
+    min_version: "TLS1.3"
+
+# ============================================================================
+# 数据库配置
+# ============================================================================
+database:
+  # 主数据库（PostgreSQL 云服务）
+  primary:
+    host: "prod-db-cluster.example.com"
+    port: 5432
+    database: "openeeap_prod"
+    username: "${DB_USERNAME}"  # 从环境变量读取
+    password: "${DB_PASSWORD}"  # 从环境变量读取
+    sslmode: "require"
+
+    # 连接池配置（生产级）
+    max_open_conns: 100
+    max_idle_conns: 20
+    conn_max_lifetime: 1h
+    conn_max_idle_time: 10m
+
+    # 性能配置
+    prepare_statements: true
+    slow_query_threshold: 200ms  # 慢查询阈值
+
+  # 只读副本（用于读写分离）
+  replicas:
+    - host: "prod-db-replica-1.example.com"
+      port: 5432
+      weight: 50  # 负载均衡权重
+    - host: "prod-db-replica-2.example.com"
+      port: 5432
+      weight: 50
+
+# ============================================================================
+# Redis 配置
+# ============================================================================
+redis:
+  # Redis 集群模式
+  mode: "cluster"
+
+  # 集群节点
+  cluster:
+    addrs:
+      - "prod-redis-1.example.com:6379"
+      - "prod-redis-2.example.com:6379"
+      - "prod-redis-3.example.com:6379"
+      - "prod-redis-4.example.com:6379"
+      - "prod-redis-5.example.com:6379"
+      - "prod-redis-6.example.com:6379"
+    password: "${REDIS_PASSWORD}"
+
+    # 集群配置
+    read_only: false
+    route_by_latency: true
+    route_randomly: false
+
+  # 连接池配置
+  pool_size: 100
+  min_idle_conns: 20
+  max_retries: 3
+
+  # 超时配置
+  dial_timeout: 5s
+  read_timeout: 3s
+  write_timeout: 3s
+  pool_timeout: 4s
+
+  # TLS 配置
+  tls_enabled: true
+  tls_skip_verify: false
+
+# ============================================================================
+# 向量数据库配置
+# ============================================================================
+vector_db:
+  type: "milvus"
+
+  milvus:
+    # Milvus 集群地址
+    address: "prod-milvus-lb.example.com:19530"
+
+    # 认证配置
+    username: "${MILVUS_USERNAME}"
+    password: "${MILVUS_PASSWORD}"
+
+    # TLS 配置
+    tls_mode: "TLS"
+
+    # 连接池配置
+    max_idle_conns: 50
+    max_open_conns: 200
+
+    # 性能配置
+    retry_times: 3
+    timeout: 10s
+    keep_alive_time: 30s
+
+    # 集合配置
+    collections:
+      knowledge_base:
+        name: "knowledge_embeddings"
+        dimension: 1536
+        metric_type: "IP"  # Inner Product
+        index_type: "IVF_FLAT"
+        nlist: 2048
+        shard_num: 4  # 分片数
+
+      cache:
+        name: "inference_cache"
+        dimension: 1536
+        metric_type: "IP"
+        index_type: "HNSW"
+        M: 32
+        efConstruction: 200
+        shard_num: 2
+
+# ============================================================================
+# 对象存储配置
+# ============================================================================
+storage:
+  type: "s3"  # 生产环境使用 S3 兼容存储
+
+  s3:
+    endpoint: "https://s3.amazonaws.com"
+    region: "us-west-2"
+    access_key: "${S3_ACCESS_KEY}"
+    secret_key: "${S3_SECRET_KEY}"
+
+    # 桶配置
+    buckets:
+      models: "openeeap-models-prod"
+      documents: "openeeap-documents-prod"
+      logs: "openeeap-logs-prod"
+      backups: "openeeap-backups-prod"
+
+    # TLS 配置
+    use_ssl: true
+
+    # 性能配置
+    max_retries: 3
+    part_size: 10485760  # 10MB
+    concurrency: 10
+
+# ============================================================================
+# 消息队列配置
+# ============================================================================
+message_queue:
+  type: "kafka"
+
+  kafka:
+    # Kafka 集群地址
+    brokers:
+      - "prod-kafka-1.example.com:9093"
+      - "prod-kafka-2.example.com:9093"
+      - "prod-kafka-3.example.com:9093"
+
+    # 认证配置（SASL/SCRAM）
+    sasl:
+      enabled: true
+      mechanism: "SCRAM-SHA-512"
+      username: "${KAFKA_USERNAME}"
+      password: "${KAFKA_PASSWORD}"
+
+    # TLS 配置
+    tls:
+      enabled: true
+      skip_verify: false
+      cert_file: "/etc/openeeap/tls/kafka-client.crt"
+      key_file: "/etc/openeeap/tls/kafka-client.key"
+      ca_file: "/etc/openeeap/tls/kafka-ca.crt"
+
+    # 生产者配置
+    producer:
+      acks: "all"  # 等待所有副本确认
+      compression: "snappy"
+      max_message_bytes: 1048576  # 1MB
+      batch_size: 16384
+      linger_ms: 10
+      retries: 3
+
+    # 消费者配置
+    consumer:
+      group_id: "openeeap-workers-prod"
+      session_timeout: 10s
+      heartbeat_interval: 3s
+      max_poll_records: 500
+      auto_offset_reset: "earliest"
+      enable_auto_commit: false  # 手动提交
+
+    # Topic 配置
+    topics:
+      training_jobs:
+        name: "training-jobs"
+        partitions: 12
+        replication_factor: 3
+      feedback_events:
+        name: "feedback-events"
+        partitions: 8
+        replication_factor: 3
+      audit_logs:
+        name: "audit-logs"
+        partitions: 6
+        replication_factor: 3
+
+# ============================================================================
+# 推理引擎配置
+# ============================================================================
+inference:
+  # vLLM 集群配置
+  vllm:
+    # 负载均衡地址
+    endpoints:
+      - url: "https://prod-vllm-1.example.com:8000"
+        weight: 100
+      - url: "https://prod-vllm-2.example.com:8000"
+        weight: 100
+      - url: "https://prod-vllm-3.example.com:8000"
+        weight: 100
+
+    # 超时配置
+    timeout: 60s
+
+    # 重试配置
+    max_retries: 2
+    retry_delay: 1s
+
+    # TLS 配置
+    tls_enabled: true
+
+  # 缓存配置
+  cache:
+    enabled: true
+
+    # L1 本地缓存
+    l1:
+      enabled: true
+      max_entries: 10000
+      ttl: 1h
+
+    # L2 Redis 缓存
+    l2:
+      enabled: true
+      ttl: 24h
+      key_prefix: "inference:cache:l2:"
+
+    # L3 向量缓存
+    l3:
+      enabled: true
+      similarity_threshold: 0.95
+      max_candidates: 10
+      ttl: 72h
+
+# ============================================================================
+# RAG 配置
+# ============================================================================
+rag:
+  # 检索配置
+  retrieval:
+    max_results: 20
+    min_score: 0.7
+
+    # 混合检索权重
+    vector_weight: 0.7
+    keyword_weight: 0.3
+
+  # 重排序配置
+  rerank:
+    enabled: true
+    model: "cross-encoder/ms-marco-MiniLM-L-12-v2"
+    top_k: 5
+
+  # 生成配置
+  generation:
+    max_context_length: 8000
+    temperature: 0.1
+    top_p: 0.95
+
+# ============================================================================
+# 策略引擎配置
+# ============================================================================
+governance:
+  policy:
+    # 策略存储
+    storage: "database"
+
+    # 策略缓存
+    cache:
+      enabled: true
+      ttl: 10m
+
+    # 决策日志
+    decision_logging: true
+
+  # 审计配置
+  audit:
+    enabled: true
+
+    # 审计日志存储
+    storage:
+      type: "elasticsearch"
+      endpoint: "https://prod-es-cluster.example.com:9200"
+      index_prefix: "openeeap-audit"
+      username: "${ES_USERNAME}"
+      password: "${ES_PASSWORD}"
+
+    # 日志保留期
+    retention_days: 365
+
+  # 合规配置
+  compliance:
+    # 启用的合规框架
+    frameworks:
+      - "SOC2"
+      - "GDPR"
+      - "PCI-DSS"
+
+    # PII 检测
+    pii_detection:
+      enabled: true
+      sensitivity_levels:
+        - "HIGH"
+        - "MEDIUM"
+        - "LOW"
+
+# ============================================================================
+# 可观测性配置
+# ============================================================================
+observability:
+  # 日志配置
+  logging:
+    level: "info"  # 生产环境使用 info 级别
+    format: "json"
+
+    # 输出配置
+    outputs:
+      - type: "stdout"
+      - type: "file"
+        path: "/var/log/openeeap/app.log"
+        max_size: 100  # MB
+        max_backups: 30
+        max_age: 90  # 天
+        compress: true
+      - type: "elasticsearch"
+        endpoint: "https://prod-es-cluster.example.com:9200"
+        index: "openeeap-logs"
+
+  # 追踪配置
+  tracing:
+    enabled: true
+
+    # Jaeger 配置
+    exporter: "otlp"
+    endpoint: "https://prod-jaeger-collector.example.com:4318"
+
+    # 采样配置
+    sampler:
+      type: "probabilistic"
+      param: 0.1  # 10% 采样率
+
+    # TLS 配置
+    tls_enabled: true
+
+  # 指标配置
+  metrics:
+    enabled: true
+
+    # Prometheus 配置
+    prometheus:
+      enabled: true
+      path: "/metrics"
+      port: 9091
+
+      # 指标保留期
+      retention: "30d"
+
+    # 自定义指标
+    custom:
+      - name: "inference_latency_ms"
+        type: "histogram"
+        buckets: [10, 50, 100, 200, 500, 1000, 2000, 5000]
+      - name: "cache_hit_rate"
+        type: "gauge"
+
+# ============================================================================
+# 安全配置
+# ============================================================================
+security:
+  # 认证配置
+  authentication:
+    # JWT 配置
+    jwt:
+      secret_key: "${JWT_SECRET_KEY}"
+      expiration: 24h
+      refresh_expiration: 168h  # 7天
+      issuer: "openeeap-prod"
+
+    # API Key 配置
+    api_key:
+      enabled: true
+      header_name: "X-API-Key"
+
+  # 授权配置
+  authorization:
+    enabled: true
+    default_deny: true
+
+  # 加密配置
+  encryption:
+    # 字段加密
+    field_encryption:
+      enabled: true
+      algorithm: "AES-256-GCM"
+      key: "${ENCRYPTION_KEY}"
+
+    # 传输加密
+    transport:
+      tls_min_version: "TLS1.3"
+
+  # 安全头配置
+  headers:
+    - "X-Content-Type-Options: nosniff"
+    - "X-Frame-Options: DENY"
+    - "X-XSS-Protection: 1; mode=block"
+    - "Strict-Transport-Security: max-age=31536000; includeSubDomains"
+
+# ============================================================================
+# 性能优化配置
+# ============================================================================
+performance:
+  # 并发控制
+  concurrency:
+    max_workers: 100
+    queue_size: 1000
+
+  # 批处理配置
+  batch:
+    enabled: true
+    max_batch_size: 32
+    batch_timeout: 100ms
+
+  # 预热配置
+  warmup:
+    enabled: true
+    endpoints:
+      - "/health"
+      - "/ready"
+
+  # 连接保活
+  keepalive:
+    enabled: true
+    time: 30s
+    timeout: 10s
+
+# ============================================================================
+# 监控告警配置
+# ============================================================================
+alerting:
+  enabled: true
+
+  # 告警通道
+  channels:
+    - type: "pagerduty"
+      integration_key: "${PAGERDUTY_KEY}"
+    - type: "slack"
+      webhook_url: "${SLACK_WEBHOOK_URL}"
+    - type: "email"
+      smtp_host: "smtp.example.com"
+      smtp_port: 587
+      from: "alerts@openeeap.com"
+      to:
+        - "oncall@example.com"
+
+  # 告警规则
+  rules:
+    - name: "HighErrorRate"
+      condition: "error_rate > 0.01"
+      duration: "5m"
+      severity: "P1"
+
+    - name: "HighLatency"
+      condition: "p95_latency > 5000"
+      duration: "10m"
+      severity: "P2"
+
+    - name: "LowCacheHitRate"
+      condition: "cache_hit_rate < 0.4"
+      duration: "15m"
+      severity: "P3"
+
+# ============================================================================
+# 备份配置
+# ============================================================================
+backup:
+  enabled: true
+
+  # 数据库备份
+  database:
+    schedule: "0 2 * * *"  # 每天凌晨2点
+    retention_days: 30
+    backup_bucket: "openeeap-backups-prod"
+
+  # 配置备份
+  config:
+    schedule: "0 3 * * *"  # 每天凌晨3点
+    retention_days: 90
+
+# ============================================================================
+# 特性开关
+# ============================================================================
+feature_flags:
+  online_learning: true
+  model_routing: true
+  privacy_gateway: true
+  policy_enforcement: true
+  distributed_tracing: true
+  advanced_caching: true
+
+# Personal.AI order the ending

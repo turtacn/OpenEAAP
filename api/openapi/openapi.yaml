@@ -1,0 +1,1304 @@
+openapi: 3.0.3
+info:
+  title: OpenEAAP API
+  description: |
+    OpenEAAP (Open Enterprise AI Agent Platform) REST API Specification.
+
+    This API provides endpoints for managing AI agents, workflows, models, and knowledge bases.
+
+    ## Authentication
+    All API requests require authentication using Bearer tokens:
+    ```
+    Authorization: Bearer <your-api-token>
+    ```
+
+    ## Rate Limiting
+    - Default: 100 requests per minute per user
+    - Burst: 200 requests per minute
+
+    ## Versioning
+    API version is included in the path: `/api/v1/...`
+  version: 1.0.0
+  contact:
+    name: OpenEAAP Team
+    email: support@openeeap.org
+    url: https://github.com/openeeap/openeeap
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: https://api.openeeap.org/v1
+    description: Production server
+  - url: https://staging-api.openeeap.org/v1
+    description: Staging server
+  - url: http://localhost:8080/v1
+    description: Local development server
+
+tags:
+  - name: agents
+    description: AI Agent management
+  - name: workflows
+    description: Workflow orchestration
+  - name: models
+    description: Model management and inference
+  - name: knowledge
+    description: Knowledge base and RAG
+  - name: training
+    description: Model training and fine-tuning
+  - name: governance
+    description: Policy and compliance
+  - name: system
+    description: System health and monitoring
+
+paths:
+  # ==================== Agent APIs ====================
+  /agents:
+    get:
+      tags: [agents]
+      summary: List all agents
+      description: Retrieve a paginated list of agents
+      operationId: listAgents
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: runtime_type
+          in: query
+          schema:
+            type: string
+            enum: [native, langchain, autogpt]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, error]
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Agent'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - BearerAuth: []
+
+    post:
+      tags: [agents]
+      summary: Create a new agent
+      description: Create and deploy a new AI agent
+      operationId: createAgent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAgentRequest'
+      responses:
+        '201':
+          description: Agent created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - BearerAuth: []
+
+  /agents/{agentId}:
+    get:
+      tags: [agents]
+      summary: Get agent by ID
+      operationId: getAgent
+      parameters:
+        - $ref: '#/components/parameters/AgentIdParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth: []
+
+    put:
+      tags: [agents]
+      summary: Update agent
+      operationId: updateAgent
+      parameters:
+        - $ref: '#/components/parameters/AgentIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAgentRequest'
+      responses:
+        '200':
+          description: Agent updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth: []
+
+    delete:
+      tags: [agents]
+      summary: Delete agent
+      operationId: deleteAgent
+      parameters:
+        - $ref: '#/components/parameters/AgentIdParam'
+      responses:
+        '204':
+          description: Agent deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth: []
+
+  /agents/{agentId}/execute:
+    post:
+      tags: [agents]
+      summary: Execute agent
+      description: Execute an agent with the provided input
+      operationId: executeAgent
+      parameters:
+        - $ref: '#/components/parameters/AgentIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteAgentRequest'
+      responses:
+        '200':
+          description: Execution completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth: []
+
+  /agents/{agentId}/stream:
+    post:
+      tags: [agents]
+      summary: Execute agent with streaming
+      description: Execute an agent and stream the response
+      operationId: streamAgent
+      parameters:
+        - $ref: '#/components/parameters/AgentIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteAgentRequest'
+      responses:
+        '200':
+          description: Streaming response
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                format: binary
+      security:
+        - BearerAuth: []
+
+  # ==================== Workflow APIs ====================
+  /workflows:
+    get:
+      tags: [workflows]
+      summary: List all workflows
+      operationId: listWorkflows
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Workflow'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+      security:
+        - BearerAuth: []
+
+    post:
+      tags: [workflows]
+      summary: Create a new workflow
+      operationId: createWorkflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkflowRequest'
+      responses:
+        '201':
+          description: Workflow created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workflow'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+      security:
+        - BearerAuth: []
+
+  /workflows/{workflowId}:
+    get:
+      tags: [workflows]
+      summary: Get workflow by ID
+      operationId: getWorkflow
+      parameters:
+        - $ref: '#/components/parameters/WorkflowIdParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workflow'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      security:
+        - BearerAuth: []
+
+    delete:
+      tags: [workflows]
+      summary: Delete workflow
+      operationId: deleteWorkflow
+      parameters:
+        - $ref: '#/components/parameters/WorkflowIdParam'
+      responses:
+        '204':
+          description: Workflow deleted successfully
+      security:
+        - BearerAuth: []
+
+  /workflows/{workflowId}/run:
+    post:
+      tags: [workflows]
+      summary: Run workflow
+      operationId: runWorkflow
+      parameters:
+        - $ref: '#/components/parameters/WorkflowIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunWorkflowRequest'
+      responses:
+        '200':
+          description: Workflow execution started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowExecution'
+      security:
+        - BearerAuth: []
+
+  /workflows/{workflowId}/executions/{executionId}:
+    get:
+      tags: [workflows]
+      summary: Get workflow execution status
+      operationId: getWorkflowExecution
+      parameters:
+        - $ref: '#/components/parameters/WorkflowIdParam'
+        - $ref: '#/components/parameters/ExecutionIdParam'
+      responses:
+        '200':
+          description: Execution status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowExecution'
+      security:
+        - BearerAuth: []
+
+  /workflows/{workflowId}/executions/{executionId}/pause:
+    post:
+      tags: [workflows]
+      summary: Pause workflow execution
+      operationId: pauseWorkflowExecution
+      parameters:
+        - $ref: '#/components/parameters/WorkflowIdParam'
+        - $ref: '#/components/parameters/ExecutionIdParam'
+      responses:
+        '200':
+          description: Execution paused
+      security:
+        - BearerAuth: []
+
+  /workflows/{workflowId}/executions/{executionId}/resume:
+    post:
+      tags: [workflows]
+      summary: Resume workflow execution
+      operationId: resumeWorkflowExecution
+      parameters:
+        - $ref: '#/components/parameters/WorkflowIdParam'
+        - $ref: '#/components/parameters/ExecutionIdParam'
+      responses:
+        '200':
+          description: Execution resumed
+      security:
+        - BearerAuth: []
+
+  # ==================== Model APIs ====================
+  /models:
+    get:
+      tags: [models]
+      summary: List all models
+      operationId: listModels
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [llm, embedding, reranker]
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Model'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+      security:
+        - BearerAuth: []
+
+    post:
+      tags: [models]
+      summary: Register a new model
+      operationId: registerModel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterModelRequest'
+      responses:
+        '201':
+          description: Model registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Model'
+      security:
+        - BearerAuth: []
+
+  /models/{modelId}:
+    get:
+      tags: [models]
+      summary: Get model by ID
+      operationId: getModel
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Model'
+      security:
+        - BearerAuth: []
+
+    delete:
+      tags: [models]
+      summary: Unregister model
+      operationId: unregisterModel
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+      responses:
+        '204':
+          description: Model unregistered successfully
+      security:
+        - BearerAuth: []
+
+  /models/{modelId}/infer:
+    post:
+      tags: [models]
+      summary: Run model inference
+      operationId: inferModel
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InferenceRequest'
+      responses:
+        '200':
+          description: Inference result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InferenceResponse'
+      security:
+        - BearerAuth: []
+
+  # ==================== Knowledge APIs ====================
+  /knowledge/documents:
+    get:
+      tags: [knowledge]
+      summary: List all documents
+      operationId: listDocuments
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Document'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+      security:
+        - BearerAuth: []
+
+    post:
+      tags: [knowledge]
+      summary: Upload a new document
+      operationId: uploadDocument
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '201':
+          description: Document uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+      security:
+        - BearerAuth: []
+
+  /knowledge/documents/{documentId}:
+    get:
+      tags: [knowledge]
+      summary: Get document by ID
+      operationId: getDocument
+      parameters:
+        - $ref: '#/components/parameters/DocumentIdParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+      security:
+        - BearerAuth: []
+
+    delete:
+      tags: [knowledge]
+      summary: Delete document
+      operationId: deleteDocument
+      parameters:
+        - $ref: '#/components/parameters/DocumentIdParam'
+      responses:
+        '204':
+          description: Document deleted successfully
+      security:
+        - BearerAuth: []
+
+  /knowledge/search:
+    post:
+      tags: [knowledge]
+      summary: Search knowledge base
+      operationId: searchKnowledge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KnowledgeSearchRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeSearchResponse'
+      security:
+        - BearerAuth: []
+
+  # ==================== Training APIs ====================
+  /training/jobs:
+    get:
+      tags: [training]
+      summary: List all training jobs
+      operationId: listTrainingJobs
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TrainingJob'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+      security:
+        - BearerAuth: []
+
+    post:
+      tags: [training]
+      summary: Create a new training job
+      operationId: createTrainingJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTrainingJobRequest'
+      responses:
+        '201':
+          description: Training job created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingJob'
+      security:
+        - BearerAuth: []
+
+  /training/jobs/{jobId}:
+    get:
+      tags: [training]
+      summary: Get training job status
+      operationId: getTrainingJob
+      parameters:
+        - $ref: '#/components/parameters/JobIdParam'
+      responses:
+        '200':
+          description: Training job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingJob'
+      security:
+        - BearerAuth: []
+
+    delete:
+      tags: [training]
+      summary: Cancel training job
+      operationId: cancelTrainingJob
+      parameters:
+        - $ref: '#/components/parameters/JobIdParam'
+      responses:
+        '204':
+          description: Training job cancelled
+      security:
+        - BearerAuth: []
+
+  # ==================== Governance APIs ====================
+  /governance/policies:
+    get:
+      tags: [governance]
+      summary: List all policies
+      operationId: listPolicies
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Policy'
+      security:
+        - BearerAuth: []
+
+    post:
+      tags: [governance]
+      summary: Create a new policy
+      operationId: createPolicy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePolicyRequest'
+      responses:
+        '201':
+          description: Policy created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+      security:
+        - BearerAuth: []
+
+  /governance/audit/logs:
+    get:
+      tags: [governance]
+      summary: Query audit logs
+      operationId: queryAuditLogs
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: start_time
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: user_id
+          in: query
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditLog'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+      security:
+        - BearerAuth: []
+
+  # ==================== System APIs ====================
+  /system/health:
+    get:
+      tags: [system]
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /system/metrics:
+    get:
+      tags: [system]
+      summary: Get system metrics
+      operationId: getMetrics
+      responses:
+        '200':
+          description: System metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemMetrics'
+      security:
+        - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSizeParam:
+      name: page_size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    AgentIdParam:
+      name: agentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    WorkflowIdParam:
+      name: workflowId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ExecutionIdParam:
+      name: executionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ModelIdParam:
+      name: modelId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DocumentIdParam:
+      name: documentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    JobIdParam:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    # ==================== Agent Schemas ====================
+    Agent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        runtime_type:
+          type: string
+          enum: [native, langchain, autogpt]
+        config:
+          type: object
+          additionalProperties: true
+        status:
+          type: string
+          enum: [active, inactive, error]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateAgentRequest:
+      type: object
+      required:
+        - name
+        - runtime_type
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        runtime_type:
+          type: string
+          enum: [native, langchain, autogpt]
+        config:
+          type: object
+          additionalProperties: true
+
+    UpdateAgentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        config:
+          type: object
+          additionalProperties: true
+        status:
+          type: string
+          enum: [active, inactive]
+
+    ExecuteAgentRequest:
+      type: object
+      required:
+        - input
+      properties:
+        input:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+        parameters:
+          type: object
+          additionalProperties: true
+
+    ExecutionResult:
+      type: object
+      properties:
+        output:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        trace_id:
+          type: string
+        execution_time_ms:
+          type: integer
+
+    # ==================== Workflow Schemas ====================
+    Workflow:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowStep'
+        trigger:
+          type: object
+          additionalProperties: true
+        status:
+          type: string
+          enum: [active, inactive]
+        created_at:
+          type: string
+          format: date-time
+
+    WorkflowStep:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        agent_id:
+          type: string
+          format: uuid
+        condition:
+          type: string
+        next_steps:
+          type: array
+          items:
+            type: string
+
+    CreateWorkflowRequest:
+      type: object
+      required:
+        - name
+        - steps
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowStep'
+        trigger:
+          type: object
+
+    RunWorkflowRequest:
+      type: object
+      properties:
+        input:
+          type: object
+          additionalProperties: true
+        context:
+          type: object
+          additionalProperties: true
+
+    WorkflowExecution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workflow_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [running, paused, completed, failed]
+        current_step:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+
+    # ==================== Model Schemas ====================
+    Model:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [llm, embedding, reranker]
+        version:
+          type: string
+        endpoint:
+          type: string
+        config:
+          type: object
+          additionalProperties: true
+        status:
+          type: string
+          enum: [available, unavailable]
+
+    RegisterModelRequest:
+      type: object
+      required:
+        - name
+        - type
+        - endpoint
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [llm, embedding, reranker]
+        version:
+          type: string
+        endpoint:
+          type: string
+        config:
+          type: object
+
+    InferenceRequest:
+      type: object
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+        max_tokens:
+          type: integer
+        temperature:
+          type: number
+        top_p:
+          type: number
+        stream:
+          type: boolean
+
+    InferenceResponse:
+      type: object
+      properties:
+        text:
+          type: string
+        tokens_used:
+          type: integer
+        finish_reason:
+          type: string
+
+    # ==================== Knowledge Schemas ====================
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+        metadata:
+          type: object
+          additionalProperties: true
+        uploaded_at:
+          type: string
+          format: date-time
+
+    KnowledgeSearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+        top_k:
+          type: integer
+          default: 10
+        filters:
+          type: object
+          additionalProperties: true
+
+    KnowledgeSearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              document_id:
+                type: string
+              chunk_id:
+                type: string
+              text:
+                type: string
+              score:
+                type: number
+              metadata:
+                type: object
+
+    # ==================== Training Schemas ====================
+    TrainingJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [rlhf, dpo, sft]
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        config:
+          type: object
+        progress:
+          type: number
+        started_at:
+          type: string
+          format: date-time
+
+    CreateTrainingJobRequest:
+      type: object
+      required:
+        - type
+        - config
+      properties:
+        type:
+          type: string
+          enum: [rlhf, dpo, sft]
+        config:
+          type: object
+
+    # ==================== Governance Schemas ====================
+    Policy:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        rules:
+          type: array
+          items:
+            type: object
+        effect:
+          type: string
+          enum: [allow, deny]
+
+    CreatePolicyRequest:
+      type: object
+      required:
+        - name
+        - rules
+      properties:
+        name:
+          type: string
+        rules:
+          type: array
+          items:
+            type: object
+        effect:
+          type: string
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        user_id:
+          type: string
+        action:
+          type: string
+        resource:
+          type: string
+        result:
+          type: string
+          enum: [success, failure]
+
+    # ==================== System Schemas ====================
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        components:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              status:
+                type: string
+              message:
+                type: string
+
+    SystemMetrics:
+      type: object
+      properties:
+        cpu_usage:
+          type: number
+        memory_usage:
+          type: number
+        gpu_usage:
+          type: number
+        request_rate:
+          type: number
+        error_rate:
+          type: number
+
+    # ==================== Common Schemas ====================
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+# Personal.AI order the ending

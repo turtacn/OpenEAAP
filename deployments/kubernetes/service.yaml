@@ -1,0 +1,279 @@
+# deployments/kubernetes/service.yaml
+# OpenEAAP Kubernetes Service 配置
+# 定义服务暴露方式和端口映射
+
+---
+# OpenEAAP HTTP API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: openeeap-http
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: api
+    version: v1.0.0
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+spec:
+  type: LoadBalancer
+  selector:
+    app: openeeap
+    component: server
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: 8443
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+
+---
+# OpenEAAP gRPC Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: openeeap-grpc
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: grpc
+    version: v1.0.0
+spec:
+  type: ClusterIP
+  selector:
+    app: openeeap
+    component: server
+  ports:
+    - name: grpc
+      protocol: TCP
+      port: 9090
+      targetPort: 9090
+  clusterIP: None  # Headless service for gRPC load balancing
+
+---
+# OpenEAAP Metrics Service (Prometheus)
+apiVersion: v1
+kind: Service
+metadata:
+  name: openeeap-metrics
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: metrics
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9091"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  selector:
+    app: openeeap
+    component: server
+  ports:
+    - name: metrics
+      protocol: TCP
+      port: 9091
+      targetPort: 9091
+
+---
+# OpenEAAP Orchestrator Internal Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: openeeap-orchestrator
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: orchestrator
+spec:
+  type: ClusterIP
+  selector:
+    app: orchestrator
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+    - name: grpc
+      protocol: TCP
+      port: 9090
+      targetPort: 9090
+
+---
+# OpenEAAP Inference Gateway Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: openeeap-inference
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: inference
+spec:
+  type: ClusterIP
+  selector:
+    app: inference-gateway
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+    - name: grpc
+      protocol: TCP
+      port: 9090
+      targetPort: 9090
+
+---
+# OpenEAAP RAG Engine Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: openeeap-rag
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: rag
+spec:
+  type: ClusterIP
+  selector:
+    app: rag-engine
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+    - name: grpc
+      protocol: TCP
+      port: 9090
+      targetPort: 9090
+
+---
+# OpenEAAP Worker Service (Internal)
+apiVersion: v1
+kind: Service
+metadata:
+  name: openeeap-worker
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: worker
+spec:
+  type: ClusterIP
+  selector:
+    app: openeeap
+    component: worker
+  ports:
+    - name: health
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+
+---
+# OpenEAAP NodePort Service (Development/Testing)
+apiVersion: v1
+kind: Service
+metadata:
+  name: openeeap-nodeport
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: api
+    environment: development
+spec:
+  type: NodePort
+  selector:
+    app: openeeap
+    component: server
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+      nodePort: 30080
+    - name: grpc
+      protocol: TCP
+      port: 9090
+      targetPort: 9090
+      nodePort: 30090
+
+---
+# OpenEAAP Admin Service (ClusterIP)
+apiVersion: v1
+kind: Service
+metadata:
+  name: openeeap-admin
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: admin
+spec:
+  type: ClusterIP
+  selector:
+    app: openeeap
+    component: server
+  ports:
+    - name: admin
+      protocol: TCP
+      port: 8888
+      targetPort: 8888
+
+---
+# OpenEAAP Internal Service Mesh (Optional)
+apiVersion: v1
+kind: Service
+metadata:
+  name: openeeap-internal
+  namespace: openeeap
+  labels:
+    app: openeeap
+    component: internal
+  annotations:
+    service.istio.io/canonical-name: openeeap
+    service.istio.io/canonical-revision: v1
+spec:
+  type: ClusterIP
+  selector:
+    app: openeeap
+    component: server
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+      appProtocol: http
+    - name: grpc
+      protocol: TCP
+      port: 9090
+      targetPort: 9090
+      appProtocol: grpc
+
+---
+# Service Monitor for Prometheus Operator (Optional)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: openeeap-monitor
+  namespace: openeeap
+  labels:
+    app: openeeap
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: openeeap
+      component: metrics
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+
+# Personal.AI order the ending

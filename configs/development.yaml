@@ -1,0 +1,498 @@
+# OpenEAAP Development Environment Configuration
+# 开发环境配置 - 使用本地服务，启用详细日志和调试功能
+
+# 服务器配置
+server:
+  # HTTP 服务器
+  http:
+    host: "0.0.0.0"
+    port: 8080
+    # 开发环境启用调试模式
+    debug: true
+    # 详细的错误堆栈信息
+    verbose_errors: true
+    # 请求超时（开发环境较长，方便调试）
+    read_timeout: 300s
+    write_timeout: 300s
+    idle_timeout: 600s
+    # CORS 配置（开发环境允许所有来源）
+    cors:
+      enabled: true
+      allowed_origins:
+        - "*"
+      allowed_methods:
+        - "GET"
+        - "POST"
+        - "PUT"
+        - "DELETE"
+        - "OPTIONS"
+      allowed_headers:
+        - "*"
+      expose_headers:
+        - "X-Request-ID"
+        - "X-Trace-ID"
+      max_age: 86400
+
+  # gRPC 服务器
+  grpc:
+    host: "0.0.0.0"
+    port: 9090
+    # 开发环境启用反射，方便使用 grpcurl 调试
+    reflection: true
+    max_recv_msg_size: 104857600  # 100MB
+    max_send_msg_size: 104857600  # 100MB
+    connection_timeout: 300s
+
+  # 限流配置（开发环境较宽松）
+  rate_limit:
+    enabled: false  # 开发环境关闭限流
+    requests_per_second: 1000
+    burst: 2000
+
+# 数据库配置（本地 PostgreSQL）
+database:
+  # 主数据库
+  primary:
+    host: "localhost"
+    port: 5432
+    database: "openeeap_dev"
+    username: "openeeap"
+    password: "dev_password_123"
+    # 连接池配置（开发环境较小）
+    max_open_conns: 10
+    max_idle_conns: 5
+    conn_max_lifetime: 3600s
+    conn_max_idle_time: 600s
+    # SSL 配置（本地开发关闭）
+    ssl_mode: "disable"
+    # 日志配置（开发环境启用 SQL 日志）
+    log_level: "info"
+    log_slow_threshold: 200ms
+    # 自动迁移（开发环境启用）
+    auto_migrate: true
+
+  # 只读副本（开发环境可选）
+  replicas: []
+
+# 缓存配置（本地 Redis）
+cache:
+  # Redis 配置
+  redis:
+    # 单机模式
+    mode: "standalone"
+    addresses:
+      - "localhost:6379"
+    password: ""
+    database: 0
+    # 连接池配置
+    pool_size: 10
+    min_idle_conns: 2
+    max_retries: 3
+    dial_timeout: 5s
+    read_timeout: 3s
+    write_timeout: 3s
+    pool_timeout: 4s
+    idle_timeout: 300s
+    # 开发环境启用调试
+    debug: true
+
+  # L1 本地缓存配置
+  local:
+    enabled: true
+    max_size: 1000
+    ttl: 300s
+    eviction_policy: "lru"
+
+  # L2 Redis 缓存配置
+  l2:
+    enabled: true
+    key_prefix: "openeeap:dev:"
+    default_ttl: 3600s
+
+  # L3 向量缓存配置
+  l3:
+    enabled: true
+    similarity_threshold: 0.95
+    max_results: 10
+
+# 向量数据库配置（本地 Milvus）
+vector_store:
+  type: "milvus"
+  milvus:
+    # 本地 Milvus Standalone
+    host: "localhost"
+    port: 19530
+    username: ""
+    password: ""
+    # 连接配置
+    dial_timeout: 5s
+    keep_alive_time: 10s
+    # 集合配置
+    default_consistency_level: "Eventually"
+    # 索引配置
+    index_type: "IVF_FLAT"
+    metric_type: "L2"
+    nlist: 128
+    # 开发环境启用调试
+    debug: true
+
+# 对象存储配置（本地 MinIO）
+object_storage:
+  type: "minio"
+  minio:
+    endpoint: "localhost:9000"
+    access_key: "minioadmin"
+    secret_key: "minioadmin"
+    use_ssl: false
+    # 存储桶配置
+    buckets:
+      documents: "openeeap-dev-documents"
+      models: "openeeap-dev-models"
+      datasets: "openeeap-dev-datasets"
+      artifacts: "openeeap-dev-artifacts"
+    # 区域配置
+    region: "us-east-1"
+    # 开发环境自动创建存储桶
+    auto_create_buckets: true
+
+# 消息队列配置（本地 Kafka）
+message_queue:
+  type: "kafka"
+  kafka:
+    # 本地 Kafka
+    brokers:
+      - "localhost:9092"
+    # 生产者配置
+    producer:
+      required_acks: 1  # 开发环境降低可靠性要求
+      compression: "snappy"
+      max_message_bytes: 10485760  # 10MB
+      retry_max: 3
+      retry_backoff: 100ms
+      flush_frequency: 100ms
+    # 消费者配置
+    consumer:
+      group_id: "openeeap-dev"
+      auto_offset_reset: "earliest"
+      enable_auto_commit: true
+      auto_commit_interval: 1s
+      session_timeout: 10s
+      max_poll_records: 100
+    # 主题配置
+    topics:
+      training_tasks:
+        name: "dev.training.tasks"
+        partitions: 3
+        replication_factor: 1
+      feedback_events:
+        name: "dev.feedback.events"
+        partitions: 3
+        replication_factor: 1
+      audit_logs:
+        name: "dev.audit.logs"
+        partitions: 3
+        replication_factor: 1
+
+# 可观测性配置
+observability:
+  # 日志配置（开发环境详细日志）
+  logging:
+    level: "debug"  # trace/debug/info/warn/error
+    format: "json"
+    output: "stdout"
+    # 开发环境启用控制台彩色输出
+    console_colors: true
+    # 开发环境显示调用栈
+    enable_stacktrace: true
+    # 字段配置
+    time_key: "timestamp"
+    level_key: "level"
+    message_key: "message"
+    caller_key: "caller"
+    stacktrace_key: "stacktrace"
+
+  # 追踪配置
+  tracing:
+    enabled: true
+    provider: "jaeger"
+    jaeger:
+      # 本地 Jaeger
+      endpoint: "http://localhost:14268/api/traces"
+      # 采样配置（开发环境 100% 采样）
+      sampler_type: "const"
+      sampler_param: 1.0
+      # 批量上报配置
+      batch_size: 10
+      batch_timeout: 1s
+      # 开发环境启用调试
+      debug: true
+    # 服务名称
+    service_name: "openeeap-dev"
+    # 资源属性
+    resource_attributes:
+      environment: "development"
+      version: "v1.0.0-dev"
+
+  # 指标配置
+  metrics:
+    enabled: true
+    provider: "prometheus"
+    prometheus:
+      # 本地 Prometheus
+      endpoint: "http://localhost:9091"
+      # 暴露端口
+      listen_address: ":9090"
+      # 采集间隔
+      scrape_interval: 15s
+      # 命名空间
+      namespace: "openeeap"
+      subsystem: "dev"
+    # 自定义指标
+    custom_metrics:
+      - name: "request_duration_seconds"
+        type: "histogram"
+        help: "Request duration in seconds"
+        buckets: [0.001, 0.01, 0.1, 0.5, 1, 2, 5]
+      - name: "cache_hit_ratio"
+        type: "gauge"
+        help: "Cache hit ratio"
+
+  # 健康检查配置
+  health:
+    enabled: true
+    endpoint: "/health"
+    # 检查项
+    checks:
+      - name: "database"
+        interval: 10s
+        timeout: 5s
+      - name: "redis"
+        interval: 10s
+        timeout: 5s
+      - name: "milvus"
+        interval: 30s
+        timeout: 10s
+
+# 平台配置
+platform:
+  # 编排器配置
+  orchestrator:
+    # 工作线程数（开发环境较少）
+    max_workers: 5
+    # 队列容量
+    queue_capacity: 100
+    # 任务超时
+    task_timeout: 300s
+    # 重试配置
+    max_retries: 3
+    retry_backoff: 1s
+    # 开发环境启用详细日志
+    verbose_logging: true
+
+  # 推理引擎配置
+  inference:
+    # 推理网关
+    gateway:
+      # 本地 vLLM
+      endpoint: "http://localhost:8000"
+      timeout: 60s
+      max_retries: 2
+      # 批量推理
+      batch_size: 8
+      batch_timeout: 100ms
+    # 缓存配置
+    cache:
+      enabled: true
+      # 开发环境降低缓存命中阈值
+      similarity_threshold: 0.90
+      ttl: 1800s
+    # 隐私配置
+    privacy:
+      enabled: true
+      # 开发环境使用规则引擎（较快）
+      pii_detection_mode: "rule_based"
+      auto_mask: true
+
+  # RAG 引擎配置
+  rag:
+    # 检索配置
+    retriever:
+      # 混合检索权重
+      vector_weight: 0.7
+      keyword_weight: 0.3
+      # 检索数量
+      top_k: 10
+      # 相似度阈值
+      similarity_threshold: 0.7
+    # 重排序配置
+    reranker:
+      enabled: true
+      model: "bge-reranker-base"
+      top_n: 5
+    # 生成配置
+    generator:
+      # 上下文窗口
+      max_context_tokens: 4096
+      # 生成参数
+      temperature: 0.7
+      max_tokens: 1024
+
+  # 训练服务配置
+  training:
+    # 训练任务配置
+    task:
+      # 最大并发训练任务（开发环境限制为 1）
+      max_concurrent_tasks: 1
+      # 任务超时
+      task_timeout: 7200s
+    # RLHF 配置
+    rlhf:
+      enabled: false  # 开发环境默认关闭
+      learning_rate: 0.00001
+      batch_size: 4
+      epochs: 1
+    # DPO 配置
+    dpo:
+      enabled: false  # 开发环境默认关闭
+      learning_rate: 0.00001
+      batch_size: 4
+      epochs: 1
+
+# 治理配置
+governance:
+  # 策略引擎配置
+  policy:
+    enabled: true
+    # 策略文件路径
+    policy_dir: "./configs/policies"
+    # 开发环境允许策略热更新
+    hot_reload: true
+    reload_interval: 30s
+    # 默认决策（开发环境默认允许）
+    default_decision: "permit"
+
+  # 审计配置
+  audit:
+    enabled: true
+    # 审计日志存储
+    storage: "database"
+    # 审计级别（开发环境记录所有操作）
+    level: "verbose"
+    # 敏感字段掩码
+    mask_sensitive_fields: true
+    # 批量写入配置
+    batch_size: 10
+    flush_interval: 5s
+
+  # 合规配置
+  compliance:
+    enabled: true
+    # 合规框架
+    frameworks:
+      - "SOC2"
+      - "GDPR"
+    # 开发环境仅警告，不阻止
+    enforcement_mode: "warn"
+
+# 开发工具配置
+development:
+  # 热重载
+  hot_reload:
+    enabled: true
+    watch_dirs:
+      - "./internal"
+      - "./pkg"
+      - "./configs"
+    ignore_patterns:
+      - "*.tmp"
+      - "*.swp"
+      - ".git"
+
+  # Mock 数据
+  mock:
+    enabled: true
+    # 自动生成测试数据
+    auto_generate_fixtures: true
+    # Fixture 数据目录
+    fixture_dir: "./test/fixtures"
+
+  # 性能分析
+  profiling:
+    enabled: true
+    # pprof 端口
+    pprof_addr: ":6060"
+    # CPU 分析
+    cpu_profile: true
+    # 内存分析
+    mem_profile: true
+    # 阻塞分析
+    block_profile: true
+    # Goroutine 分析
+    goroutine_profile: true
+
+  # 调试工具
+  debug:
+    # 启用 SQL 日志
+    log_sql: true
+    # 启用请求日志
+    log_requests: true
+    # 启用响应日志
+    log_responses: true
+    # 打印环境变量（排除敏感信息）
+    print_env: true
+
+# 安全配置（开发环境较宽松）
+security:
+  # 认证配置
+  authentication:
+    # 开发环境使用简单的 API Key
+    type: "api_key"
+    api_key:
+      header: "X-API-Key"
+      # 开发环境允许的 API Key
+      allowed_keys:
+        - "dev-key-123456"
+    # JWT 配置（可选）
+    jwt:
+      secret: "dev-secret-key-change-in-production"
+      expiration: 86400  # 24小时
+      issuer: "openeeap-dev"
+
+  # TLS 配置（开发环境关闭）
+  tls:
+    enabled: false
+
+  # 加密配置（开发环境使用固定密钥）
+  encryption:
+    enabled: true
+    algorithm: "AES256"
+    key: "dev-encryption-key-32-bytes-!!"  # 32字节密钥
+
+# 特性开关（开发环境全部启用）
+features:
+  # Web Search 功能
+  web_search: true
+  # 深度研究功能
+  deep_research: true
+  # 代码执行功能
+  code_execution: true
+  # Artifacts 功能
+  artifacts: true
+  # 记忆功能
+  memory: true
+  # 在线学习功能
+  online_learning: true
+  # 插件系统
+  plugins: true
+
+# 环境标识
+environment: "development"
+
+# 版本信息
+version:
+  app: "v1.0.0-dev"
+  api: "v1"
+  build_time: ""  # 构建时注入
+  git_commit: ""  # 构建时注入
+
+# Personal.AI order the ending

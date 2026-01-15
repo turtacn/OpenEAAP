@@ -1,0 +1,554 @@
+# OpenEAAP Helm Chart Values
+# 用于配置 OpenEAAP 在 Kubernetes 中的部署参数
+
+#==============================================================================
+# 全局配置
+#==============================================================================
+global:
+  # 镜像仓库地址
+  imageRegistry: docker.io
+  # 镜像拉取策略
+  imagePullPolicy: IfNotPresent
+  # 镜像拉取凭证（如果使用私有仓库）
+  imagePullSecrets: []
+  # - name: regcred
+
+  # 存储类名称（用于 PVC）
+  storageClass: "standard"
+
+  # 集群域名
+  clusterDomain: cluster.local
+
+#==============================================================================
+# 应用配置
+#==============================================================================
+nameOverride: ""
+fullnameOverride: ""
+
+# 副本数配置
+replicaCount:
+  # API Server 副本数
+  server: 3
+  # Worker 副本数
+  worker: 2
+
+# 镜像配置
+image:
+  repository: openeeap/openeeap
+  tag: "v1.0.0"
+  pullPolicy: IfNotPresent
+
+# 服务账户配置
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod 注解
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9090"
+  prometheus.io/path: "/metrics"
+
+# Pod 安全上下文
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# 容器安全上下文
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
+#==============================================================================
+# 资源配置
+#==============================================================================
+resources:
+  # API Server 资源限制
+  server:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+
+  # Worker 资源限制
+  worker:
+    requests:
+      cpu: 1000m
+      memory: 1Gi
+    limits:
+      cpu: 4000m
+      memory: 4Gi
+
+  # GPU 节点配置（用于推理和训练）
+  gpu:
+    enabled: false
+    # GPU 类型：nvidia, amd
+    type: nvidia
+    # GPU 数量
+    count: 1
+    # GPU 显存要求（GB）
+    memory: 16
+
+#==============================================================================
+# 网络配置
+#==============================================================================
+service:
+  # HTTP API 服务
+  http:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+    annotations: {}
+
+  # gRPC 服务
+  grpc:
+    type: ClusterIP
+    port: 9090
+    targetPort: 9090
+    annotations: {}
+
+  # Metrics 服务
+  metrics:
+    type: ClusterIP
+    port: 9091
+    targetPort: 9091
+    annotations: {}
+
+# Ingress 配置
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+  hosts:
+    - host: api.openeeap.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: openeeap-tls
+      hosts:
+        - api.openeeap.example.com
+
+#==============================================================================
+# 健康检查配置
+#==============================================================================
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  successThreshold: 1
+  failureThreshold: 3
+
+#==============================================================================
+# 自动伸缩配置
+#==============================================================================
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  # 自定义指标（需要配置 metrics-server 和 prometheus-adapter）
+  customMetrics:
+    - type: Pods
+      pods:
+        metric:
+          name: request_queue_depth
+        target:
+          type: AverageValue
+          averageValue: "50"
+
+#==============================================================================
+# 环境变量配置
+#==============================================================================
+env:
+  # 应用环境
+  - name: APP_ENV
+    value: "production"
+
+  # 日志级别
+  - name: LOG_LEVEL
+    value: "info"
+
+  # 服务端口
+  - name: SERVER_PORT
+    value: "8080"
+
+  # gRPC 端口
+  - name: GRPC_PORT
+    value: "9090"
+
+# 从 ConfigMap 加载环境变量
+envFrom:
+  - configMapRef:
+      name: openeeap-config
+  - secretRef:
+      name: openeeap-secrets
+
+#==============================================================================
+# 配置管理
+#==============================================================================
+config:
+  # 配置文件内容（将作为 ConfigMap 挂载）
+  application.yaml: |
+    server:
+      host: 0.0.0.0
+      port: 8080
+      read_timeout: 30s
+      write_timeout: 30s
+      max_header_bytes: 1048576
+
+    grpc:
+      port: 9090
+      max_connection_idle: 5m
+      max_connection_age: 2h
+
+    observability:
+      tracing:
+        enabled: true
+        exporter: jaeger
+        endpoint: http://jaeger-collector:14268/api/traces
+      metrics:
+        enabled: true
+        port: 9091
+      logging:
+        level: info
+        format: json
+
+# 敏感配置（将作为 Secret 挂载）
+secrets:
+  # 数据库密码
+  database_password: ""
+  # Redis 密码
+  redis_password: ""
+  # JWT 密钥
+  jwt_secret: ""
+  # 对象存储密钥
+  minio_secret_key: ""
+
+#==============================================================================
+# 依赖服务配置
+#==============================================================================
+# PostgreSQL 配置
+postgresql:
+  enabled: true
+  auth:
+    username: openeeap
+    password: "changeme"
+    database: openeeap
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+  # 外部 PostgreSQL 配置（如果 enabled: false）
+  external:
+    host: postgres.example.com
+    port: 5432
+    database: openeeap
+    username: openeeap
+    password: ""
+
+# Redis 配置
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: "changeme"
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  replica:
+    replicaCount: 2
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  # 外部 Redis 配置（如果 enabled: false）
+  external:
+    host: redis.example.com
+    port: 6379
+    password: ""
+
+# Milvus 配置
+milvus:
+  enabled: true
+  standalone:
+    persistence:
+      enabled: true
+      size: 50Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+  # 外部 Milvus 配置（如果 enabled: false）
+  external:
+    host: milvus.example.com
+    port: 19530
+
+# MinIO 配置
+minio:
+  enabled: true
+  auth:
+    rootUser: admin
+    rootPassword: "changeme"
+  persistence:
+    enabled: true
+    size: 100Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  # 外部 MinIO/S3 配置（如果 enabled: false）
+  external:
+    endpoint: s3.amazonaws.com
+    accessKey: ""
+    secretKey: ""
+    bucket: openeeap
+
+# Kafka 配置
+kafka:
+  enabled: true
+  replicaCount: 3
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  # 外部 Kafka 配置（如果 enabled: false）
+  external:
+    brokers:
+      - kafka-broker-1.example.com:9092
+      - kafka-broker-2.example.com:9092
+      - kafka-broker-3.example.com:9092
+
+#==============================================================================
+# 持久化存储配置
+#==============================================================================
+persistence:
+  # 模型缓存存储
+  modelCache:
+    enabled: true
+    size: 50Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+
+  # 日志存储
+  logs:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+
+  # 训练数据存储
+  trainingData:
+    enabled: true
+    size: 100Gi
+    storageClass: ""
+    accessMode: ReadWriteMany
+
+#==============================================================================
+# 监控和可观测性
+#==============================================================================
+# Prometheus Operator 集成
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  scrapeTimeout: 10s
+  labels:
+    release: prometheus
+
+# Grafana Dashboard
+grafanaDashboard:
+  enabled: true
+  labels:
+    grafana_dashboard: "1"
+
+# Jaeger 集成
+jaeger:
+  enabled: true
+  collector:
+    url: http://jaeger-collector:14268/api/traces
+
+#==============================================================================
+# 安全配置
+#==============================================================================
+# 网络策略
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 5432  # PostgreSQL
+        - protocol: TCP
+          port: 6379  # Redis
+        - protocol: TCP
+          port: 19530 # Milvus
+        - protocol: TCP
+          port: 9000  # MinIO
+        - protocol: TCP
+          port: 9092  # Kafka
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+  # maxUnavailable: 1
+
+#==============================================================================
+# 节点选择和调度
+#==============================================================================
+# 节点选择器
+nodeSelector: {}
+# gpu: "true"
+
+# 容忍度（用于 GPU 节点等特殊节点）
+tolerations: []
+# - key: "nvidia.com/gpu"
+#   operator: "Exists"
+#   effect: "NoSchedule"
+
+# 亲和性和反亲和性
+affinity:
+  # Pod 反亲和性（尽量分散到不同节点）
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - openeeap
+          topologyKey: kubernetes.io/hostname
+
+#==============================================================================
+# 备份和恢复
+#==============================================================================
+backup:
+  enabled: false
+  schedule: "0 2 * * *"  # 每天凌晨 2 点
+  retention: 7  # 保留 7 天
+  storage:
+    type: s3
+    endpoint: s3.amazonaws.com
+    bucket: openeeap-backups
+    accessKey: ""
+    secretKey: ""
+
+#==============================================================================
+# 初始化作业
+#==============================================================================
+initJob:
+  # 数据库迁移作业
+  dbMigration:
+    enabled: true
+    image:
+      repository: openeeap/migrate
+      tag: "v1.0.0"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+#==============================================================================
+# 额外资源
+#==============================================================================
+# 额外的 ConfigMap
+extraConfigMaps: []
+# - name: extra-config
+#   data:
+#     key: value
+
+# 额外的 Secret
+extraSecrets: []
+# - name: extra-secret
+#   data:
+#     key: dmFsdWU=  # base64 encoded
+
+# 额外的 Volume
+extraVolumes: []
+# - name: extra-volume
+#   emptyDir: {}
+
+# 额外的 VolumeMount
+extraVolumeMounts: []
+# - name: extra-volume
+#   mountPath: /extra
+
+# Personal.AI order the ending

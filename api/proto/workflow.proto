@@ -1,0 +1,466 @@
+// api/proto/workflow.proto
+// OpenEAAP Workflow Service gRPC Protocol Definition
+// This file defines the gRPC service interface and message types for Workflow management
+
+syntax = "proto3";
+
+package openeeap.workflow.v1;
+
+option go_package = "github.com/openeeap/openeeap/api/proto/workflow;workflowpb";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+
+// WorkflowService defines the gRPC service for Workflow operations
+service WorkflowService {
+ // CreateWorkflow creates a new Workflow
+ rpc CreateWorkflow(CreateWorkflowRequest) returns (CreateWorkflowResponse);
+
+ // GetWorkflow retrieves a Workflow by ID
+ rpc GetWorkflow(GetWorkflowRequest) returns (GetWorkflowResponse);
+
+ // UpdateWorkflow updates an existing Workflow
+ rpc UpdateWorkflow(UpdateWorkflowRequest) returns (UpdateWorkflowResponse);
+
+ // DeleteWorkflow deletes a Workflow by ID
+ rpc DeleteWorkflow(DeleteWorkflowRequest) returns (google.protobuf.Empty);
+
+ // ListWorkflows lists all Workflows with pagination
+ rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse);
+
+ // RunWorkflow starts execution of a Workflow
+ rpc RunWorkflow(RunWorkflowRequest) returns (RunWorkflowResponse);
+
+ // RunWorkflowStream starts execution with streaming progress updates
+ rpc RunWorkflowStream(RunWorkflowRequest) returns (stream WorkflowExecutionEvent);
+
+ // PauseWorkflow pauses a running Workflow execution
+ rpc PauseWorkflow(PauseWorkflowRequest) returns (PauseWorkflowResponse);
+
+ // ResumeWorkflow resumes a paused Workflow execution
+ rpc ResumeWorkflow(ResumeWorkflowRequest) returns (ResumeWorkflowResponse);
+
+ // CancelWorkflow cancels a running or paused Workflow execution
+ rpc CancelWorkflow(CancelWorkflowRequest) returns (CancelWorkflowResponse);
+
+ // GetWorkflowExecution retrieves execution details
+ rpc GetWorkflowExecution(GetWorkflowExecutionRequest) returns (GetWorkflowExecutionResponse);
+
+ // ListWorkflowExecutions lists executions for a Workflow
+ rpc ListWorkflowExecutions(ListWorkflowExecutionsRequest) returns (ListWorkflowExecutionsResponse);
+
+ // ValidateWorkflow validates Workflow definition without executing
+ rpc ValidateWorkflow(ValidateWorkflowRequest) returns (ValidateWorkflowResponse);
+}
+
+// WorkflowStatus defines the lifecycle status of a Workflow
+enum WorkflowStatus {
+ WORKFLOW_STATUS_UNSPECIFIED = 0;
+ WORKFLOW_STATUS_DRAFT = 1;        // Workflow is in draft state
+ WORKFLOW_STATUS_ACTIVE = 2;       // Workflow is active and runnable
+ WORKFLOW_STATUS_DEPRECATED = 3;   // Workflow is deprecated
+ WORKFLOW_STATUS_ARCHIVED = 4;     // Workflow is archived
+}
+
+// ExecutionStatus defines the status of a Workflow execution
+enum ExecutionStatus {
+ EXECUTION_STATUS_UNSPECIFIED = 0;
+ EXECUTION_STATUS_PENDING = 1;     // Execution is pending/queued
+ EXECUTION_STATUS_RUNNING = 2;     // Execution is in progress
+ EXECUTION_STATUS_PAUSED = 3;      // Execution is paused
+ EXECUTION_STATUS_COMPLETED = 4;   // Execution completed successfully
+ EXECUTION_STATUS_FAILED = 5;      // Execution failed
+ EXECUTION_STATUS_CANCELLED = 6;   // Execution was cancelled
+ EXECUTION_STATUS_TIMEOUT = 7;     // Execution timed out
+}
+
+// StepStatus defines the status of a Workflow step execution
+enum StepStatus {
+ STEP_STATUS_UNSPECIFIED = 0;
+ STEP_STATUS_PENDING = 1;          // Step is pending
+ STEP_STATUS_RUNNING = 2;          // Step is executing
+ STEP_STATUS_COMPLETED = 3;        // Step completed successfully
+ STEP_STATUS_FAILED = 4;           // Step failed
+ STEP_STATUS_SKIPPED = 5;          // Step was skipped (conditional)
+ STEP_STATUS_RETRYING = 6;         // Step is retrying after failure
+}
+
+// StepType defines the type of Workflow step
+enum StepType {
+ STEP_TYPE_UNSPECIFIED = 0;
+ STEP_TYPE_AGENT = 1;              // Execute an Agent
+ STEP_TYPE_TOOL = 2;               // Execute a Tool
+ STEP_TYPE_CONDITION = 3;          // Conditional branching
+ STEP_TYPE_LOOP = 4;               // Loop iteration
+ STEP_TYPE_PARALLEL = 5;           // Parallel execution
+ STEP_TYPE_SUBWORKFLOW = 6;        // Execute another Workflow
+ STEP_TYPE_WAIT = 7;               // Wait/sleep step
+ STEP_TYPE_TRANSFORM = 8;          // Data transformation
+ STEP_TYPE_HUMAN_IN_LOOP = 9;      // Human approval/input required
+}
+
+// TriggerType defines the type of Workflow trigger
+enum TriggerType {
+ TRIGGER_TYPE_UNSPECIFIED = 0;
+ TRIGGER_TYPE_MANUAL = 1;          // Manual trigger
+ TRIGGER_TYPE_SCHEDULED = 2;       // Scheduled (cron)
+ TRIGGER_TYPE_EVENT = 3;           // Event-driven
+ TRIGGER_TYPE_WEBHOOK = 4;         // Webhook trigger
+ TRIGGER_TYPE_API = 5;             // API call trigger
+}
+
+// Workflow represents the core Workflow entity
+message Workflow {
+ string id = 1;                                  // Unique identifier
+ string name = 2;                                // Workflow name
+ string description = 3;                         // Workflow description
+ WorkflowStatus status = 4;                      // Current status
+ repeated WorkflowStep steps = 5;                // Workflow steps
+ TriggerConfig trigger_config = 6;               // Trigger configuration
+ WorkflowConfig config = 7;                      // Workflow configuration
+ map<string, string> metadata = 8;               // Custom metadata
+ google.protobuf.Timestamp created_at = 9;       // Creation timestamp
+ google.protobuf.Timestamp updated_at = 10;      // Last update timestamp
+ string created_by = 11;                         // Creator user ID
+ string version = 12;                            // Workflow version
+}
+
+// WorkflowStep represents a single step in a Workflow
+message WorkflowStep {
+ string id = 1;                                  // Step ID (unique within workflow)
+ string name = 2;                                // Step name
+ string description = 3;                         // Step description
+ StepType type = 4;                              // Step type
+ google.protobuf.Struct config = 5;              // Step-specific configuration
+ repeated string depends_on = 6;                 // IDs of prerequisite steps
+ ConditionConfig condition = 7;                  // Conditional execution
+ RetryConfig retry_config = 8;                   // Retry configuration
+ int32 timeout_seconds = 9;                      // Step timeout
+ map<string, string> input_mapping = 10;         // Input variable mapping
+ map<string, string> output_mapping = 11;        // Output variable mapping
+}
+
+// TriggerConfig defines how a Workflow is triggered
+message TriggerConfig {
+ TriggerType type = 1;                           // Trigger type
+ ScheduleConfig schedule = 2;                    // Schedule (if type=SCHEDULED)
+ EventConfig event = 3;                          // Event (if type=EVENT)
+ WebhookConfig webhook = 4;                      // Webhook (if type=WEBHOOK)
+ bool enabled = 5;                               // Whether trigger is enabled
+}
+
+// ScheduleConfig defines scheduled execution
+message ScheduleConfig {
+ string cron_expression = 1;                     // Cron expression
+ string timezone = 2;                            // Timezone (e.g., "UTC", "America/New_York")
+ google.protobuf.Timestamp start_time = 3;       // Start time for schedule
+ google.protobuf.Timestamp end_time = 4;         // End time for schedule
+}
+
+// EventConfig defines event-driven triggers
+message EventConfig {
+ string event_source = 1;                        // Event source (e.g., "kafka", "sqs")
+ string event_type = 2;                          // Event type filter
+ map<string, string> event_filters = 3;          // Event filter conditions
+}
+
+// WebhookConfig defines webhook triggers
+message WebhookConfig {
+ string webhook_url = 1;                         // Webhook endpoint URL
+ string secret_token = 2;                        // Secret for webhook validation
+ repeated string allowed_ips = 3;                // IP whitelist
+}
+
+// WorkflowConfig defines global Workflow configuration
+message WorkflowConfig {
+ int32 max_execution_time_seconds = 1;           // Maximum total execution time
+ int32 max_concurrent_executions = 2;            // Maximum concurrent executions
+ bool enable_persistence = 3;                    // Enable execution state persistence
+ bool enable_audit_logging = 4;                  // Enable audit logging
+ ErrorHandlingStrategy error_handling = 5;       // Error handling strategy
+ map<string, string> global_variables = 6;       // Global variables
+}
+
+// ErrorHandlingStrategy defines how errors are handled
+enum ErrorHandlingStrategy {
+ ERROR_HANDLING_STRATEGY_UNSPECIFIED = 0;
+ ERROR_HANDLING_STRATEGY_FAIL_FAST = 1;          // Stop on first error
+ ERROR_HANDLING_STRATEGY_CONTINUE = 2;           // Continue on errors
+ ERROR_HANDLING_STRATEGY_RETRY = 3;              // Retry failed steps
+ ERROR_HANDLING_STRATEGY_ROLLBACK = 4;           // Rollback on error
+}
+
+// ConditionConfig defines conditional execution logic
+message ConditionConfig {
+ string expression = 1;                          // Condition expression (e.g., "$.status == 'success'")
+ ConditionOperator operator = 2;                 // Logical operator
+ repeated ConditionConfig nested_conditions = 3; // Nested conditions (for AND/OR)
+}
+
+// ConditionOperator defines logical operators for conditions
+enum ConditionOperator {
+ CONDITION_OPERATOR_UNSPECIFIED = 0;
+ CONDITION_OPERATOR_EQUALS = 1;                  // ==
+ CONDITION_OPERATOR_NOT_EQUALS = 2;              // !=
+ CONDITION_OPERATOR_GREATER_THAN = 3;            // >
+ CONDITION_OPERATOR_LESS_THAN = 4;               // <
+ CONDITION_OPERATOR_CONTAINS = 5;                // Contains
+ CONDITION_OPERATOR_AND = 6;                     // Logical AND
+ CONDITION_OPERATOR_OR = 7;                      // Logical OR
+}
+
+// RetryConfig defines retry behavior for a step
+message RetryConfig {
+ int32 max_attempts = 1;                         // Maximum retry attempts
+ int32 initial_delay_seconds = 2;                // Initial delay before retry
+ int32 max_delay_seconds = 3;                    // Maximum delay between retries
+ float backoff_multiplier = 4;                   // Exponential backoff multiplier
+ repeated string retryable_errors = 5;           // Error types that trigger retry
+}
+
+// CreateWorkflowRequest represents a request to create a Workflow
+message CreateWorkflowRequest {
+ string name = 1;                                // Workflow name (required)
+ string description = 2;                         // Workflow description
+ repeated WorkflowStep steps = 3;                // Workflow steps (required)
+ TriggerConfig trigger_config = 4;               // Trigger configuration
+ WorkflowConfig config = 5;                      // Workflow configuration
+ map<string, string> metadata = 6;               // Custom metadata
+}
+
+// CreateWorkflowResponse represents the response for CreateWorkflow
+message CreateWorkflowResponse {
+ Workflow workflow = 1;                          // Created Workflow
+}
+
+// GetWorkflowRequest represents a request to retrieve a Workflow
+message GetWorkflowRequest {
+ string id = 1;                                  // Workflow ID (required)
+}
+
+// GetWorkflowResponse represents the response for GetWorkflow
+message GetWorkflowResponse {
+ Workflow workflow = 1;                          // Retrieved Workflow
+}
+
+// UpdateWorkflowRequest represents a request to update a Workflow
+message UpdateWorkflowRequest {
+ string id = 1;                                  // Workflow ID (required)
+ string name = 2;                                // Updated name
+ string description = 3;                         // Updated description
+ repeated WorkflowStep steps = 4;                // Updated steps
+ TriggerConfig trigger_config = 5;               // Updated trigger
+ WorkflowConfig config = 6;                      // Updated configuration
+ WorkflowStatus status = 7;                      // Updated status
+ map<string, string> metadata = 8;               // Updated metadata
+}
+
+// UpdateWorkflowResponse represents the response for UpdateWorkflow
+message UpdateWorkflowResponse {
+ Workflow workflow = 1;                          // Updated Workflow
+}
+
+// DeleteWorkflowRequest represents a request to delete a Workflow
+message DeleteWorkflowRequest {
+ string id = 1;                                  // Workflow ID (required)
+ bool force = 2;                                 // Force delete with running executions
+}
+
+// ListWorkflowsRequest represents a request to list Workflows
+message ListWorkflowsRequest {
+ int32 page = 1;                                 // Page number (1-indexed)
+ int32 page_size = 2;                            // Number of items per page
+ string filter = 3;                              // Filter expression
+ string sort_by = 4;                             // Sort field
+ bool sort_desc = 5;                             // Sort in descending order
+}
+
+// ListWorkflowsResponse represents the response for ListWorkflows
+message ListWorkflowsResponse {
+ repeated Workflow workflows = 1;                // List of Workflows
+ int32 total_count = 2;                          // Total count
+ int32 page = 3;                                 // Current page
+ int32 page_size = 4;                            // Page size
+}
+
+// RunWorkflowRequest represents a request to run a Workflow
+message RunWorkflowRequest {
+ string workflow_id = 1;                         // Workflow ID (required)
+ map<string, string> input_variables = 2;        // Input variables
+ string trigger_source = 3;                      // Trigger source identifier
+ bool enable_streaming = 4;                      // Enable streaming updates
+ map<string, string> execution_context = 5;      // Execution context metadata
+}
+
+// RunWorkflowResponse represents the response for RunWorkflow
+message RunWorkflowResponse {
+ string execution_id = 1;                        // Execution ID
+ ExecutionStatus status = 2;                     // Initial status
+ google.protobuf.Timestamp started_at = 3;       // Start timestamp
+}
+
+// WorkflowExecutionEvent represents a streaming execution event
+message WorkflowExecutionEvent {
+ string execution_id = 1;                        // Execution ID
+ EventType event_type = 2;                       // Event type
+ StepExecutionUpdate step_update = 3;            // Step update (if applicable)
+ google.protobuf.Struct data = 4;                // Event data
+ google.protobuf.Timestamp timestamp = 5;        // Event timestamp
+}
+
+// EventType defines the type of execution event
+enum EventType {
+ EVENT_TYPE_UNSPECIFIED = 0;
+ EVENT_TYPE_EXECUTION_STARTED = 1;               // Execution started
+ EVENT_TYPE_EXECUTION_COMPLETED = 2;             // Execution completed
+ EVENT_TYPE_EXECUTION_FAILED = 3;                // Execution failed
+ EVENT_TYPE_STEP_STARTED = 4;                    // Step started
+ EVENT_TYPE_STEP_COMPLETED = 5;                  // Step completed
+ EVENT_TYPE_STEP_FAILED = 6;                     // Step failed
+ EVENT_TYPE_STEP_RETRYING = 7;                   // Step retrying
+ EVENT_TYPE_WORKFLOW_PAUSED = 8;                 // Workflow paused
+ EVENT_TYPE_WORKFLOW_RESUMED = 9;                // Workflow resumed
+}
+
+// StepExecutionUpdate represents a step execution update
+message StepExecutionUpdate {
+ string step_id = 1;                             // Step ID
+ string step_name = 2;                           // Step name
+ StepStatus status = 3;                          // Step status
+ google.protobuf.Struct input = 4;               // Step input data
+ google.protobuf.Struct output = 5;              // Step output data
+ string error_message = 6;                       // Error message (if failed)
+ int32 retry_count = 7;                          // Retry count
+ google.protobuf.Timestamp started_at = 8;       // Step start time
+ google.protobuf.Timestamp completed_at = 9;     // Step completion time
+}
+
+// PauseWorkflowRequest represents a request to pause execution
+message PauseWorkflowRequest {
+ string execution_id = 1;                        // Execution ID (required)
+ string reason = 2;                              // Reason for pausing
+}
+
+// PauseWorkflowResponse represents the response for PauseWorkflow
+message PauseWorkflowResponse {
+ string execution_id = 1;                        // Execution ID
+ ExecutionStatus status = 2;                     // Updated status
+ google.protobuf.Timestamp paused_at = 3;        // Pause timestamp
+}
+
+// ResumeWorkflowRequest represents a request to resume execution
+message ResumeWorkflowRequest {
+ string execution_id = 1;                        // Execution ID (required)
+ map<string, string> updated_variables = 2;      // Updated variables (optional)
+}
+
+// ResumeWorkflowResponse represents the response for ResumeWorkflow
+message ResumeWorkflowResponse {
+ string execution_id = 1;                        // Execution ID
+ ExecutionStatus status = 2;                     // Updated status
+ google.protobuf.Timestamp resumed_at = 3;       // Resume timestamp
+}
+
+// CancelWorkflowRequest represents a request to cancel execution
+message CancelWorkflowRequest {
+ string execution_id = 1;                        // Execution ID (required)
+ string reason = 2;                              // Reason for cancellation
+ bool force = 3;                                 // Force immediate cancellation
+}
+
+// CancelWorkflowResponse represents the response for CancelWorkflow
+message CancelWorkflowResponse {
+ string execution_id = 1;                        // Execution ID
+ ExecutionStatus status = 2;                     // Updated status
+ google.protobuf.Timestamp cancelled_at = 3;     // Cancellation timestamp
+}
+
+// GetWorkflowExecutionRequest represents a request to get execution details
+message GetWorkflowExecutionRequest {
+ string execution_id = 1;                        // Execution ID (required)
+}
+
+// GetWorkflowExecutionResponse represents the response for GetWorkflowExecution
+message GetWorkflowExecutionResponse {
+ WorkflowExecution execution = 1;                // Execution details
+}
+
+// WorkflowExecution represents the execution state of a Workflow
+message WorkflowExecution {
+ string id = 1;                                  // Execution ID
+ string workflow_id = 2;                         // Workflow ID
+ string workflow_version = 3;                    // Workflow version
+ ExecutionStatus status = 4;                     // Execution status
+ map<string, string> input_variables = 5;        // Input variables
+ map<string, string> output_variables = 6;       // Output variables
+ repeated StepExecution step_executions = 7;     // Step execution details
+ string error_message = 8;                       // Error message (if failed)
+ google.protobuf.Timestamp started_at = 9;       // Start timestamp
+ google.protobuf.Timestamp completed_at = 10;    // Completion timestamp
+ int64 duration_ms = 11;                         // Execution duration
+ string triggered_by = 12;                       // User or system that triggered
+ string trigger_source = 13;                     // Trigger source
+}
+
+// StepExecution represents the execution state of a Workflow step
+message StepExecution {
+ string step_id = 1;                             // Step ID
+ string step_name = 2;                           // Step name
+ StepStatus status = 3;                          // Step status
+ google.protobuf.Struct input = 4;               // Step input
+ google.protobuf.Struct output = 5;              // Step output
+ string error_message = 6;                       // Error message
+ int32 retry_count = 7;                          // Retry count
+ google.protobuf.Timestamp started_at = 8;       // Start timestamp
+ google.protobuf.Timestamp completed_at = 9;     // Completion timestamp
+ int64 duration_ms = 10;                         // Step duration
+}
+
+// ListWorkflowExecutionsRequest represents a request to list executions
+message ListWorkflowExecutionsRequest {
+ string workflow_id = 1;                         // Workflow ID filter
+ int32 page = 2;                                 // Page number
+ int32 page_size = 3;                            // Page size
+ ExecutionStatus status_filter = 4;              // Status filter
+ google.protobuf.Timestamp start_time = 5;       // Start time filter
+ google.protobuf.Timestamp end_time = 6;         // End time filter
+ string sort_by = 7;                             // Sort field
+ bool sort_desc = 8;                             // Sort descending
+}
+
+// ListWorkflowExecutionsResponse represents the response for ListWorkflowExecutions
+message ListWorkflowExecutionsResponse {
+ repeated WorkflowExecution executions = 1;      // List of executions
+ int32 total_count = 2;                          // Total count
+ int32 page = 3;                                 // Current page
+ int32 page_size = 4;                            // Page size
+}
+
+// ValidateWorkflowRequest represents a request to validate a Workflow
+message ValidateWorkflowRequest {
+ Workflow workflow = 1;                          // Workflow to validate (can be unsaved)
+}
+
+// ValidateWorkflowResponse represents the response for ValidateWorkflow
+message ValidateWorkflowResponse {
+ bool is_valid = 1;                              // Whether Workflow is valid
+ repeated ValidationError errors = 2;            // Validation errors
+ repeated ValidationWarning warnings = 3;        // Validation warnings
+}
+
+// ValidationError represents a validation error
+message ValidationError {
+ string field = 1;                               // Field with error
+ string message = 2;                             // Error message
+ string error_code = 3;                          // Error code
+}
+
+// ValidationWarning represents a validation warning
+message ValidationWarning {
+ string field = 1;                               // Field with warning
+ string message = 2;                             // Warning message
+ string warning_code = 3;                        // Warning code
+}
+
+// Personal.AI order the ending
