@@ -8,7 +8,7 @@
 
 ## 文档摘要
 
-OpenEAAP (Open Enterprise AI Agent Application Platform) 是一个面向企业级应用的 AI 智能体应用平台，专注于为安全、云、AI 等领域提供完整的智能体开发、部署与运营能力。本文档详细阐述了 OpenEAAP 的技术架构、核心组件设计、关键技术方案及实施路径。
+OpenEAAP (Open Enterprise AI Agent Application Platform) 是一个面向企业级应用的 AI 智能体应用平台，专注于为行业、基础设施、AI 等领域提供完整的智能体开发、部署与运营能力。本文档详细阐述了 OpenEAAP 的技术架构、核心组件设计、关键技术方案及实施路径。
 
 ---
 
