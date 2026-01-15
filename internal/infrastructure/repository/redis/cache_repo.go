@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sangfor.local/hci/hci-common/utils/redis"
 	"time"
 
 	"github.com/openeeap/openeeap/pkg/errors"

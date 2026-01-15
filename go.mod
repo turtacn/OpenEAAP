@@ -141,6 +141,13 @@ require (
 
 // Replace directives for local development or specific versions
 replace (
+   github.com/openeeap/openeeap/api/proto/agent => ./pkg/pb/agent
+   github.com/openeeap/openeeap/api/proto/model => ./pkg/pb/model
+   github.com/openeeap/openeeap/api/proto/workflow => ./pkg/pb/workflow
+   github.com/openeeap/openeeap/cmd => ./cmd
+   github.com/openeeap/openeeap/internal => ./internal
+   github.com/openeeap/openeeap/pkg => ./pkg
+   github.com/openeeap/openeeap/test => ./test
    // Use local version of plugin runtime during development
    // github.com/openeeap/plugin-runtime => ./pkg/plugin-runtime
 

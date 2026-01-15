@@ -317,7 +317,7 @@ message UpdateModelRequest {
  optional string description = 3;
  optional ModelConfig config = 4;
  optional double cost_per_1k_tokens = 5;
- optional map<string, string> metadata = 6;
+ map<string, string> metadata = 6;
 }
 
 // UpdateModelResponse is the response for updating a model
