@@ -60,7 +60,7 @@ type CacheConfig struct {
 // NewCacheRepository 创建 Redis 缓存仓储
 func NewCacheRepository(config *CacheConfig) (CacheRepository, error) {
 	if config == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "config cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "config cannot be nil")
 	}
 
 	// 设置默认值
@@ -104,7 +104,7 @@ func NewCacheRepository(config *CacheConfig) (CacheRepository, error) {
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to connect to redis")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to connect to redis")
 	}
 
 	return &cacheRepo{
@@ -127,7 +127,7 @@ func (r *cacheRepo) buildKey(key string) string {
 // Set 设置缓存
 func (r *cacheRepo) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
 	if key == "" {
-		return errors.New(errors.CodeInvalidParameter, "key cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "key cannot be empty")
 	}
 
 	fullKey := r.buildKey(key)
@@ -135,7 +135,7 @@ func (r *cacheRepo) Set(ctx context.Context, key string, value interface{}, expi
 	// 序列化值
 	data, err := r.serialize(value)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to serialize value")
+		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to serialize value")
 	}
 
 	// 设置默认过期时间
@@ -154,16 +154,16 @@ func (r *cacheRepo) Set(ctx context.Context, key string, value interface{}, expi
 		return nil
 	}
 
-	return errors.Wrap(lastErr, errors.CodeDatabaseError, "failed to set cache after retries")
+	return errors.WrapDatabaseError(lastErr, errors.CodeDatabaseError, "failed to set cache after retries")
 }
 
 // Get 获取缓存
 func (r *cacheRepo) Get(ctx context.Context, key string, dest interface{}) error {
 	if key == "" {
-		return errors.New(errors.CodeInvalidParameter, "key cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "key cannot be empty")
 	}
 	if dest == nil {
-		return errors.New(errors.CodeInvalidParameter, "dest cannot be nil")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "dest cannot be nil")
 	}
 
 	fullKey := r.buildKey(key)
@@ -174,7 +174,7 @@ func (r *cacheRepo) Get(ctx context.Context, key string, dest interface{}) error
 		data, err := r.client.Get(ctx, fullKey).Bytes()
 		if err != nil {
 			if err == redis.Nil {
-				return errors.New(errors.CodeNotFound, "cache not found")
+				return errors.NewNotFoundError(errors.CodeNotFound, "cache not found")
 			}
 			lastErr = err
 			time.Sleep(r.retryDelay * time.Duration(i+1))
@@ -183,18 +183,18 @@ func (r *cacheRepo) Get(ctx context.Context, key string, dest interface{}) error
 
 		// 反序列化
 		if err := r.deserialize(data, dest); err != nil {
-			return errors.Wrap(err, errors.CodeInternalError, "failed to deserialize value")
+			return errors.WrapInternalError(err, errors.CodeInternalError, "failed to deserialize value")
 		}
 		return nil
 	}
 
-	return errors.Wrap(lastErr, errors.CodeDatabaseError, "failed to get cache after retries")
+	return errors.WrapDatabaseError(lastErr, errors.CodeDatabaseError, "failed to get cache after retries")
 }
 
 // Delete 删除缓存
 func (r *cacheRepo) Delete(ctx context.Context, keys ...string) error {
 	if len(keys) == 0 {
-		return errors.New(errors.CodeInvalidParameter, "keys cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "keys cannot be empty")
 	}
 
 	// 构建完整键
@@ -214,13 +214,13 @@ func (r *cacheRepo) Delete(ctx context.Context, keys ...string) error {
 		return nil
 	}
 
-	return errors.Wrap(lastErr, errors.CodeDatabaseError, "failed to delete cache after retries")
+	return errors.WrapDatabaseError(lastErr, errors.CodeDatabaseError, "failed to delete cache after retries")
 }
 
 // Exists 检查键是否存在
 func (r *cacheRepo) Exists(ctx context.Context, keys ...string) (int64, error) {
 	if len(keys) == 0 {
-		return 0, errors.New(errors.CodeInvalidParameter, "keys cannot be empty")
+		return 0, errors.NewValidationError(errors.CodeInvalidParameter, "keys cannot be empty")
 	}
 
 	// 构建完整键
@@ -241,13 +241,13 @@ func (r *cacheRepo) Exists(ctx context.Context, keys ...string) (int64, error) {
 		return count, nil
 	}
 
-	return 0, errors.Wrap(lastErr, errors.CodeDatabaseError, "failed to check existence after retries")
+	return 0, errors.WrapDatabaseError(lastErr, errors.CodeDatabaseError, "failed to check existence after retries")
 }
 
 // Expire 设置过期时间
 func (r *cacheRepo) Expire(ctx context.Context, key string, expiration time.Duration) error {
 	if key == "" {
-		return errors.New(errors.CodeInvalidParameter, "key cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "key cannot be empty")
 	}
 
 	fullKey := r.buildKey(key)
@@ -263,13 +263,13 @@ func (r *cacheRepo) Expire(ctx context.Context, key string, expiration time.Dura
 		return nil
 	}
 
-	return errors.Wrap(lastErr, errors.CodeDatabaseError, "failed to set expiration after retries")
+	return errors.WrapDatabaseError(lastErr, errors.CodeDatabaseError, "failed to set expiration after retries")
 }
 
 // TTL 获取键的剩余生存时间
 func (r *cacheRepo) TTL(ctx context.Context, key string) (time.Duration, error) {
 	if key == "" {
-		return 0, errors.New(errors.CodeInvalidParameter, "key cannot be empty")
+		return 0, errors.NewValidationError(errors.CodeInvalidParameter, "key cannot be empty")
 	}
 
 	fullKey := r.buildKey(key)
@@ -286,7 +286,7 @@ func (r *cacheRepo) TTL(ctx context.Context, key string) (time.Duration, error) 
 		return ttl, nil
 	}
 
-	return 0, errors.Wrap(lastErr, errors.CodeDatabaseError, "failed to get TTL after retries")
+	return 0, errors.WrapDatabaseError(lastErr, errors.CodeDatabaseError, "failed to get TTL after retries")
 }
 
 // Keys 查找匹配的键
@@ -320,7 +320,7 @@ func (r *cacheRepo) Keys(ctx context.Context, pattern string) ([]string, error) 
 		return keys, nil
 	}
 
-	return nil, errors.Wrap(lastErr, errors.CodeDatabaseError, "failed to get keys after retries")
+	return nil, errors.WrapDatabaseError(lastErr, errors.CodeDatabaseError, "failed to get keys after retries")
 }
 
 // FlushDB 清空当前数据库
@@ -336,7 +336,7 @@ func (r *cacheRepo) FlushDB(ctx context.Context) error {
 		return nil
 	}
 
-	return errors.Wrap(lastErr, errors.CodeDatabaseError, "failed to flush DB after retries")
+	return errors.WrapDatabaseError(lastErr, errors.CodeDatabaseError, "failed to flush DB after retries")
 }
 
 // Ping 健康检查
@@ -393,12 +393,12 @@ type CacheStats struct {
 func (r *cacheRepo) GetStats(ctx context.Context) (*CacheStats, error) {
 	info, err := r.client.Info(ctx, "memory", "stats").Result()
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get redis info")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get redis info")
 	}
 
 	dbSize, err := r.client.DBSize(ctx).Result()
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get DB size")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get DB size")
 	}
 
 	// 解析 info 字符串（简化版，实际应更完善）

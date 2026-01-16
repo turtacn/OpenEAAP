@@ -45,7 +45,7 @@ type RedisConfig struct {
 // NewL2RedisCache creates a new L2 Redis cache instance
 func NewL2RedisCache(logger logging.Logger, config *RedisConfig) (*L2RedisCache, error) {
 	if config == nil {
-		return nil, errors.New(errors.CodeInvalidArgument, "redis config cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidArgument, "redis config cannot be nil")
 	}
 
 	client := redis.NewClient(&redis.Options{
@@ -65,7 +65,7 @@ func NewL2RedisCache(logger logging.Logger, config *RedisConfig) (*L2RedisCache,
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to connect to Redis")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to connect to Redis")
 	}
 
 	simHashBits := config.SimHashBits
@@ -163,7 +163,7 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 // Set stores an entry in L2 Redis cache
 func (c *L2RedisCache) Set(ctx context.Context, entry *CacheEntry) error {
 	if entry == nil {
-		return errors.New(errors.CodeInvalidArgument, "cache entry cannot be nil")
+		return errors.NewValidationError(errors.CodeInvalidArgument, "cache entry cannot be nil")
 	}
 
 	startTime := time.Now()
@@ -177,7 +177,7 @@ func (c *L2RedisCache) Set(ctx context.Context, entry *CacheEntry) error {
 	if !entryCopy.ExpiresAt.IsZero() {
 		ttl = time.Until(entryCopy.ExpiresAt)
 		if ttl <= 0 {
-			return errors.New(errors.CodeInvalidArgument, "entry already expired")
+			return errors.NewValidationError(errors.CodeInvalidArgument, "entry already expired")
 		}
 	} else {
 		entryCopy.ExpiresAt = time.Now().Add(ttl)
@@ -186,14 +186,14 @@ func (c *L2RedisCache) Set(ctx context.Context, entry *CacheEntry) error {
 	// Serialize entry
 	data, err := c.serializeEntry(&entryCopy)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to serialize entry")
+		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to serialize entry")
 	}
 
 	redisKey := c.buildRedisKey(entry.Key)
 
 	// Store in Redis with TTL
 	if err := c.client.Set(ctx, redisKey, data, ttl).Err(); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to set Redis cache")
+		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to set Redis cache")
 	}
 
 	// Store SimHash mapping for fuzzy matching
@@ -220,7 +220,7 @@ func (c *L2RedisCache) Delete(ctx context.Context, key string) error {
 
 	// Delete exact match
 	if err := c.client.Del(ctx, redisKey).Err(); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to delete from Redis")
+		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to delete from Redis")
 	}
 
 	// Delete SimHash mapping
@@ -242,12 +242,12 @@ func (c *L2RedisCache) Clear(ctx context.Context) error {
 	}
 
 	if err := iter.Err(); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to scan Redis keys")
+		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to scan Redis keys")
 	}
 
 	if len(keys) > 0 {
 		if err := c.client.Del(ctx, keys...).Err(); err != nil {
-			return errors.Wrap(err, errors.CodeInternalError, "failed to delete Redis keys")
+			return errors.WrapInternalError(err, errors.CodeInternalError, "failed to delete Redis keys")
 		}
 	}
 
@@ -521,7 +521,7 @@ func (c *L2RedisCache) GetMetrics(ctx context.Context) map[string]interface{} {
 // HealthCheck checks if Redis connection is healthy
 func (c *L2RedisCache) HealthCheck(ctx context.Context) error {
 	if err := c.client.Ping(ctx).Err(); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "Redis health check failed")
+		return errors.WrapInternalError(err, errors.CodeInternalError, "Redis health check failed")
 	}
 	return nil
 }

@@ -114,7 +114,7 @@ func NewPIIDetector(logger logging.Logger, config *DetectorConfig) (*PIIDetector
 
 	// Initialize regex patterns
 	if err := detector.initializePatterns(); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to initialize patterns")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to initialize patterns")
 	}
 
 	// Load ML model if enabled
@@ -192,7 +192,7 @@ func (d *PIIDetector) DetectBatch(ctx context.Context, texts []string) ([]*PIIDe
 	for i, text := range texts {
 		result, err := d.Detect(ctx, text)
 		if err != nil {
-			return nil, errors.Wrap(err, errors.CodeInternalError, "batch detection failed")
+			return nil, errors.WrapInternalError(err, errors.CodeInternalError, "batch detection failed")
 		}
 		results[i] = result
 	}

@@ -142,7 +142,7 @@ func (cm *CacheManager) Get(ctx context.Context, req interface{}) (interface{}, 
 	// Generate cache key
 	key, err := cm.generateCacheKey(req)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to generate cache key")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to generate cache key")
 	}
 
 	// Try L1 cache first (fastest, < 1ms)
@@ -235,7 +235,7 @@ func (cm *CacheManager) Set(ctx context.Context, req interface{}, resp interface
 	// Generate cache key
 	key, err := cm.generateCacheKey(req)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to generate cache key")
+		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to generate cache key")
 	}
 
 	now := time.Now()
@@ -312,7 +312,7 @@ func (cm *CacheManager) Set(ctx context.Context, req interface{}, resp interface
 func (cm *CacheManager) Invalidate(ctx context.Context, req interface{}) error {
 	key, err := cm.generateCacheKey(req)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to generate cache key")
+		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to generate cache key")
 	}
 
 	var errs []error
@@ -414,7 +414,7 @@ func (cm *CacheManager) generateCacheKey(req interface{}) (string, error) {
 	// Serialize request to JSON
 	data, err := json.Marshal(req)
 	if err != nil {
-		return "", errors.Wrap(err, errors.CodeInternalError, "failed to marshal request")
+		return "", errors.WrapInternalError(err, errors.CodeInternalError, "failed to marshal request")
 	}
 
 	// Generate SHA-256 hash

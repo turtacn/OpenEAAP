@@ -43,12 +43,12 @@ type agentRepo struct {
 // NewAgentRepository 创建 Agent 仓储
 func NewAgentRepository(db *gorm.DB) (agent.AgentRepository, error) {
 	if db == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "database connection cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "database connection cannot be nil")
 	}
 
 	// 自动迁移表结构
 	if err := db.AutoMigrate(&AgentModel{}); err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to migrate agent table")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to migrate agent table")
 	}
 
 	return &agentRepo{db: db}, nil
@@ -57,7 +57,7 @@ func NewAgentRepository(db *gorm.DB) (agent.AgentRepository, error) {
 // Create 创建 Agent
 func (r *agentRepo) Create(ctx context.Context, agt *agent.Agent) error {
 	if agt == nil {
-		return errors.New(errors.CodeInvalidParameter, "agent cannot be nil")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "agent cannot be nil")
 	}
 
 	// 验证 Agent
@@ -68,7 +68,7 @@ func (r *agentRepo) Create(ctx context.Context, agt *agent.Agent) error {
 	// 转换为数据库模型
 	model, err := r.toModel(agt)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to convert agent to model")
+		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to convert agent to model")
 	}
 
 	// 执行创建
@@ -76,7 +76,7 @@ func (r *agentRepo) Create(ctx context.Context, agt *agent.Agent) error {
 		if isDuplicateKeyError(err) {
 			return errors.Wrap(err, errors.CodeAlreadyExists, "agent already exists")
 		}
-		return errors.Wrap(err, errors.CodeDatabaseError, "failed to create agent")
+		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to create agent")
 	}
 
 	// 更新实体的时间戳
@@ -89,15 +89,15 @@ func (r *agentRepo) Create(ctx context.Context, agt *agent.Agent) error {
 // GetByID 根据 ID 获取 Agent
 func (r *agentRepo) GetByID(ctx context.Context, id string) (*agent.Agent, error) {
 	if id == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "agent ID cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "agent ID cannot be empty")
 	}
 
 	var model AgentModel
 	if err := r.db.WithContext(ctx).First(&model, "id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, errors.New(errors.CodeNotFound, "agent not found")
+			return nil, errors.NewNotFoundError(errors.CodeNotFound, "agent not found")
 		}
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get agent")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get agent")
 	}
 
 	return r.toEntity(&model)
@@ -106,10 +106,10 @@ func (r *agentRepo) GetByID(ctx context.Context, id string) (*agent.Agent, error
 // Update 更新 Agent
 func (r *agentRepo) Update(ctx context.Context, agt *agent.Agent) error {
 	if agt == nil {
-		return errors.New(errors.CodeInvalidParameter, "agent cannot be nil")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "agent cannot be nil")
 	}
 	if agt.ID == "" {
-		return errors.New(errors.CodeInvalidParameter, "agent ID cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "agent ID cannot be empty")
 	}
 
 	// 验证 Agent
@@ -120,7 +120,7 @@ func (r *agentRepo) Update(ctx context.Context, agt *agent.Agent) error {
 	// 转换为数据库模型
 	model, err := r.toModel(agt)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to convert agent to model")
+		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to convert agent to model")
 	}
 
 	// 使用乐观锁更新
@@ -139,7 +139,7 @@ func (r *agentRepo) Update(ctx context.Context, agt *agent.Agent) error {
 		})
 
 	if result.Error != nil {
-		return errors.Wrap(result.Error, errors.CodeDatabaseError, "failed to update agent")
+		return errors.WrapDatabaseError(result.Error, errors.CodeDatabaseError, "failed to update agent")
 	}
 
 	if result.RowsAffected == 0 {
@@ -156,16 +156,16 @@ func (r *agentRepo) Update(ctx context.Context, agt *agent.Agent) error {
 // Delete 删除 Agent（软删除）
 func (r *agentRepo) Delete(ctx context.Context, id string) error {
 	if id == "" {
-		return errors.New(errors.CodeInvalidParameter, "agent ID cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "agent ID cannot be empty")
 	}
 
 	result := r.db.WithContext(ctx).Delete(&AgentModel{}, "id = ?", id)
 	if result.Error != nil {
-		return errors.Wrap(result.Error, errors.CodeDatabaseError, "failed to delete agent")
+		return errors.WrapDatabaseError(result.Error, errors.CodeDatabaseError, "failed to delete agent")
 	}
 
 	if result.RowsAffected == 0 {
-		return errors.New(errors.CodeNotFound, "agent not found")
+		return errors.NewNotFoundError(errors.CodeNotFound, "agent not found")
 	}
 
 	return nil
@@ -174,16 +174,16 @@ func (r *agentRepo) Delete(ctx context.Context, id string) error {
 // HardDelete 硬删除 Agent
 func (r *agentRepo) HardDelete(ctx context.Context, id string) error {
 	if id == "" {
-		return errors.New(errors.CodeInvalidParameter, "agent ID cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "agent ID cannot be empty")
 	}
 
 	result := r.db.WithContext(ctx).Unscoped().Delete(&AgentModel{}, "id = ?", id)
 	if result.Error != nil {
-		return errors.Wrap(result.Error, errors.CodeDatabaseError, "failed to hard delete agent")
+		return errors.WrapDatabaseError(result.Error, errors.CodeDatabaseError, "failed to hard delete agent")
 	}
 
 	if result.RowsAffected == 0 {
-		return errors.New(errors.CodeNotFound, "agent not found")
+		return errors.NewNotFoundError(errors.CodeNotFound, "agent not found")
 	}
 
 	return nil
@@ -232,7 +232,7 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 	// 获取总数
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, errors.Wrap(err, errors.CodeDatabaseError, "failed to count agents")
+		return nil, 0, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to count agents")
 	}
 
 	// 应用排序
@@ -254,7 +254,7 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 	// 查询数据
 	var models []AgentModel
 	if err := query.Find(&models).Error; err != nil {
-		return nil, 0, errors.Wrap(err, errors.CodeDatabaseError, "failed to list agents")
+		return nil, 0, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to list agents")
 	}
 
 	// 转换为实体
@@ -262,7 +262,7 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 	for i := range models {
 		agt, err := r.toEntity(&models[i])
 		if err != nil {
-			return nil, 0, errors.Wrap(err, errors.CodeInternalError, "failed to convert model to entity")
+			return nil, 0, errors.WrapInternalError(err, errors.CodeInternalError, "failed to convert model to entity")
 		}
 		agents = append(agents, agt)
 	}
@@ -273,10 +273,10 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 // UpdateStatus 更新 Agent 状态
 func (r *agentRepo) UpdateStatus(ctx context.Context, id string, status agent.AgentStatus) error {
 	if id == "" {
-		return errors.New(errors.CodeInvalidParameter, "agent ID cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "agent ID cannot be empty")
 	}
 	if !status.Valid() {
-		return errors.New(errors.CodeInvalidParameter, "invalid agent status")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "invalid agent status")
 	}
 
 	result := r.db.WithContext(ctx).
@@ -288,11 +288,11 @@ func (r *agentRepo) UpdateStatus(ctx context.Context, id string, status agent.Ag
 		})
 
 	if result.Error != nil {
-		return errors.Wrap(result.Error, errors.CodeDatabaseError, "failed to update agent status")
+		return errors.WrapDatabaseError(result.Error, errors.CodeDatabaseError, "failed to update agent status")
 	}
 
 	if result.RowsAffected == 0 {
-		return errors.New(errors.CodeNotFound, "agent not found")
+		return errors.NewNotFoundError(errors.CodeNotFound, "agent not found")
 	}
 
 	return nil
@@ -309,7 +309,7 @@ func (r *agentRepo) Transaction(ctx context.Context, fn func(repo agent.AgentRep
 // BatchCreate 批量创建 Agent
 func (r *agentRepo) BatchCreate(ctx context.Context, agents []*agent.Agent) error {
 	if len(agents) == 0 {
-		return errors.New(errors.CodeInvalidParameter, "agents cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "agents cannot be empty")
 	}
 
 	models := make([]AgentModel, 0, len(agents))
@@ -320,7 +320,7 @@ func (r *agentRepo) BatchCreate(ctx context.Context, agents []*agent.Agent) erro
 
 		model, err := r.toModel(agt)
 		if err != nil {
-			return errors.Wrap(err, errors.CodeInternalError, "failed to convert agent to model")
+			return errors.WrapInternalError(err, errors.CodeInternalError, "failed to convert agent to model")
 		}
 		models = append(models, *model)
 	}
@@ -329,7 +329,7 @@ func (r *agentRepo) BatchCreate(ctx context.Context, agents []*agent.Agent) erro
 	if err := r.db.WithContext(ctx).
 		Clauses(clause.OnConflict{DoNothing: true}).
 		CreateInBatches(models, 100).Error; err != nil {
-		return errors.Wrap(err, errors.CodeDatabaseError, "failed to batch create agents")
+		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to batch create agents")
 	}
 
 	return nil
@@ -411,7 +411,7 @@ func (r *agentRepo) GetStatistics(ctx context.Context) (*agent.AgentStatistics, 
 	if err := r.db.WithContext(ctx).
 		Model(&AgentModel{}).
 		Count(&stats.Total).Error; err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get total count")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get total count")
 	}
 
 	// 按状态统计
@@ -425,7 +425,7 @@ func (r *agentRepo) GetStatistics(ctx context.Context) (*agent.AgentStatistics, 
 		Select("status, COUNT(*) as count").
 		Group("status").
 		Find(&statusCounts).Error; err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get status counts")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get status counts")
 	}
 
 	stats.ByStatus = make(map[string]int64)
@@ -444,7 +444,7 @@ func (r *agentRepo) GetStatistics(ctx context.Context) (*agent.AgentStatistics, 
 		Select("runtime_type, COUNT(*) as count").
 		Group("runtime_type").
 		Find(&runtimeCounts).Error; err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get runtime counts")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get runtime counts")
 	}
 
 	stats.ByRuntimeType = make(map[string]int64)
