@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenEAAP - Enterprise-Grade AI Agent Platform</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #121826;
+            --accent-cyan: #00f0ff;
+            --accent-purple: #9d00ff;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-glow: 0 0 10px rgba(0, 240, 255, 0.5);
+            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --gradient: linear-gradient(135deg, #00f0ff 0%, #9d00ff 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* 粒子背景效果 */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 40% 40%, rgba(0, 240, 255, 0.05) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        /* 导航栏 */
+        nav {
+            background-color: rgba(18, 24, 38, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 1rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .logo span {
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-content {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-left: 2rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-cyan);
+            text-shadow: var(--border-glow);
+        }
+
+        /* 语言切换按钮 */
+        .lang-switch {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .lang-switch:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: var(--border-glow);
+        }
+
+        .lang-switch span {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .lang-switch i {
+            color: var(--accent-cyan);
+        }
+
+        /* 英雄区 */
+        .hero {
+            padding: 8rem 5% 6rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 800px;
+            margin: 0 auto 2rem;
+        }
+
+        .cta-btn {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            background: var(--gradient);
+            border: none;
+            border-radius: 8px;
+            color: var(--bg-primary);
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--border-glow);
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.7);
+        }
+
+        /* 通用区块样式 */
+        .section {
+            padding: 6rem 5%;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+        }
+
+        .section-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            position: relative;
+            display: inline-block;
+        }
+
+        .section-title::after {
+            content: "";
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: var(--gradient);
+            border-radius: 3px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* 痛点&解决方案 */
+        .pain-solution {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .card {
+            background-color: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+        }
+
+        .card h3 {
+            color: var(--accent-cyan);
+            margin-bottom: 1.5rem;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .card ul {
+            list-style: none;
+        }
+
+        .card li {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+        }
+
+        .card li i {
+            color: var(--accent-purple);
+            margin-top: 0.4rem;
+        }
+
+        /* 核心功能 */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background-color: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--gradient);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+        }
+
+        .feature-card h3 {
+            color: var(--accent-cyan);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-card .metric {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .feature-card .metric span {
+            font-size: 0.9rem;
+        }
+
+        .feature-card .metric .value {
+            color: var(--accent-purple);
+            font-weight: 600;
+        }
+
+        /* 性能指标表格 */
+        .performance-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--bg-secondary);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            margin: 2rem 0;
+        }
+
+        .performance-table th, .performance-table td {
+            padding: 1.2rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+        }
+
+        .performance-table th {
+            background-color: rgba(18, 24, 38, 0.8);
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        .performance-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .performance-table tr:hover {
+            background-color: rgba(0, 240, 255, 0.05);
+        }
+
+        .improvement {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        /* 快速开始 */
+        .quick-start {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .step {
+            background-color: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            border-left: 4px solid var(--accent-cyan);
+        }
+
+        .step h4 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .step h4 span {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background: var(--gradient);
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-size: 0.9rem;
+            color: var(--bg-primary);
+            font-weight: 700;
+        }
+
+        .step code {
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            display: block;
+            margin: 1rem 0;
+            font-family: monospace;
+            color: var(--accent-cyan);
+            overflow-x: auto;
+        }
+
+        /* 技术栈 */
+        .tech-stack {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .tech-item {
+            background-color: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .tech-item:hover {
+            transform: translateY(-3px);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+        }
+
+        .tech-item i {
+            font-size: 2rem;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .tech-item p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        /* 路线图 */
+        .roadmap {
+            position: relative;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .roadmap::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 100%;
+            background: var(--gradient);
+        }
+
+        .roadmap-item {
+            display: flex;
+            justify-content: flex-end;
+            padding-right: 50%;
+            position: relative;
+            margin-bottom: 3rem;
+        }
+
+        .roadmap-item:nth-child(even) {
+            justify-content: flex-start;
+            padding-left: 50%;
+            padding-right: 0;
+        }
+
+        .roadmap-content {
+            width: 90%;
+            background-color: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+        }
+
+        .roadmap-content h4 {
+            color: var(--accent-cyan);
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .roadmap-content .status {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .status-done {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .status-in-progress {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .status-planned {
+            background-color: rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+        }
+
+        .roadmap-item::after {
+            content: "";
+            position: absolute;
+            top: 1.5rem;
+            right: calc(50% - 10px);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--gradient);
+            box-shadow: var(--border-glow);
+        }
+
+        .roadmap-item:nth-child(even)::after {
+            left: calc(50% - 10px);
+            right: auto;
+        }
+
+        /* 页脚 */
+        footer {
+            background-color: var(--bg-secondary);
+            padding: 3rem 5%;
+            text-align: center;
+            border-top: 1px solid rgba(0, 240, 255, 0.2);
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent-cyan);
+            text-shadow: var(--border-glow);
+        }
+
+        .copyright {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .pain-solution {
+                grid-template-columns: 1fr;
+            }
+
+            .roadmap::before {
+                left: 20px;
+            }
+
+            .roadmap-item {
+                padding-right: 0;
+                padding-left: 50px;
+                justify-content: flex-start;
+            }
+
+            .roadmap-item:nth-child(even) {
+                padding-left: 50px;
+            }
+
+            .roadmap-item::after {
+                left: 10px;
+                right: auto;
+            }
+
+            .roadmap-content {
+                width: 100%;
+            }
+
+            .nav-content {
+                gap: 1rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .lang-switch {
+                padding: 0.4rem 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- 导航栏 -->
+<nav>
+    <div class="logo">
+        <i class="fas fa-robot"></i>
+        <span data-lang-key="logo">OpenEAAP</span>
+    </div>
+    <div class="nav-content">
+        <div class="nav-links">
+            <a href="#features" data-lang-key="nav_features">Core Features</a>
+            <a href="#performance" data-lang-key="nav_performance">Performance</a>
+            <a href="#quickstart" data-lang-key="nav_quickstart">Quick Start</a>
+            <a href="#roadmap" data-lang-key="nav_roadmap">Roadmap</a>
+            <a href="https://github.com/turtacn/OpenEAAP" target="_blank" data-lang-key="nav_github">GitHub</a>
+        </div>
+        <!-- 语言切换按钮 -->
+        <div class="lang-switch" id="langSwitch">
+            <i class="fas fa-globe"></i>
+            <span id="currentLang">English</span>
+        </div>
+    </div>
+</nav>
+
+<!-- 英雄区 -->
+<section class="hero">
+    <div class="container">
+        <h1 data-lang-key="hero_title">Enterprise-Grade AI Agent Platform</h1>
+        <p data-lang-key="hero_desc">High Performance · Low Cost · Out-of-the-Box · Enterprise-Grade Security</p>
+        <a href="https://github.com/turtacn/OpenEAAP" target="_blank" class="cta-btn" data-lang-key="hero_btn">Get Started Now</a>
+    </div>
+</section>
+
+<!-- 项目背景 -->
+<section class="section">
+    <div class="container">
+        <h2 class="section-title" data-lang-key="pain_solution_title">Business Challenges & Solutions</h2>
+        <div class="pain-solution">
+            <div class="card">
+                <h3><i class="fas fa-exclamation-triangle"></i> <span data-lang-key="pain_points_title">Core Business Pain Points</span></h3>
+                <ul>
+                    <li><i class="fas fa-times"></i> <span data-lang-key="pain_1">High Inference Costs (60-80% of total AI costs)</span></li>
+                    <li><i class="fas fa-times"></i> <span data-lang-key="pain_2">Severe Performance Bottlenecks (P95 > 5s)</span></li>
+                    <li><i class="fas fa-times"></i> <span data-lang-key="pain_3">Low Development Efficiency (3-6 months per Agent)</span></li>
+                    <li><i class="fas fa-times"></i> <span data-lang-key="pain_4">Data Security Risks (PII Leakage)</span></li>
+                    <li><i class="fas fa-times"></i> <span data-lang-key="pain_5">Difficult Continuous Optimization (No Feedback Loop)</span></li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-check-circle"></i> <span data-lang-key="solutions_title">OpenEAAP Solutions</span></h3>
+                <ul>
+                    <li><i class="fas fa-check"></i> <span data-lang-key="solution_1">Three-Level Caching (Reduce 60% of costs)</span></li>
+                    <li><i class="fas fa-check"></i> <span data-lang-key="solution_2">High-Efficiency Inference (P95 < 1.5s)</span></li>
+                    <li><i class="fas fa-check"></i> <span data-lang-key="solution_3">Standard Framework (50% shorter development cycle)</span></li>
+                    <li><i class="fas fa-check"></i> <span data-lang-key="solution_4">Privacy Gateway (Automatic PII Masking)</span></li>
+                    <li><i class="fas fa-check"></i> <span data-lang-key="solution_5">Online Learning (Continuous Optimization Loop)</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 核心功能 -->
+<section id="features" class="section">
+    <div class="container">
+        <h2 class="section-title" data-lang-key="features_title">Core Features</h2>
+        <div class="features">
+            <div class="feature-card">
+                <h3 data-lang-key="feature_1_title">High-Performance Inference Engine</h3>
+                <p data-lang-key="feature_1_desc">Three-Level Smart Caching (L1 Local <1ms + L2 Redis <10ms + L3 Vector <50ms) with 50%+ hit rate, integrated with vLLM for 24x throughput improvement.</p>
+                <div class="metric">
+                    <span data-lang-key="metric_p95_latency">P95 Latency</span>
+                    <span class="value">1500ms (↓70%)</span>
+                </div>
+                <div class="metric">
+                    <span data-lang-key="metric_inference_cost">Inference Cost</span>
+                    <span class="value">$0.40/1K tokens (↓60%)</span>
+                </div>
+            </div>
+            <div class="feature-card">
+                <h3 data-lang-key="feature_2_title">Flexible Orchestration Engine</h3>
+                <p data-lang-key="feature_2_desc">Multi-Runtime Support (Native, LangChain, AutoGPT), visual orchestration via YAML/JSON, and dynamic plugin ecosystem for unlimited extensibility.</p>
+                <div class="metric">
+                    <span data-lang-key="metric_dev_cycle">Development Cycle</span>
+                    <span class="value">↓50%</span>
+                </div>
+                <div class="metric">
+                    <span data-lang-key="metric_runtime_compat">Runtime Compatibility</span>
+                    <span class="value">100%</span>
+                </div>
+            </div>
+            <div class="feature-card">
+                <h3 data-lang-key="feature_3_title">Enterprise-Grade RAG Engine</h3>
+                <p data-lang-key="feature_3_desc">Hybrid Retrieval (Vector + Keyword + Knowledge Graph) improves accuracy by 30%, with smart reranking and answer verification to avoid hallucinations.</p>
+                <div class="metric">
+                    <span data-lang-key="metric_retrieval_acc">Retrieval Accuracy</span>
+                    <span class="value">↑30%</span>
+                </div>
+                <div class="metric">
+                    <span data-lang-key="metric_hallucination">Hallucination Rate</span>
+                    <span class="value">↓90%</span>
+                </div>
+            </div>
+            <div class="feature-card">
+                <h3 data-lang-key="feature_4_title">Continuous Optimization</h3>
+                <p data-lang-key="feature_4_desc">RLHF/DPO Training based on human feedback, Prompt Auto-Optimization, and A/B Testing framework for continuous model improvement.</p>
+                <div class="metric">
+                    <span data-lang-key="metric_model_perf">Model Performance</span>
+                    <span class="value">↑25%</span>
+                </div>
+                <div class="metric">
+                    <span data-lang-key="metric_feedback_cycle">Feedback Cycle</span>
+                    <span class="value">24h</span>
+                </div>
+            </div>
+            <div class="feature-card">
+                <h3 data-lang-key="feature_5_title">Comprehensive Security & Governance</h3>
+                <p data-lang-key="feature_5_desc">Privacy Computing Gateway, ABAC/RBAC access control, and full-link audit to meet SOC2/GDPR/PCI-DSS compliance requirements.</p>
+                <div class="metric">
+                    <span data-lang-key="metric_pii_detection">PII Detection Rate</span>
+                    <span class="value">99%</span>
+                </div>
+                <div class="metric">
+                    <span data-lang-key="metric_compliance">Compliance Coverage</span>
+                    <span class="value">100%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 性能指标 -->
+<section id="performance" class="section">
+    <div class="container">
+        <h2 class="section-title" data-lang-key="performance_title">Performance Metrics</h2>
+        <table class="performance-table">
+            <thead>
+            <tr>
+                <th data-lang-key="table_metric">Metric</th>
+                <th data-lang-key="table_traditional">Traditional Solution</th>
+                <th data-lang-key="table_openeaap">OpenEAAP (Optimized)</th>
+                <th data-lang-key="table_improvement">Improvement</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td data-lang-key="metric_p50">P50 Latency</td>
+                <td>2500ms</td>
+                <td>800ms</td>
+                <td class="improvement">↓68%</td>
+            </tr>
+            <tr>
+                <td data-lang-key="metric_p95">P95 Latency</td>
+                <td>5000ms</td>
+                <td>1500ms</td>
+                <td class="improvement">↓70%</td>
+            </tr>
+            <tr>
+                <td data-lang-key="metric_p99">P99 Latency</td>
+                <td>8000ms</td>
+                <td>2200ms</td>
+                <td class="improvement">↓72.5%</td>
+            </tr>
+            <tr>
+                <td data-lang-key="metric_qps">QPS</td>
+                <td>45</td>
+                <td>120</td>
+                <td class="improvement">↑166%</td>
+            </tr>
+            <tr>
+                <td data-lang-key="metric_cache_hit">Cache Hit Rate</td>
+                <td>0%</td>
+                <td>52%</td>
+                <td class="improvement" data-lang-key="metric_new_cap">New Capability</td>
+            </tr>
+            <tr>
+                <td data-lang-key="metric_inf_cost">Inference Cost</td>
+                <td>$1.00/1K tokens</td>
+                <td>$0.40/1K tokens</td>
+                <td class="improvement">↓60%</td>
+            </tr>
+            <tr>
+                <td data-lang-key="metric_gpu">GPU Utilization</td>
+                <td>40%</td>
+                <td>75%</td>
+                <td class="improvement">↑87.5%</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- 快速开始 -->
+<section id="quickstart" class="section">
+    <div class="container">
+        <h2 class="section-title" data-lang-key="quickstart_title">Quick Start</h2>
+        <div class="quick-start">
+            <div class="step">
+                <h4><span>1</span> <span data-lang-key="step_1">Clone Repository</span></h4>
+                <code>git clone https://github.com/turtacn/OpenEAAP.git
+                    cd OpenEAAP</code>
+                <p data-lang-key="step_1_desc">Clone the OpenEAAP repository to your local environment</p>
+            </div>
+            <div class="step">
+                <h4><span>2</span> <span data-lang-key="step_2">Start Dependencies</span></h4>
+                <code>docker-compose up -d</code>
+                <p data-lang-key="step_2_desc">Start PostgreSQL, Redis, Milvus, MinIO via Docker Compose</p>
+            </div>
+            <div class="step">
+                <h4><span>3</span> <span data-lang-key="step_3">Migrate Database</span></h4>
+                <code>make migrate-up</code>
+                <p data-lang-key="step_3_desc">Initialize database schema with migration scripts</p>
+            </div>
+            <div class="step">
+                <h4><span>4</span> <span data-lang-key="step_4">Configure Env</span></h4>
+                <code>cp configs/development.yaml.example configs/development.yaml</code>
+                <p data-lang-key="step_4_desc">Copy and modify configuration file for your environment</p>
+            </div>
+            <div class="step">
+                <h4><span>5</span> <span data-lang-key="step_5">Start Service</span></h4>
+                <code>make run-server</code>
+                <p data-lang-key="step_5_desc">Start HTTP service (http://localhost:8080)</p>
+            </div>
+            <div class="step">
+                <h4><span>6</span> <span data-lang-key="step_6">Run Tests</span></h4>
+                <code>make test</code>
+                <p data-lang-key="step_6_desc">Run all tests to verify the environment</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 技术栈 -->
+<section class="section">
+    <div class="container">
+        <h2 class="section-title" data-lang-key="tech_stack_title">Tech Stack</h2>
+        <div class="tech-stack">
+            <div class="tech-item">
+                <i class="fab fa-golang"></i>
+                <h4>Go 1.21+</h4>
+                <p data-lang-key="tech_1">High-performance backend services</p>
+            </div>
+            <div class="tech-item">
+                <i class="fas fa-server"></i>
+                <h4>vLLM</h4>
+                <p data-lang-key="tech_2">High-performance LLM inference engine</p>
+            </div>
+            <div class="tech-item">
+                <i class="fas fa-database"></i>
+                <h4>PostgreSQL</h4>
+                <p data-lang-key="tech_3">Relational data storage</p>
+            </div>
+            <div class="tech-item">
+                <i class="fas fa-memory"></i>
+                <h4>Redis</h4>
+                <p data-lang-key="tech_4">Distributed caching</p>
+            </div>
+            <div class="tech-item">
+                <i class="fas fa-vector-square"></i>
+                <h4>Milvus</h4>
+                <p data-lang-key="tech_5">Vector database for retrieval</p>
+            </div>
+            <div class="tech-item">
+                <i class="fab fa-docker"></i>
+                <h4>Docker/K8s</h4>
+                <p data-lang-key="tech_6">Containerization & orchestration</p>
+            </div>
+            <div class="tech-item">
+                <i class="fas fa-chart-line"></i>
+                <h4>Prometheus</h4>
+                <p data-lang-key="tech_7">Metrics monitoring</p>
+            </div>
+            <div class="tech-item">
+                <i class="fas fa-trace"></i>
+                <h4>OpenTelemetry</h4>
+                <p data-lang-key="tech_8">Distributed tracing & logging</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 路线图 -->
+<section id="roadmap" class="section">
+    <div class="container">
+        <h2 class="section-title" data-lang-key="roadmap_title">Roadmap</h2>
+        <div class="roadmap">
+            <div class="roadmap-item">
+                <div class="roadmap-content">
+                    <span class="status status-done" data-lang-key="status_done">Completed (2026 Q1-Q2)</span>
+                    <h4 data-lang-key="roadmap_1_title">Foundation Platform</h4>
+                    <ul>
+                        <li data-lang-key="roadmap_1_1">Core DDD Architecture setup</li>
+                        <li data-lang-key="roadmap_1_2">Orchestrator & Runtime (Native, LangChain)</li>
+                        <li data-lang-key="roadmap_1_3">Inference Gateway (vLLM Integration)</li>
+                        <li data-lang-key="roadmap_1_4">Three-level caching architecture</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="roadmap-item">
+                <div class="roadmap-content">
+                    <span class="status status-in-progress" data-lang-key="status_in_progress">In Progress (2026 Q2-Q3)</span>
+                    <h4 data-lang-key="roadmap_2_title">Data Intelligence</h4>
+                    <ul>
+                        <li data-lang-key="roadmap_2_1">RAG Engine (Hybrid retrieval, Reranking)</li>
+                        <li data-lang-key="roadmap_2_2">Vector Database Integration (Milvus)</li>
+                        <li data-lang-key="roadmap_2_3">Knowledge Graph Construction</li>
+                        <li data-lang-key="roadmap_2_4">Document Processing Pipeline</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="roadmap-item">
+                <div class="roadmap-content">
+                    <span class="status status-planned" data-lang-key="status_planned">Planned (2026 Q3-Q4)</span>
+                    <h4 data-lang-key="roadmap_3_title">Continuous Optimization</h4>
+                    <ul>
+                        <li data-lang-key="roadmap_3_1">Online Learning Engine</li>
+                        <li data-lang-key="roadmap_3_2">RLHF/DPO Training Flow</li>
+                        <li data-lang-key="roadmap_3_3">Prompt Auto-Optimization</li>
+                        <li data-lang-key="roadmap_3_4">A/B Testing Framework</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="roadmap-item">
+                <div class="roadmap-content">
+                    <span class="status status-planned" data-lang-key="status_planned_2">Planned (2026 Q4-2027 Q1)</span>
+                    <h4 data-lang-key="roadmap_4_title">Governance Enhancement</h4>
+                    <ul>
+                        <li data-lang-key="roadmap_4_1">Policy Engine (ABAC/RBAC)</li>
+                        <li data-lang-key="roadmap_4_2">Privacy Computing Gateway</li>
+                        <li data-lang-key="roadmap_4_3">Audit & Compliance (SOC2, GDPR)</li>
+                        <li data-lang-key="roadmap_4_4">Security Hardening</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="roadmap-item">
+                <div class="roadmap-content">
+                    <span class="status status-planned" data-lang-key="status_planned_3">Planned (2027 Q1-Q2)</span>
+                    <h4 data-lang-key="roadmap_5_title">Ecosystem Integration</h4>
+                    <ul>
+                        <li data-lang-key="roadmap_5_1">AutoGPT Adapter</li>
+                        <li data-lang-key="roadmap_5_2">Plugin Marketplace</li>
+                        <li data-lang-key="roadmap_5_3">Multimodal Support (Image, Voice)</li>
+                        <li data-lang-key="roadmap_5_4">Edge AI Deployment</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 页脚 -->
+<footer>
+    <div class="container">
+        <div class="logo">
+            <i class="fas fa-robot"></i>
+            <span data-lang-key="logo">OpenEAAP</span>
+        </div>
+        <div class="footer-links">
+            <a href="https://github.com/turtacn/OpenEAAP" target="_blank" data-lang-key="footer_github">GitHub</a>
+            <a href="https://github.com/turtacn/OpenEAAP/blob/main/docs/architecture.md" target="_blank" data-lang-key="footer_architecture">Architecture</a>
+            <a href="https://github.com/turtacn/OpenEAAP/blob/main/docs/apis.md" target="_blank" data-lang-key="footer_api">API Docs</a>
+            <a href="https://github.com/turtacn/OpenEAAP/blob/main/LICENSE" target="_blank" data-lang-key="footer_license">License</a>
+        </div>
+        <p class="copyright" data-lang-key="copyright">© 2026 OpenEAAP Authors. Licensed under Apache 2.0.</p>
+    </div>
+</footer>
+
+<script>
+    // 语言包定义
+    const langData = {
+        en: {
+            logo: "OpenEAAP",
+            nav_features: "Core Features",
+            nav_performance: "Performance",
+            nav_quickstart: "Quick Start",
+            nav_roadmap: "Roadmap",
+            nav_github: "GitHub",
+            hero_title: "Enterprise-Grade AI Agent Platform",
+            hero_desc: "High Performance · Low Cost · Out-of-the-Box · Enterprise-Grade Security",
+            hero_btn: "Get Started Now",
+            pain_solution_title: "Business Challenges & Solutions",
+            pain_points_title: "Core Business Pain Points",
+            pain_1: "High Inference Costs (60-80% of total AI costs)",
+            pain_2: "Severe Performance Bottlenecks (P95 > 5s)",
+            pain_3: "Low Development Efficiency (3-6 months per Agent)",
+            pain_4: "Data Security Risks (PII Leakage)",
+            pain_5: "Difficult Continuous Optimization (No Feedback Loop)",
+            solutions_title: "OpenEAAP Solutions",
+            solution_1: "Three-Level Caching (Reduce 60% of costs)",
+            solution_2: "High-Efficiency Inference (P95 < 1.5s)",
+            solution_3: "Standard Framework (50% shorter development cycle)",
+            solution_4: "Privacy Gateway (Automatic PII Masking)",
+            solution_5: "Online Learning (Continuous Optimization Loop)",
+            features_title: "Core Features",
+            feature_1_title: "High-Performance Inference Engine",
+            feature_1_desc: "Three-Level Smart Caching (L1 Local <1ms + L2 Redis <10ms + L3 Vector <50ms) with 50%+ hit rate, integrated with vLLM for 24x throughput improvement.",
+            feature_2_title: "Flexible Orchestration Engine",
+            feature_2_desc: "Multi-Runtime Support (Native, LangChain, AutoGPT), visual orchestration via YAML/JSON, and dynamic plugin ecosystem for unlimited extensibility.",
+            feature_3_title: "Enterprise-Grade RAG Engine",
+            feature_3_desc: "Hybrid Retrieval (Vector + Keyword + Knowledge Graph) improves accuracy by 30%, with smart reranking and answer verification to avoid hallucinations.",
+            feature_4_title: "Continuous Optimization",
+            feature_4_desc: "RLHF/DPO Training based on human feedback, Prompt Auto-Optimization, and A/B Testing framework for continuous model improvement.",
+            feature_5_title: "Comprehensive Security & Governance",
+            feature_5_desc: "Privacy Computing Gateway, ABAC/RBAC access control, and full-link audit to meet SOC2/GDPR/PCI-DSS compliance requirements.",
+            metric_p95_latency: "P95 Latency",
+            metric_inference_cost: "Inference Cost",
+            metric_dev_cycle: "Development Cycle",
+            metric_runtime_compat: "Runtime Compatibility",
+            metric_retrieval_acc: "Retrieval Accuracy",
+            metric_hallucination: "Hallucination Rate",
+            metric_model_perf: "Model Performance",
+            metric_feedback_cycle: "Feedback Cycle",
+            metric_pii_detection: "PII Detection Rate",
+            metric_compliance: "Compliance Coverage",
+            performance_title: "Performance Metrics",
+            table_metric: "Metric",
+            table_traditional: "Traditional Solution",
+            table_openeaap: "OpenEAAP (Optimized)",
+            table_improvement: "Improvement",
+            metric_p50: "P50 Latency",
+            metric_p95: "P95 Latency",
+            metric_p99: "P99 Latency",
+            metric_qps: "QPS",
+            metric_cache_hit: "Cache Hit Rate",
+            metric_new_cap: "New Capability",
+            metric_inf_cost: "Inference Cost",
+            metric_gpu: "GPU Utilization",
+            quickstart_title: "Quick Start",
+            step_1: "Clone Repository",
+            step_1_desc: "Clone the OpenEAAP repository to your local environment",
+            step_2: "Start Dependencies",
+            step_2_desc: "Start PostgreSQL, Redis, Milvus, MinIO via Docker Compose",
+            step_3: "Migrate Database",
+            step_3_desc: "Initialize database schema with migration scripts",
+            step_4: "Configure Env",
+            step_4_desc: "Copy and modify configuration file for your environment",
+            step_5: "Start Service",
+            step_5_desc: "Start HTTP service (http://localhost:8080)",
+            step_6: "Run Tests",
+            step_6_desc: "Run all tests to verify the environment",
+            tech_stack_title: "Tech Stack",
+            tech_1: "High-performance backend services",
+            tech_2: "High-performance LLM inference engine",
+            tech_3: "Relational data storage",
+            tech_4: "Distributed caching",
+            tech_5: "Vector database for retrieval",
+            tech_6: "Containerization & orchestration",
+            tech_7: "Metrics monitoring",
+            tech_8: "Distributed tracing & logging",
+            roadmap_title: "Roadmap",
+            status_done: "Completed (2026 Q1-Q2)",
+            status_in_progress: "In Progress (2026 Q2-Q3)",
+            status_planned: "Planned (2026 Q3-Q4)",
+            status_planned_2: "Planned (2026 Q4-2027 Q1)",
+            status_planned_3: "Planned (2027 Q1-Q2)",
+            roadmap_1_title: "Foundation Platform",
+            roadmap_1_1: "Core DDD Architecture setup",
+            roadmap_1_2: "Orchestrator & Runtime (Native, LangChain)",
+            roadmap_1_3: "Inference Gateway (vLLM Integration)",
+            roadmap_1_4: "Three-level caching architecture",
+            roadmap_2_title: "Data Intelligence",
+            roadmap_2_1: "RAG Engine (Hybrid retrieval, Reranking)",
+            roadmap_2_2: "Vector Database Integration (Milvus)",
+            roadmap_2_3: "Knowledge Graph Construction",
+            roadmap_2_4: "Document Processing Pipeline",
+            roadmap_3_title: "Continuous Optimization",
+            roadmap_3_1: "Online Learning Engine",
+            roadmap_3_2: "RLHF/DPO Training Flow",
+            roadmap_3_3: "Prompt Auto-Optimization",
+            roadmap_3_4: "A/B Testing Framework",
+            roadmap_4_title: "Governance Enhancement",
+            roadmap_4_1: "Policy Engine (ABAC/RBAC)",
+            roadmap_4_2: "Privacy Computing Gateway",
+            roadmap_4_3: "Audit & Compliance (SOC2, GDPR)",
+            roadmap_4_4: "Security Hardening",
+            roadmap_5_title: "Ecosystem Integration",
+            roadmap_5_1: "AutoGPT Adapter",
+            roadmap_5_2: "Plugin Marketplace",
+            roadmap_5_3: "Multimodal Support (Image, Voice)",
+            roadmap_5_4: "Edge AI Deployment",
+            footer_github: "GitHub",
+            footer_architecture: "Architecture",
+            footer_api: "API Docs",
+            footer_license: "License",
+            copyright: "© 2026 OpenEAAP Authors. Licensed under Apache 2.0."
+        },
+        zh: {
+            logo: "OpenEAAP",
+            nav_features: "核心功能",
+            nav_performance: "性能指标",
+            nav_quickstart: "快速开始",
+            nav_roadmap: "开发路线",
+            nav_github: "代码仓库",
+            hero_title: "企业级 AI Agent 平台",
+            hero_desc: "高性能 · 低成本 · 开箱即用 · 企业级安全",
+            hero_btn: "立即开始使用",
+            pain_solution_title: "业务痛点与解决方案",
+            pain_points_title: "核心业务痛点",
+            pain_1: "推理成本高昂（占 AI 总成本 60-80%）",
+            pain_2: "性能瓶颈严重（P95 延迟 > 5秒）",
+            pain_3: "开发效率低下（单个 Agent 开发需 3-6 个月）",
+            pain_4: "数据安全风险（敏感个人信息泄露）",
+            pain_5: "持续优化困难（无反馈闭环）",
+            solutions_title: "OpenEAAP 解决方案",
+            solution_1: "三级缓存架构（降低 60% 推理成本）",
+            solution_2: "高效推理引擎（P95 延迟 < 1.5秒）",
+            solution_3: "标准化框架（开发周期缩短 50%）",
+            solution_4: "隐私网关（自动敏感信息脱敏）",
+            solution_5: "在线学习（构建持续优化闭环）",
+            features_title: "核心功能",
+            feature_1_title: "高性能推理引擎",
+            feature_1_desc: "三级智能缓存（L1 本地 <1毫秒 + L2 Redis <10毫秒 + L3 向量 <50毫秒），缓存命中率 50%+，集成 vLLM 使吞吐量提升 24 倍。",
+            feature_2_title: "灵活编排引擎",
+            feature_2_desc: "多运行时支持（Native、LangChain、AutoGPT），通过 YAML/JSON 可视化编排，动态插件生态实现无限扩展。",
+            feature_3_title: "企业级 RAG 引擎",
+            feature_3_desc: "混合检索（向量 + 关键词 + 知识图谱）提升 30% 准确率，智能重排和答案验证避免幻觉问题。",
+            feature_4_title: "持续优化能力",
+            feature_4_desc: "基于人类反馈的 RLHF/DPO 训练，提示词自动优化，A/B 测试框架实现模型持续迭代。",
+            feature_5_title: "全面安全与治理",
+            feature_5_desc: "隐私计算网关，ABAC/RBAC 访问控制，全链路审计满足 SOC2/GDPR/PCI-DSS 合规要求。",
+            metric_p95_latency: "P95 延迟",
+            metric_inference_cost: "推理成本",
+            metric_dev_cycle: "开发周期",
+            metric_runtime_compat: "运行时兼容性",
+            metric_retrieval_acc: "检索准确率",
+            metric_hallucination: "幻觉率",
+            metric_model_perf: "模型性能",
+            metric_feedback_cycle: "反馈周期",
+            metric_pii_detection: "敏感信息检测率",
+            metric_compliance: "合规覆盖率",
+            performance_title: "性能指标",
+            table_metric: "指标",
+            table_traditional: "传统方案",
+            table_openeaap: "OpenEAAP（优化后）",
+            table_improvement: "优化效果",
+            metric_p50: "P50 延迟",
+            metric_p95: "P95 延迟",
+            metric_p99: "P99 延迟",
+            metric_qps: "每秒查询数",
+            metric_cache_hit: "缓存命中率",
+            metric_new_cap: "新增能力",
+            metric_inf_cost: "推理成本",
+            metric_gpu: "GPU 利用率",
+            quickstart_title: "快速开始",
+            step_1: "克隆代码仓库",
+            step_1_desc: "将 OpenEAAP 代码仓库克隆到本地环境",
+            step_2: "启动依赖服务",
+            step_2_desc: "通过 Docker Compose 启动 PostgreSQL、Redis、Milvus、MinIO",
+            step_3: "数据库迁移",
+            step_3_desc: "使用迁移脚本初始化数据库表结构",
+            step_4: "配置环境",
+            step_4_desc: "复制并修改配置文件适配本地环境",
+            step_5: "启动服务",
+            step_5_desc: "启动 HTTP 服务（地址：http://localhost:8080）",
+            step_6: "运行测试",
+            step_6_desc: "运行所有测试用例验证环境正确性",
+            tech_stack_title: "技术栈",
+            tech_1: "高性能后端服务开发",
+            tech_2: "高性能大语言模型推理引擎",
+            tech_3: "关系型数据存储",
+            tech_4: "分布式缓存",
+            tech_5: "向量数据库（检索场景）",
+            tech_6: "容器化与编排",
+            tech_7: "指标监控",
+            tech_8: "分布式追踪与日志",
+            roadmap_title: "开发路线",
+            status_done: "已完成（2026 第一/二季度）",
+            status_in_progress: "开发中（2026 第二/三季度）",
+            status_planned: "规划中（2026 第三/四季度）",
+            status_planned_2: "规划中（2026 第四季度-2027 第一季度）",
+            status_planned_3: "规划中（2027 第一/二季度）",
+            roadmap_1_title: "基础平台",
+            roadmap_1_1: "核心 DDD 架构搭建",
+            roadmap_1_2: "编排器与运行时（Native、LangChain）",
+            roadmap_1_3: "推理网关（vLLM 集成）",
+            roadmap_1_4: "三级缓存架构",
+            roadmap_2_title: "数据智能",
+            roadmap_2_1: "RAG 引擎（混合检索、重排）",
+            roadmap_2_2: "向量数据库集成（Milvus）",
+            roadmap_2_3: "知识图谱构建",
+            roadmap_2_4: "文档处理流水线",
+            roadmap_3_title: "持续优化",
+            roadmap_3_1: "在线学习引擎",
+            roadmap_3_2: "RLHF/DPO 训练流程",
+            roadmap_3_3: "提示词自动优化",
+            roadmap_3_4: "A/B 测试框架",
+            roadmap_4_title: "治理增强",
+            roadmap_4_1: "策略引擎（ABAC/RBAC）",
+            roadmap_4_2: "隐私计算网关",
+            roadmap_4_3: "审计与合规（SOC2、GDPR）",
+            roadmap_4_4: "安全加固",
+            roadmap_5_title: "生态集成",
+            roadmap_5_1: "AutoGPT 适配器",
+            roadmap_5_2: "插件市场",
+            roadmap_5_3: "多模态支持（图片、语音）",
+            roadmap_5_4: "边缘 AI 部署",
+            footer_github: "代码仓库",
+            footer_architecture: "架构文档",
+            footer_api: "API 文档",
+            footer_license: "开源协议",
+            copyright: "© 2026 OpenEAAP 开发团队。基于 Apache 2.0 协议开源。"
+        }
+    };
+
+    // 当前语言状态
+    let currentLang = "en";
+
+    // 切换语言函数
+    function switchLang(targetLang) {
+        // 更新当前语言
+        currentLang = targetLang;
+        document.getElementById("currentLang").textContent = targetLang === "en" ? "English" : "中文";
+
+        // 遍历所有带 data-lang-key 属性的元素，替换文本
+        document.querySelectorAll("[data-lang-key]").forEach(el => {
+            const key = el.getAttribute("data-lang-key");
+            if (langData[targetLang][key]) {
+                el.textContent = langData[targetLang][key];
+            }
+        });
+
+        // 更新页面 lang 属性
+        document.documentElement.lang = targetLang;
+    }
+
+    // 绑定语言切换按钮事件
+    document.getElementById("langSwitch").addEventListener("click", () => {
+        const newLang = currentLang === "en" ? "zh" : "en";
+        switchLang(newLang);
+    });
+
+    // 初始化语言（默认英文）
+    switchLang("en");
+</script>
+</body>
+</html>
