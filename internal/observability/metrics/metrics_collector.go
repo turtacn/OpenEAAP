@@ -454,8 +454,7 @@ func (c *MetricsCollector) CalculateCacheHitRate(cacheName string) float64 {
 		return 0
 	}
 
-	labels := prometheus.Labels{"cache_name": cacheName}
-
+	// labels := prometheus.Labels{"cache_name": cacheName}
 	// Note: In production, you'd need to collect metrics data
 	// This is a simplified example
 	return 0

@@ -309,12 +309,6 @@ type BatchOperationResult struct {
 	Error   string `json:"error,omitempty"`
 }
 
-// Pagination 分页信息
-type Pagination struct {
-	Page       int   `json:"page" example:"1"`
-	PageSize   int   `json:"page_size" example:"20"`
-	Total      int64 `json:"total" example:"100"`
-	TotalPages int   `json:"total_pages" example:"5"`
-}
+// Note: Pagination type is defined in common_dto.go to avoid duplication
 
 //Personal.AI order the ending
