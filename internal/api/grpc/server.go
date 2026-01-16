@@ -14,7 +14,8 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/openeeap/openeeap/api/proto"
+	// TODO: generate proto files
+	//"github.com/openeeap/openeeap/api/proto"
 	"github.com/openeeap/openeeap/internal/api/grpc/handler"
 	"github.com/openeeap/openeeap/internal/app/service"
 	"github.com/openeeap/openeeap/internal/observability/logging"

@@ -12,9 +12,10 @@ import (
 	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/internal/observability/metrics"
 	"github.com/openeeap/openeeap/internal/observability/trace"
-	"github.com/openeeap/openeeap/internal/platform/deployment"
-	"github.com/openeeap/openeeap/internal/platform/testing"
 	"github.com/openeeap/openeeap/pkg/errors"
+	// TODO: implement deployment and testing packages
+	// "github.com/openeeap/openeeap/internal/platform/deployment"
+	// "github.com/openeeap/openeeap/internal/platform/testing"
 )
 
 // AgentService Agent 应用服务接口

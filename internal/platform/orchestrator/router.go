@@ -8,10 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/openeeap/openeeap/internal/domain/entity"
-	"github.com/openeeap/openeeap/internal/domain/repository"
+	"github.com/openeeap/openeeap/internal/domain/agent"
+	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/pkg/errors"
-	"github.com/openeeap/openeeap/pkg/logger"
 )
 
 // Router 路由器接口

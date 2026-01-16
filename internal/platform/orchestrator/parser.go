@@ -8,10 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/openeeap/openeeap/internal/domain/entity"
-	"github.com/openeeap/openeeap/internal/infrastructure/llm"
+	"github.com/openeeap/openeeap/internal/domain/agent"
+	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/pkg/errors"
-	"github.com/openeeap/openeeap/pkg/logger"
 )
 
 // Parser 请求解析器接口

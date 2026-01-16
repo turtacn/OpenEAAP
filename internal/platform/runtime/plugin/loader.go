@@ -9,14 +9,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/internal/platform/runtime"
 	"github.com/openeeap/openeeap/pkg/errors"
-	"github.com/openeeap/openeeap/pkg/logger"
 )
 
 // PluginLoader 插件加载器
 type PluginLoader struct {
-	logger        logger.Logger
+	logger        logging.Logger
 	plugins       map[string]*LoadedPlugin
 	pluginsMu     sync.RWMutex
 	searchPaths   []string

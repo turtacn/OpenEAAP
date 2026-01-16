@@ -6,15 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/openeeap/openeeap/internal/domain/entity"
-	"github.com/openeeap/openeeap/internal/domain/repository"
-	"github.com/openeeap/openeeap/internal/platform/executor"
-	"github.com/openeeap/openeeap/internal/platform/parser"
-	"github.com/openeeap/openeeap/internal/platform/plugin"
-	"github.com/openeeap/openeeap/internal/platform/router"
-	"github.com/openeeap/openeeap/internal/platform/scheduler"
+	"github.com/openeeap/openeeap/internal/domain/agent"
+	"github.com/openeeap/openeeap/internal/infrastructure/repository/postgres"
+	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/pkg/errors"
-	"github.com/openeeap/openeeap/pkg/logger"
 )
 
 // Orchestrator 编排器接口
@@ -49,18 +44,19 @@ type Orchestrator interface {
 
 // orchestrator 编排器实现
 type orchestrator struct {
-	parser        parser.Parser
-	router        router.Router
-	scheduler     scheduler.Scheduler
-	executor      executor.Executor
-	pluginManager plugin.PluginManager
+	parser        Parser
+	router        Router
+	scheduler     Scheduler
+	executor      Executor
+	//pluginManager *plugin.PluginManager // TODO: implement plugin manager
 
-	policyRepo    repository.PolicyRepository
-	taskRepo      repository.TaskRepository
-	executionRepo repository.ExecutionRepository
+	// TODO: implement repository interfaces
+	//policyRepo    *postgres.PolicyRepository
+	//taskRepo      *postgres.TaskRepository
+	//executionRepo *postgres.ExecutionRepository
 
 	config        *OrchestratorConfig
-	logger        logger.Logger
+	logger        logging.Logger
 
 	executions    map[string]*executionContext
 	mu            sync.RWMutex

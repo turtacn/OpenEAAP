@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/pkg/errors"
-	"github.com/openeeap/openeeap/pkg/logger"
 )
 
 // KafkaClient Kafka 消息队列客户端接口
