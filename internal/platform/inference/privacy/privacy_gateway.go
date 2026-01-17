@@ -45,7 +45,7 @@ type PrivacyPolicy struct {
 // PrivacyGateway provides PII detection and redaction for inference
 type PrivacyGateway struct {
 	logger           logging.Logger
-	metricsCollector metrics.MetricsCollector
+	metricsCollector *metrics.MetricsCollector
 	detector         *PIIDetector
 	policy           *PrivacyPolicy
 	auditLogger      AuditLogger
@@ -108,7 +108,7 @@ type RestoreRequest struct {
 // NewPrivacyGateway creates a new privacy gateway
 func NewPrivacyGateway(
 	logger logging.Logger,
-	metricsCollector metrics.MetricsCollector,
+	metricsCollector *metrics.MetricsCollector,
 	detector *PIIDetector,
 	policy *PrivacyPolicy,
 	auditLogger AuditLogger,

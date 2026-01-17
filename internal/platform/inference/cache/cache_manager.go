@@ -105,7 +105,7 @@ type Cache interface {
 // CacheManager manages the three-tier cache hierarchy
 type CacheManager struct {
 	logger           logging.Logger
-	metricsCollector metrics.MetricsCollector
+	metricsCollector *metrics.MetricsCollector
 	config           *CacheConfig
 
 	l1Cache          Cache
@@ -118,7 +118,7 @@ type CacheManager struct {
 // NewCacheManager creates a new cache manager
 func NewCacheManager(
 	logger logging.Logger,
-	metricsCollector metrics.MetricsCollector,
+	metricsCollector *metrics.MetricsCollector,
 	config *CacheConfig,
 	l1Cache Cache,
 	l2Cache Cache,

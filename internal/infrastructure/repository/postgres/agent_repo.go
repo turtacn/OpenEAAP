@@ -752,3 +752,31 @@ func (r *agentRepo) GetRecent(ctx context.Context, limit int) ([]*agent.Agent, e
 	
 	return agents, nil
 }
+
+// IncrementExecutionCount increments execution count
+func (r *agentRepo) IncrementExecutionCount(ctx context.Context, id string, success bool) error {
+	updates := map[string]interface{}{
+		"execution_count": gorm.Expr("execution_count + ?", 1),
+		"updated_at":      time.Now(),
+	}
+	
+	if success {
+		updates["last_executed_at"] = time.Now()
+	}
+	
+	result := r.db.WithContext(ctx).
+		Model(&AgentModel{}).
+		Where("id = ?", id).
+		Updates(updates)
+	
+	if result.Error != nil {
+		return errors.Wrap(result.Error, errors.CodeDatabaseError, "failed to increment execution count")
+	}
+	
+	if result.RowsAffected == 0 {
+		return errors.NewNotFoundError(errors.CodeNotFound, "agent not found")
+	}
+	
+	return nil
+}
+

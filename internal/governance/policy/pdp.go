@@ -268,7 +268,7 @@ func (p *pdp) Evaluate(ctx context.Context, request *AccessRequest) (*Decision, 
 
 	if len(policies) == 0 {
 		p.logger.WithContext(ctx).Debug("No applicable policies found", logging.Any("request_id", request.RequestID))
-		return p.createDecision(request, p.config.DefaultEffect, "no applicable policies", nil), nil
+		return p.createDecision(request, p.config.DefaultEffect, "no applicable policies", nil, nil, nil), nil
 	}
 
 	// 按优先级排序策略
@@ -549,7 +549,7 @@ func (p *pdp) evaluateDenyOverrides(ctx context.Context, request *AccessRequest,
 	}
 
 	return p.createDecision(request, p.config.DefaultEffect, "no permit found",
-		applicablePolicies), nil
+		applicablePolicies, nil, nil), nil
 }
 
 func (p *pdp) evaluatePermitOverrides(ctx context.Context, request *AccessRequest, policies []*Policy) (*Decision, error) {
@@ -601,7 +601,7 @@ func (p *pdp) evaluatePermitOverrides(ctx context.Context, request *AccessReques
 	}
 
 	return p.createDecision(request, p.config.DefaultEffect, "no deny found",
-		applicablePolicies), nil
+		applicablePolicies, nil, nil), nil
 }
 
 func (p *pdp) evaluateFirstApplicable(ctx context.Context, request *AccessRequest, policies []*Policy) (*Decision, error) {
@@ -630,7 +630,7 @@ func (p *pdp) evaluateFirstApplicable(ctx context.Context, request *AccessReques
 			[]string{policy.ID}, policy.Obligations, policy.Advice), nil
 	}
 
-	return p.createDecision(request, p.config.DefaultEffect, "no applicable policy", nil), nil
+	return p.createDecision(request, p.config.DefaultEffect, "no applicable policy", nil, nil, nil), nil
 }
 
 func (p *pdp) matchTarget(request *AccessRequest, target *Target) bool {
@@ -785,7 +785,7 @@ func (p *pdp) evaluateAttributes(request *AccessRequest, attributes []*Attribute
 	return true
 }
 
-func (p *pdp) createDecision(request *AccessRequest, effect Effect, reason string, applicablePolicies []string, obligationsAndAdvice ...[]*Obligation) *Decision {
+func (p *pdp) createDecision(request *AccessRequest, effect Effect, reason string, applicablePolicies []string, obligations []*Obligation, advice []*Advice) *Decision {
 	decision := &Decision{
 		RequestID:          request.RequestID,
 		Effect:             effect,
@@ -794,16 +794,8 @@ func (p *pdp) createDecision(request *AccessRequest, effect Effect, reason strin
 		EvaluatedAt:        time.Now(),
 		Duration:           time.Since(request.Timestamp),
 		Metadata:           make(map[string]interface{}),
-	}
-
-	if len(obligationsAndAdvice) > 0 {
-		decision.Obligations = obligationsAndAdvice[0]
-	}
-	if len(obligationsAndAdvice) > 1 {
-		// Type assertion needed for advice
-		if advice, ok := interface{}(obligationsAndAdvice[1]).([]*Advice); ok {
-			decision.Advice = advice
-		}
+		Obligations:        obligations,
+		Advice:             advice,
 	}
 
 	return decision
