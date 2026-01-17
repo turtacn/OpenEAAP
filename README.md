@@ -3,7 +3,7 @@
 <div align="center">
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://go.dev/)
 [![Build Status](https://img.shields.io/badge/Build-Passing-success)](https://github.com/openeeap/openeeap/actions)
 [![Code Coverage](https://img.shields.io/badge/Coverage-85%25-brightgreen)](https://codecov.io/gh/openeeap/openeeap)
 
@@ -389,7 +389,7 @@ graph TB
 
 | Category | Technology | Usage |
 | --- | --- | --- |
-| **Language** | Go 1.21+ | High-performance backend services |
+| **Language** | Go 1.24+ | High-performance backend services |
 | **Web Framework** | Gin / Echo | HTTP API Services |
 | **RPC Framework** | gRPC | High-performance internal communication |
 | **Database** | PostgreSQL 14+ | Relational data storage |
@@ -411,7 +411,7 @@ graph TB
 
 ### Prerequisites
 
-* **Go** 1.21 or higher
+* **Go** 1.24 or higher
 * **Docker** and **Docker Compose** (for local development)
 * **Kubernetes** 1.25+ (for production deployment)
 * **PostgreSQL** 14+, **Redis** 7+, **Milvus** 2.3+ (can be started quickly via Docker Compose)
@@ -687,7 +687,7 @@ Performance test results based on real business workloads (100 concurrent users,
 | `refactor` | Code refactoring | `refactor: Optimize orchestrator architecture` |
 | `perf` | Performance optimization | `perf: Optimize vector retrieval performance` |
 | `test` | Testing related | `test: Add inference engine integration tests` |
-| `chore` | Build/Tools related | `chore: Upgrade Go version to 1.21` |
+| `chore` | Build/Tools related | `chore: Upgrade Go version to 1.24` |
 
 ### Code Review Checklist
 

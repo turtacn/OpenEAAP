@@ -3,7 +3,7 @@
 <div align="center">
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://go.dev/)
 [![Build Status](https://img.shields.io/badge/Build-Passing-success)](https://github.com/openeeap/openeeap/actions)
 [![Code Coverage](https://img.shields.io/badge/Coverage-85%25-brightgreen)](https://codecov.io/gh/openeeap/openeeap)
 
@@ -383,7 +383,7 @@ graph TB
 
 | 类别         | 技术选型                    | 用途          |
 | ---------- | ----------------------- | ----------- |
-| **语言**     | Go 1.21+                | 高性能后端服务     |
+| **语言**     | Go 1.24+                | 高性能后端服务     |
 | **Web 框架** | Gin / Echo              | HTTP API 服务 |
 | **RPC 框架** | gRPC                    | 高性能内部通信     |
 | **数据库**    | PostgreSQL 14+          | 关系型数据存储     |
@@ -405,7 +405,7 @@ graph TB
 
 ### 前置要求
 
-* **Go** 1.21 或更高版本
+* **Go** 1.24 或更高版本
 * **Docker** 和 **Docker Compose**（用于本地开发）
 * **Kubernetes** 1.25+（用于生产部署）
 * **PostgreSQL** 14+、**Redis** 7+、**Milvus** 2.3+（可通过 Docker Compose 快速启动）
@@ -672,7 +672,7 @@ openeeap workflow run document-analysis-workflow \
 | `refactor` | 代码重构          | `refactor: 优化编排器架构`  |
 | `perf`     | 性能优化          | `perf: 优化向量检索性能`     |
 | `test`     | 测试相关          | `test: 添加推理引擎集成测试`   |
-| `chore`    | 构建/工具链相关      | `chore: 升级Go版本到1.21` |
+| `chore`    | 构建/工具链相关      | `chore: 升级Go版本到1.24 |
 
 ### 代码审查清单
 
