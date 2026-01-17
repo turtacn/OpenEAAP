@@ -213,13 +213,13 @@ func (pl *PluginLoader) LoadPlugin(ctx context.Context, pluginPath string) (*Loa
 	// 转换为插件实例
 	instance, ok := symbol.(PluginInstance)
 	if !ok {
-		return nil, errors.New("ERR_INTERNAL", "invalid plugin instance type")
+		return nil, errors.InternalError("invalid plugin instance type")
 	}
 
 	// 获取插件元数据
 	metadata := instance.GetMetadata()
 	if metadata == nil {
-		return nil, errors.New("ERR_INTERNAL", "plugin metadata is nil")
+		return nil, errors.InternalError("plugin metadata is nil")
 	}
 
 	// 创建加载的插件对象

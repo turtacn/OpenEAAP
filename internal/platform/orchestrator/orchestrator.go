@@ -361,7 +361,7 @@ func NewOrchestrator(
 // Execute 执行请求
 func (o *orchestrator) Execute(ctx context.Context, req *ExecuteRequest) (*ExecuteResponse, error) {
 	if o.closed {
-		return nil, errors.New("ERR_INTERNAL", "orchestrator is closed")
+		return nil, errors.InternalError("orchestrator is closed")
 	}
 	if req == nil {
 		return nil, errors.New(errors.CodeInvalidParameter, "request cannot be nil")
@@ -473,7 +473,7 @@ func (o *orchestrator) Execute(ctx context.Context, req *ExecuteRequest) (*Execu
 // ExecuteStream 流式执行请求
 func (o *orchestrator) ExecuteStream(ctx context.Context, req *ExecuteRequest, stream ResponseStream) error {
 	if o.closed {
-		return errors.New("ERR_INTERNAL", "orchestrator is closed")
+		return errors.InternalError("orchestrator is closed")
 	}
 	if req == nil {
 		return errors.New(errors.CodeInvalidParameter, "request cannot be nil")
@@ -680,7 +680,7 @@ AFTER_PLUGINS:
 // ExecuteBatch 批量执行请求
 func (o *orchestrator) ExecuteBatch(ctx context.Context, requests []*ExecuteRequest) ([]*ExecuteResponse, error) {
 	if o.closed {
-		return nil, errors.New("ERR_INTERNAL", "orchestrator is closed")
+		return nil, errors.InternalError("orchestrator is closed")
 	}
 	if len(requests) == 0 {
 		return nil, errors.New(errors.CodeInvalidParameter, "requests cannot be empty")
@@ -716,7 +716,7 @@ func (o *orchestrator) ExecuteBatch(ctx context.Context, requests []*ExecuteRequ
 // ExecuteAsync 异步执行请求
 func (o *orchestrator) ExecuteAsync(ctx context.Context, req *ExecuteRequest, callback ExecuteCallback) error {
 	if o.closed {
-		return errors.New("ERR_INTERNAL", "orchestrator is closed")
+		return errors.InternalError("orchestrator is closed")
 	}
 	if req == nil {
 		return errors.New(errors.CodeInvalidParameter, "request cannot be nil")

@@ -588,7 +588,7 @@ func (t *rlhfTrainer) validateRewardModel(ctx context.Context, dataset *training
 
 		// 检查奖励是否合理
 		if math.IsNaN(reward) || math.IsInf(reward, 0) {
-			return errors.New("ERR_INTERNAL", "invalid reward prediction")
+			return errors.InternalError("invalid reward prediction")
 		}
 	}
 

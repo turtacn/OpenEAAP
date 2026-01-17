@@ -591,7 +591,7 @@ func (c *L3VectorCache) HealthCheck(ctx context.Context) error {
 	}
 
 	if !hasCollection {
-		return errors.New("ERR_INTERNAL", "collection does not exist")
+		return errors.InternalError("collection does not exist")
 	}
 
 	return nil

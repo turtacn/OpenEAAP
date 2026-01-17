@@ -473,7 +473,10 @@ func (r *ragEngineImpl) calculateConfidence(chunks []*RetrievedChunk, verified b
 		confidence *= 0.7
 	}
 
-	return min(confidence, 1.0)
+	if confidence > 1.0 {
+		return 1.0
+	}
+	return confidence
 }
 
 // applyDefaults 应用默认配置

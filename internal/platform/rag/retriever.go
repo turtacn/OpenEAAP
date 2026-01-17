@@ -177,7 +177,7 @@ func (r *retrieverImpl) Retrieve(ctx context.Context, req *RetrieveRequest) ([]*
 	}
 
 	latency := time.Since(startTime)
- r.logger.WithContext(ctx).Info("retrieval completed", logging.Any("query", req.Query), logging.Any("mode", req.Mode), logging.Any("chunks_count", len(chunks)))
+	r.logger.WithContext(ctx).Info("retrieval completed", logging.Any("query", req.Query), logging.Any("mode", req.Mode), logging.Any("chunks_count", len(chunks)), logging.Any("latency_ms", latency.Milliseconds()))
 
 	// span.AddTag("chunks_count", len(chunks))
 
@@ -189,30 +189,67 @@ func (r *retrieverImpl) vectorRetrieval(ctx context.Context, req *RetrieveReques
 	r.logger.WithContext(ctx).Debug("performing vector retrieval", logging.Any("query", req.Query))
 
 	// 构建向量搜索请求
+	// TODO: Convert query text to vector embedding
+	queryVectors := [][]float32{{}} // Placeholder - needs actual embedding
 	searchReq := &vector.SearchRequest{
-		CollectionName: req.CollectionName,
-		QueryText:      req.Query,
-		TopK:           req.TopK * 2, // 检索更多候选，后续过滤
-		MetricType:     "COSINE",
-		Filters:        r.buildVectorFilters(req),
+		Collection:   req.CollectionName,
+		Vectors:      queryVectors,
+		VectorField:  "embedding", // Default vector field name
+		TopK:         req.TopK * 2, // 检索更多候选，后续过滤
+		MetricType:   vector.MetricTypeCosine,
+		Filter:       "", // TODO: Convert r.buildVectorFilters(req) result to string
 	}
 
 	// 执行向量搜索
-	results, err := r.vectorStore.Search(ctx, searchReq)
+	searchResp, err := r.vectorStore.Search(ctx, searchReq)
 	if err != nil {
 		return nil, errors.Wrap(err, "ERR_INTERNAL", "vector search failed")
 	}
 
 	// 转换为 RetrievedChunk
-	chunks := make([]*RetrievedChunk, 0, len(results))
-	for _, result := range results {
+	chunks := make([]*RetrievedChunk, 0, len(searchResp.Results))
+	for _, result := range searchResp.Results {
+		content := ""
+		if contentVal, ok := result.Fields["content"]; ok {
+			if contentStr, ok := contentVal.(string); ok {
+				content = contentStr
+			}
+		}
+		
+		chunkID := ""
+		if idStr, ok := result.ID.(string); ok {
+			chunkID = idStr
+		}
+		
+		documentID := ""
+		if docID, ok := result.Metadata["document_id"]; ok {
+			if docIDStr, ok := docID.(string); ok {
+				documentID = docIDStr
+			}
+		}
+		
+		source := ""
+		if src, ok := result.Metadata["source"]; ok {
+			if srcStr, ok := src.(string); ok {
+				source = srcStr
+			}
+		}
+		
+		// Convert metadata map[string]interface{} to map[string]string
+		metadata := make(map[string]string)
+		for k, v := range result.Metadata {
+			if vStr, ok := v.(string); ok {
+				metadata[k] = vStr
+			}
+		}
+		
 		chunk := &RetrievedChunk{
-			ChunkID:    result.ID,
-			DocumentID: result.Metadata["document_id"],
-			Content:    result.Content,
+			ChunkID:    chunkID,
+			DocumentID: documentID,
+			Content:    content,
 			Score:      result.Score,
-			Metadata:   result.Metadata,
-			Source:     result.Metadata["source"],
+			Metadata:   metadata,
+			Source:     source,
 		}
 		chunks = append(chunks, chunk)
 	}
@@ -340,7 +377,7 @@ func (r *retrieverImpl) hybridRetrieval(ctx context.Context, req *RetrieveReques
 	}
 
 	if len(allChunks) == 0 {
-		return nil, errors.New("ERR_INTERNAL", "all retrieval strategies failed")
+		return nil, errors.InternalError("all retrieval strategies failed")
 	}
 
 	// 融合分数（RRF - Reciprocal Rank Fusion）

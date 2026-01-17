@@ -303,7 +303,7 @@ func (c *VLLMClient) CompleteBatch(ctx context.Context, requests []CompletionReq
 
 	c.recordMetrics("batch", "success", time.Since(startTime))
 
- c.logger.WithContext(ctx).Info("vLLM batch completed", logging.Any("request_count", len(requests))
+	c.logger.WithContext(ctx).Info("vLLM batch completed", logging.Any("request_count", len(requests)))
 
 	return &batchResp, nil
 }

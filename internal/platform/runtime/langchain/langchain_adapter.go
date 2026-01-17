@@ -363,7 +363,7 @@ func (lca *LangChainAdapter) Initialize(ctx context.Context, config *runtime.Run
 	defer lca.mu.Unlock()
 
 	if lca.status == runtime.RuntimeStatusReady {
-		return errors.New("ERR_INTERNAL", "runtime already initialized")
+		return errors.InternalError("runtime already initialized")
 	}
 
 	// 验证配置
@@ -411,7 +411,7 @@ func (lca *LangChainAdapter) Initialize(ctx context.Context, config *runtime.Run
 // Execute 执行任务
 func (lca *LangChainAdapter) Execute(ctx context.Context, req *runtime.ExecuteRequest) (*runtime.ExecuteResponse, error) {
 	if !lca.IsReady() {
-		return nil, errors.New("ERR_INTERNAL", "runtime not ready")
+		return nil, errors.InternalError("runtime not ready")
 	}
 
 	// 更新指标

@@ -172,12 +172,12 @@ func DefaultManagerConfig() *ManagerConfig {
 }
 
 // NewPluginManager 创建插件管理器
-func NewPluginManager(logger // logger.Logger, loader *PluginLoader, config *ManagerConfig) (*PluginManager, error) {
+func NewPluginManager(logger logging.Logger, loader *PluginLoader, config *ManagerConfig) (*PluginManager, error) {
 	if logger == nil {
-		return nil, errors.NewInternalError("ERR_InvalidParameter", "logger cannot be nil")
+		return nil, errors.ValidationError("logger cannot be nil")
 	}
 	if loader == nil {
-		return nil, errors.NewInternalError("ERR_InvalidParameter", "loader cannot be nil")
+		return nil, errors.ValidationError("loader cannot be nil")
 	}
 	if config == nil {
 		config = DefaultManagerConfig()
@@ -299,7 +299,7 @@ func (pm *PluginManager) RegisterPlugin(ctx context.Context, plugin *runtime.Plu
 		},
 	})
 
-	pm.// logger.Info("plugin registered",
+	pm.logger.Info("plugin registered",
 		"plugin_id", plugin.ID,
 		"plugin_name", plugin.Name,
 		"version", version.String())
@@ -332,7 +332,7 @@ func (pm *PluginManager) UnregisterPlugin(ctx context.Context, pluginID string) 
 	// 卸载插件
 	if entry.LoadedPlugin != nil {
 		if err := pm.loader.UnloadPlugin(ctx, pluginID); err != nil {
-			pm.// logger.Warn("failed to unload plugin during unregister",
+			pm.logger.Warn("failed to unload plugin during unregister",
 				"plugin_id", pluginID,
 				"error", err)
 		}
@@ -356,7 +356,7 @@ func (pm *PluginManager) UnregisterPlugin(ctx context.Context, pluginID string) 
 		Timestamp: time.Now(),
 	})
 
-	pm.// logger.Info("plugin unregistered", "plugin_id", pluginID)
+	pm.logger.Info("plugin unregistered", "plugin_id", pluginID)
 	return nil
 }
 
@@ -419,7 +419,7 @@ func (pm *PluginManager) ActivatePlugin(ctx context.Context, pluginID string) er
 		Timestamp: time.Now(),
 	})
 
-	pm.// logger.Info("plugin activated", "plugin_id", pluginID)
+	pm.logger.Info("plugin activated", "plugin_id", pluginID)
 	return nil
 }
 
@@ -449,7 +449,7 @@ func (pm *PluginManager) DeactivatePlugin(ctx context.Context, pluginID string) 
 		Timestamp: time.Now(),
 	})
 
-	pm.// logger.Info("plugin deactivated", "plugin_id", pluginID)
+	pm.logger.Info("plugin deactivated", "plugin_id", pluginID)
 	return nil
 }
 
@@ -515,7 +515,7 @@ func (pm *PluginManager) UpdatePlugin(ctx context.Context, pluginID string, newP
 		},
 	})
 
-	pm.// logger.Info("plugin updated",
+	pm.logger.Info("plugin updated",
 		"plugin_id", pluginID,
 		"new_version", newVersion.String())
 
@@ -639,7 +639,7 @@ func (pm *PluginManager) RollbackPlugin(ctx context.Context, pluginID string, ta
 	// 卸载当前版本
 	if entry.LoadedPlugin != nil {
 		if err := pm.loader.UnloadPlugin(ctx, pluginID); err != nil {
-			pm.// logger.Warn("failed to unload current version", "error", err)
+			pm.logger.Warn("failed to unload current version", "error", err)
 		}
 	}
 
@@ -648,7 +648,7 @@ func (pm *PluginManager) RollbackPlugin(ctx context.Context, pluginID string, ta
 	entry.Version = targetVersionEntry.Version
 	entry.UpdatedAt = time.Now()
 
-	pm.// logger.Info("plugin rolled back",
+	pm.logger.Info("plugin rolled back",
 		"plugin_id", pluginID,
 		"target_version", targetVersion)
 
@@ -691,7 +691,7 @@ func (pm *PluginManager) GetMetrics() map[string]interface{} {
 
 // Shutdown 关闭管理器
 func (pm *PluginManager) Shutdown(ctx context.Context) error {
-	pm.// logger.Info("shutting down plugin manager")
+	pm.logger.Info("shutting down plugin manager")
 
 	// 发送关闭信号
 	close(pm.shutdownChan)
@@ -714,7 +714,7 @@ func (pm *PluginManager) Shutdown(ctx context.Context) error {
 		pm.healthChecker.Stop()
 	}
 
-	pm.// logger.Info("plugin manager shutdown completed")
+	pm.logger.Info("plugin manager shutdown completed")
 	return nil
 }
 
@@ -769,7 +769,7 @@ func (pm *PluginManager) emitEvent(event *PluginEvent) {
 	for _, handler := range pm.eventHandlers {
 		go func(h PluginEventHandler) {
 			if err := h.HandleEvent(event); err != nil {
-				pm.// logger.Warn("event handler failed",
+				pm.logger.Warn("event handler failed",
 					"event_type", event.Type,
 					"plugin_id", event.PluginID,
 					"error", err)
@@ -820,7 +820,7 @@ func (pm *PluginManager) registryBackupLoop() {
 		select {
 		case <-ticker.C:
 			if err := pm.registry.Backup(); err != nil {
-				pm.// logger.Warn("registry backup failed", "error", err)
+				pm.logger.Warn("registry backup failed", "error", err)
 			}
 		case <-pm.shutdownChan:
 			return
@@ -1376,7 +1376,7 @@ func (pm *PluginManager) ImportPluginRegistry(ctx context.Context, data []byte) 
 	defer pm.mu.Unlock()
 
 	// 简化实现：实际应该反序列化并注册插件
-	pm.// logger.Info("plugin registry imported",
+	pm.logger.Info("plugin registry imported",
 		"data_size", len(data))
 
 	return nil
@@ -1403,13 +1403,13 @@ func (pm *PluginManager) CleanupInactivePlugins(ctx context.Context, threshold t
 
 	for _, id := range toRemove {
 		if err := pm.UnregisterPlugin(ctx, id); err != nil {
-			pm.// logger.Warn("failed to cleanup inactive plugin",
+			pm.logger.Warn("failed to cleanup inactive plugin",
 				"plugin_id", id,
 				"error", err)
 		}
 	}
 
-	pm.// logger.Info("inactive plugins cleaned up",
+	pm.logger.Info("inactive plugins cleaned up",
 		"removed_count", len(toRemove))
 
 	return nil

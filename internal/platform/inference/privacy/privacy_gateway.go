@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/internal/observability/metrics"
 	"github.com/openeeap/openeeap/pkg/errors"

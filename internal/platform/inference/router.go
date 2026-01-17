@@ -277,7 +277,7 @@ func (r *Router) Route(ctx context.Context, req *InferenceRequest) (InferenceEng
 		engine, err = r.routeLatencyOptimized(ctx, req)
 
 	default:
-		err = errors.New("ERR_INTERNAL", fmt.Sprintf("unknown routing strategy: %s", r.strategy))
+		err = errors.InternalError(fmt.Sprintf("unknown routing strategy: %s", r.strategy))
 	}
 
 	if err != nil {
@@ -385,7 +385,7 @@ func (r *Router) ruleMatches(ctx context.Context, rule *RoutingRule, req *Infere
 func (r *Router) routeRoundRobin(ctx context.Context) (InferenceEngine, error) {
 	engines := r.getAvailableEngines()
 	if len(engines) == 0 {
-		return nil, errors.New("ERR_INTERNAL", "no available engines")
+		return nil, errors.InternalError("no available engines")
 	}
 
 	r.roundRobinMu.Lock()
@@ -401,7 +401,7 @@ func (r *Router) routeRoundRobin(ctx context.Context) (InferenceEngine, error) {
 func (r *Router) routeWeightedRandom(ctx context.Context) (InferenceEngine, error) {
 	engines := r.getAvailableEngines()
 	if len(engines) == 0 {
-		return nil, errors.New("ERR_INTERNAL", "no available engines")
+		return nil, errors.InternalError("no available engines")
 	}
 
 	// Calculate total weight
@@ -439,7 +439,7 @@ func (r *Router) routeWeightedRandom(ctx context.Context) (InferenceEngine, erro
 func (r *Router) routeLeastLatency(ctx context.Context) (InferenceEngine, error) {
 	engines := r.getAvailableEngines()
 	if len(engines) == 0 {
-		return nil, errors.New("ERR_INTERNAL", "no available engines")
+		return nil, errors.InternalError("no available engines")
 	}
 
 	r.metricsMu.RLock()
@@ -473,7 +473,7 @@ func (r *Router) routeLeastLatency(ctx context.Context) (InferenceEngine, error)
 func (r *Router) routeLeastLoad(ctx context.Context) (InferenceEngine, error) {
 	engines := r.getAvailableEngines()
 	if len(engines) == 0 {
-		return nil, errors.New("ERR_INTERNAL", "no available engines")
+		return nil, errors.InternalError("no available engines")
 	}
 
 	r.metricsMu.RLock()
@@ -567,7 +567,7 @@ func (r *Router) routeABTest(ctx context.Context, req *InferenceRequest) (Infere
 func (r *Router) routeCostOptimized(ctx context.Context, req *InferenceRequest) (InferenceEngine, error) {
 	engines := r.getAvailableEngines()
 	if len(engines) == 0 {
-		return nil, errors.New("ERR_INTERNAL", "no available engines")
+		return nil, errors.InternalError("no available engines")
 	}
 
 	var bestEngine *EngineConfig
@@ -591,7 +591,7 @@ func (r *Router) routeCostOptimized(ctx context.Context, req *InferenceRequest) 
 func (r *Router) routeLatencyOptimized(ctx context.Context, req *InferenceRequest) (InferenceEngine, error) {
 	engines := r.getAvailableEngines()
 	if len(engines) == 0 {
-		return nil, errors.New("ERR_INTERNAL", "no available engines")
+		return nil, errors.InternalError("no available engines")
 	}
 
 	// Get latency requirement from context
@@ -645,7 +645,7 @@ func (r *Router) getEngine(name string) (InferenceEngine, error) {
 	}
 
 	if !cfg.Enabled {
-		return nil, errors.New("ERR_INTERNAL", fmt.Sprintf("engine %s is disabled", name))
+		return nil, errors.InternalError(fmt.Sprintf("engine %s is disabled", name))
 	}
 
 	return cfg.Engine, nil

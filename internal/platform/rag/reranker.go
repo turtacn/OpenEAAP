@@ -162,7 +162,7 @@ func (r *rerankerImpl) Rerank(ctx context.Context, req *RerankRequest) ([]*Retri
 	}
 
 	latency := time.Since(startTime)
- r.logger.WithContext(ctx).Info("reranking completed", logging.Any("method", req.Method), logging.Any("input_count", len(req.Chunks)))
+	r.logger.WithContext(ctx).Info("reranking completed", logging.Any("method", req.Method), logging.Any("input_count", len(req.Chunks)), logging.Any("latency_ms", latency.Milliseconds()))
 
 	return rerankedChunks, nil
 }

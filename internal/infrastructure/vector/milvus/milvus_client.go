@@ -351,7 +351,7 @@ func (mc *milvusClient) DescribeCollection(ctx context.Context, collectionName s
 			EnableDynamicField: coll.Schema.EnableDynamicField,
 		},
 		ShardNum:         coll.ShardNum,
-		CreatedTimestamp: 0 // TODO: Milvus SDK v2 does not expose creation time,
+		CreatedTimestamp: 0, // TODO: Milvus SDK v2 does not expose creation time
 		ConsistencyLevel: coll.ConsistencyLevel,
 	}, nil
 }
@@ -734,13 +734,13 @@ func (mc *milvusClient) GetCollectionStatistics(ctx context.Context, collectionN
 		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get collection statistics")
 	}
 
-	return &CollectionStats{
 	// Parse row count from stats map
 	rowCount := int64(0)
 	if rowCountStr, ok := stats["row_count"]; ok {
 		fmt.Sscanf(rowCountStr, "%d", &rowCount)
 	}
 
+	return &CollectionStats{
 		RowCount: rowCount,
 		DataSize: 0, // Milvus SDK 可能不直接提供，需要额外计算
 	}, nil

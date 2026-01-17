@@ -363,7 +363,7 @@ func (l *policyLoader) LoadFromDatabase(ctx context.Context, filter *PolicyFilte
 	l.logger.WithContext(ctx).Debug("Loading policies from database")
 
 	if l.policyRepo == nil {
-		return nil, errors.New("ERR_INTERNAL", "policy repository not configured")
+		return nil, errors.InternalError("policy repository not configured")
 	}
 
 	policies, err := l.policyRepo.List(ctx, filter)
@@ -394,7 +394,7 @@ func (l *policyLoader) LoadFromConfigCenter(ctx context.Context, key string) ([]
 	l.logger.WithContext(ctx).Debug("Loading policy from config center", logging.Any("key", key))
 
 	if l.configCenter == nil {
-		return nil, errors.New("ERR_INTERNAL", "config center not configured")
+		return nil, errors.InternalError("config center not configured")
 	}
 
 	// 获取配置内容

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/internal/observability/trace"
 	"github.com/openeeap/openeeap/pkg/errors"

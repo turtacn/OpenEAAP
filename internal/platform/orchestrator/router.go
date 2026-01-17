@@ -384,7 +384,7 @@ func NewRouter(
 // Route 路由请求
 func (r *router) Route(ctx context.Context, req *RouteRequest) (*RouteResponse, error) {
 	if r.closed {
-		return nil, errors.New("ERR_INTERNAL", "router is closed")
+		return nil, errors.InternalError("router is closed")
 	}
 	if req == nil {
 		return nil, errors.New(errors.CodeInvalidParameter, "route request cannot be nil")
@@ -484,7 +484,7 @@ func (r *router) SelectRuntime(ctx context.Context, req *RuntimeSelectionRequest
 // SelectModel 选择模型
 func (r *router) SelectModel(ctx context.Context, req *ModelSelectionRequest) (*ModelInfo, error) {
 	if r.modelRepo == nil {
-		return nil, errors.New("ERR_INTERNAL", "model repository not configured")
+		return nil, errors.InternalError("model repository not configured")
 	}
 
 	// 获取所有可用模型

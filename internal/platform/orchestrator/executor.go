@@ -265,7 +265,7 @@ func NewExecutor(
 // Execute 执行任务
 func (e *executor) Execute(ctx context.Context, req *ExecuteRequest) (*ExecuteResponse, error) {
 	if e.closed {
-		return nil, errors.New("ERR_INTERNAL", "executor is closed")
+		return nil, errors.InternalError("executor is closed")
 	}
 	if req == nil || req.Task == nil {
 		return nil, errors.New(errors.CodeInvalidParameter, "execute request or task cannot be nil")
@@ -634,7 +634,7 @@ func (e *executor) executeNative(ctx context.Context, req *ExecuteRequest, execS
 
 	// 调用LLM客户端
 	if e.llmClient == nil {
-		return "", 0, 0, errors.New("ERR_INTERNAL", "llm client not configured")
+		return "", 0, 0, errors.InternalError("llm client not configured")
 	}
 
 	llmReq := &llm.CompletionRequest{
@@ -678,7 +678,7 @@ func (e *executor) executeLangChain(ctx context.Context, req *ExecuteRequest, ex
 
 	// 调用LangChain运行时
 	if e.runtimeManager == nil {
-		return "", 0, 0, errors.New("ERR_INTERNAL", "runtime manager not configured")
+		return "", 0, 0, errors.InternalError("runtime manager not configured")
 	}
 
 	runtimeReq := &runtime.ExecuteRequest{
@@ -706,7 +706,7 @@ func (e *executor) executeAutoGPT(ctx context.Context, req *ExecuteRequest, exec
 
 	// 调用AutoGPT运行时
 	if e.runtimeManager == nil {
-		return "", 0, 0, errors.New("ERR_INTERNAL", "runtime manager not configured")
+		return "", 0, 0, errors.InternalError("runtime manager not configured")
 	}
 
 	runtimeReq := &runtime.ExecuteRequest{

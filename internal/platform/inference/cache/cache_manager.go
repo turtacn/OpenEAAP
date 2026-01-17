@@ -373,7 +373,7 @@ func (cm *CacheManager) ClearAll(ctx context.Context) error {
 	}
 
 	if len(errs) > 0 {
-		return errors.New("ERR_INTERNAL", fmt.Sprintf("failed to clear %d cache levels", len(errs)))
+		return errors.InternalError(fmt.Sprintf("failed to clear %d cache levels", len(errs)))
 	}
 
 	cm.logger.WithContext(ctx).Info("all caches cleared")
