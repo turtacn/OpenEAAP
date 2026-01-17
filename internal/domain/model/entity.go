@@ -929,3 +929,13 @@ func (m *Model) RemoveTag(tag string) {
 }
 
 //Personal.AI order the ending
+
+// ModelMetrics represents model performance metrics
+type ModelMetrics struct {
+	TotalInferences  int64   `json:"total_inferences"`
+	AvgLatencyMs     float64 `json:"avg_latency_ms"`
+	ErrorRate        float64 `json:"error_rate"`
+	P95LatencyMs     float64 `json:"p95_latency_ms"`
+	P99LatencyMs     float64 `json:"p99_latency_ms"`
+	TokensPerSecond  float64 `json:"tokens_per_second"`
+}

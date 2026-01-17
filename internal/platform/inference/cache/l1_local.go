@@ -166,7 +166,7 @@ func (c *L1LocalCache) Clear(ctx context.Context) error {
 	c.head.next = c.tail
 	c.tail.prev = c.head
 
-	c.logger.Info(ctx, "L1 cache cleared")
+	c.logger.WithContext(ctx).Info("L1 cache cleared")
 
 	return nil
 }
@@ -319,11 +319,11 @@ func (c *L1LocalCache) GetMetrics() map[string]interface{} {
 func (c *L1LocalCache) Warmup(ctx context.Context, entries []*CacheEntry) error {
 	for _, entry := range entries {
 		if err := c.Set(ctx, entry); err != nil {
-			c.logger.Warn(ctx, "failed to warmup entry", "key", entry.Key, "error", err)
+			c.logger.WithContext(ctx).Warn("failed to warmup entry", logging.Any("key", entry.Key), logging.Error(err))
 		}
 	}
 
-	c.logger.Info(ctx, "L1 cache warmup completed", "count", len(entries))
+	c.logger.WithContext(ctx).Info("L1 cache warmup completed", logging.Any("count", len(entries))
 
 	return nil
 }

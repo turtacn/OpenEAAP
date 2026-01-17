@@ -122,7 +122,7 @@ type DPOConfig struct {
 type dpoTrainer struct {
 	backend          training.DistributedBackend
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config         *DPOConfig
@@ -154,7 +154,7 @@ type PolicyModel interface {
 func NewDPOTrainer(
 	backend training.DistributedBackend,
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,
 	config *DPOConfig,
 	trainingConfig *training.TrainingConfig,
@@ -182,7 +182,7 @@ func (t *dpoTrainer) Train(ctx context.Context, task *training.TrainingTask, dat
 			map[string]string{"task_id": task.ID})
 	}()
 
-	t.logger.Info(ctx, "Starting DPO training", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("Starting DPO training", logging.Any("task_id", task.ID))
 
 	// 初始化分布式环境
 	if t.backend != nil {
@@ -205,7 +205,7 @@ func (t *dpoTrainer) Train(ctx context.Context, task *training.TrainingTask, dat
 	defer t.runningTasks.Delete(task.ID)
 
 	// 准备偏好数据集
-	t.logger.Info(ctx, "Preparing preference dataset", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("Preparing preference dataset", logging.Any("task_id", task.ID))
 	prefDataset, err := t.convertToPreferenceDataset(ctx, dataset)
 	if err != nil {
 		return errors.Wrap(err, errors.CodeInternalError, "failed to prepare preference dataset")
@@ -216,10 +216,10 @@ func (t *dpoTrainer) Train(ctx context.Context, task *training.TrainingTask, dat
 
 	// 加载参考模型
 	if t.config.ReferenceFreePath != "" {
-		t.logger.Info(ctx, "Loading reference model", "path", t.config.ReferenceFreePath)
+		t.logger.WithContext(ctx).Info("Loading reference model", logging.Any("path", t.config.ReferenceFreePath))
 		refModel := NewSimplePolicyModel(t.logger)
 		if err := refModel.Load(ctx, t.config.ReferenceFreePath); err != nil {
-			t.logger.Warn(ctx, "Failed to load reference model, using current model", "error", err)
+			t.logger.WithContext(ctx).Warn("Failed to load reference model, using current model", logging.Error(err))
 		} else {
 			t.referenceModel = refModel
 		}
@@ -229,7 +229,7 @@ func (t *dpoTrainer) Train(ctx context.Context, task *training.TrainingTask, dat
 	t.updateTaskProgress(ctx, task)
 
 	// 执行 DPO 训练
-	t.logger.Info(ctx, "Starting DPO optimization", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("Starting DPO optimization", logging.Any("task_id", task.ID))
 	if err := t.TrainDPO(ctx, task, prefDataset); err != nil {
 		return errors.Wrap(err, errors.CodeInternalError, "DPO training failed")
 	}
@@ -238,10 +238,10 @@ func (t *dpoTrainer) Train(ctx context.Context, task *training.TrainingTask, dat
 	t.updateTaskProgress(ctx, task)
 
 	// 最终评估
-	t.logger.Info(ctx, "Evaluating preferences", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("Evaluating preferences", logging.Any("task_id", task.ID))
 	evalResult, err := t.EvaluatePreferences(ctx, prefDataset)
 	if err != nil {
-		t.logger.Warn(ctx, "Preference evaluation failed", "error", err)
+		t.logger.WithContext(ctx).Warn("Preference evaluation failed", logging.Error(err))
 	} else {
 		task.Metrics = map[string]float64{
 			"accuracy":  evalResult.Accuracy,
@@ -257,7 +257,7 @@ func (t *dpoTrainer) Train(ctx context.Context, task *training.TrainingTask, dat
 	t.metricsCollector.Increment("dpo_training_completed",
 		map[string]string{"task_id": task.ID})
 
-	t.logger.Info(ctx, "DPO training completed successfully", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("DPO training completed successfully", logging.Any("task_id", task.ID))
 
 	return nil
 }
@@ -267,7 +267,7 @@ func (t *dpoTrainer) PreparePreferenceData(ctx context.Context, feedbacks []*Fee
 	ctx, span := t.tracer.Start(ctx, "DPOTrainer.PreparePreferenceData")
 	defer span.End()
 
-	t.logger.Info(ctx, "Preparing preference pairs", "feedback_count", len(feedbacks))
+	t.logger.WithContext(ctx).Info("Preparing preference pairs", logging.Any("feedback_count", len(feedbacks))
 
 	pairs := []*PreferencePair{}
 
@@ -298,11 +298,7 @@ func (t *dpoTrainer) PreparePreferenceData(ctx context.Context, feedbacks []*Fee
 		CreatedAt:       time.Now(),
 	}
 
-	t.logger.Info(ctx, "Preference dataset prepared",
-		"total_pairs", len(pairs),
-		"train_pairs", len(dataset.TrainingSplit),
-		"val_pairs", len(dataset.ValidationSplit),
-		"test_pairs", len(dataset.TestSplit))
+ t.logger.WithContext(ctx).Info("Preference dataset prepared", logging.Any("total_pairs", len(pairs))
 
 	return dataset, nil
 }
@@ -312,7 +308,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 	ctx, span := t.tracer.Start(ctx, "DPOTrainer.TrainDPO")
 	defer span.End()
 
-	t.logger.Info(ctx, "Starting DPO optimization", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("Starting DPO optimization", logging.Any("task_id", task.ID))
 
 	epochs := t.trainingConfig.Epochs
 	batchSize := t.trainingConfig.BatchSize
@@ -320,7 +316,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 	// 初始化策略模型
 	policyModel := NewSimplePolicyModel(t.logger)
 	if err := policyModel.Load(ctx, t.trainingConfig.ModelPath); err != nil {
-		t.logger.Warn(ctx, "Failed to load policy model", "error", err)
+		t.logger.WithContext(ctx).Warn("Failed to load policy model", logging.Error(err))
 	}
 
 	// 如果没有参考模型，克隆当前策略模型
@@ -343,9 +339,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 			return errors.New(errors.CodeCancelled, "training task was stopped")
 		}
 
-		t.logger.Info(ctx, "Training epoch",
-			"epoch", epoch+1,
-			"total_epochs", epochs)
+  t.logger.WithContext(ctx).Info("Training epoch", logging.Any("epoch", epoch+1), logging.Any("total_epochs", epochs))
 
 		epochLoss := 0.0
 		batchCount := 0
@@ -386,10 +380,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 
 			// 记录批次指标
 			if batchCount%t.trainingConfig.LoggingSteps == 0 {
-				t.logger.Debug(ctx, "Batch training",
-					"epoch", epoch+1,
-					"batch", batchCount,
-					"loss", loss)
+    t.logger.WithContext(ctx).Debug("Batch training", logging.Any("epoch", epoch+1), logging.Any("batch", batchCount), logging.Any("loss", loss))
 
 				t.metricsCollector.Histogram("dpo_batch_loss",
 					loss,
@@ -404,9 +395,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 		task.CurrentLoss = avgEpochLoss
 		task.Epoch = epoch + 1
 
-		t.logger.Info(ctx, "Epoch completed",
-			"epoch", epoch+1,
-			"avg_loss", avgEpochLoss)
+  t.logger.WithContext(ctx).Info("Epoch completed", logging.Any("epoch", epoch+1), logging.Any("avg_loss", avgEpochLoss))
 
 		t.metricsCollector.Histogram("dpo_epoch_loss",
 			avgEpochLoss,
@@ -419,11 +408,9 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 		if (epoch+1)%t.trainingConfig.EvalSteps == 0 {
 			valLoss, err := t.evaluateOnValidation(ctx, policyModel, dataset.ValidationSplit)
 			if err != nil {
-				t.logger.Warn(ctx, "Validation failed", "error", err)
+				t.logger.WithContext(ctx).Warn("Validation failed", logging.Error(err))
 			} else {
-				t.logger.Info(ctx, "Validation loss",
-					"epoch", epoch+1,
-					"val_loss", valLoss)
+    t.logger.WithContext(ctx).Info("Validation loss", logging.Any("epoch", epoch+1), logging.Any("val_loss", valLoss))
 
 				// 早停检查
 				if valLoss < bestLoss {
@@ -434,14 +421,12 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 					// 保存最佳模型
 					bestModelPath := fmt.Sprintf("%s/best_model", t.trainingConfig.OutputPath)
 					if err := policyModel.Save(ctx, bestModelPath); err != nil {
-						t.logger.Warn(ctx, "Failed to save best model", "error", err)
+						t.logger.WithContext(ctx).Warn("Failed to save best model", logging.Error(err))
 					}
 				} else {
 					patience++
 					if patience >= maxPatience {
-						t.logger.Info(ctx, "Early stopping triggered",
-							"epoch", epoch+1,
-							"patience", patience)
+      t.logger.WithContext(ctx).Info("Early stopping triggered", logging.Any("epoch", epoch+1), logging.Any("patience", patience))
 						break
 					}
 				}
@@ -453,7 +438,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 			checkpointPath := fmt.Sprintf("%s/checkpoint_epoch_%d",
 				t.trainingConfig.OutputPath, epoch+1)
 			if err := policyModel.Save(ctx, checkpointPath); err != nil {
-				t.logger.Warn(ctx, "Failed to save checkpoint", "error", err)
+				t.logger.WithContext(ctx).Warn("Failed to save checkpoint", logging.Error(err))
 			}
 		}
 
@@ -464,10 +449,10 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 
 		// 同步参考模型（如果配置）
 		if t.config.SyncRefModel && (epoch+1)%5 == 0 {
-			t.logger.Info(ctx, "Synchronizing reference model")
+			t.logger.WithContext(ctx).Info("Synchronizing reference model")
 			newRefModel, err := policyModel.Clone(ctx)
 			if err != nil {
-				t.logger.Warn(ctx, "Failed to sync reference model", "error", err)
+				t.logger.WithContext(ctx).Warn("Failed to sync reference model", logging.Error(err))
 			} else {
 				t.referenceModel = newRefModel
 			}
@@ -480,10 +465,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 		return errors.Wrap(err, errors.CodeInternalError, "failed to save final model")
 	}
 
-	t.logger.Info(ctx, "DPO training completed",
-		"task_id", task.ID,
-		"final_loss", task.CurrentLoss,
-		"best_loss", task.BestLoss)
+ t.logger.WithContext(ctx).Info("DPO training completed", logging.Any("task_id", task.ID), logging.Any("final_loss", task.CurrentLoss), logging.Any("best_loss", task.BestLoss))
 
 	return nil
 }
@@ -561,7 +543,7 @@ func (t *dpoTrainer) EvaluatePreferences(ctx context.Context, dataset *Preferenc
 	ctx, span := t.tracer.Start(ctx, "DPOTrainer.EvaluatePreferences")
 	defer span.End()
 
-	t.logger.Info(ctx, "Evaluating preferences", "test_samples", len(dataset.TestSplit))
+	t.logger.WithContext(ctx).Info("Evaluating preferences", logging.Any("test_samples", len(dataset.TestSplit))
 
 	policyModel := NewSimplePolicyModel(t.logger)
 	if err := policyModel.Load(ctx, fmt.Sprintf("%s/final_model", t.trainingConfig.OutputPath)); err != nil {
@@ -619,11 +601,7 @@ func (t *dpoTrainer) EvaluatePreferences(ctx context.Context, dataset *Preferenc
 		EvaluatedAt: time.Now(),
 	}
 
-	t.logger.Info(ctx, "Preference evaluation completed",
-		"accuracy", accuracy,
-		"precision", precision,
-		"recall", recall,
-		"f1_score", f1)
+ t.logger.WithContext(ctx).Info("Preference evaluation completed", logging.Any("accuracy", accuracy), logging.Any("precision", precision), logging.Any("recall", recall), logging.Any("f1_score", f1))
 
 	return evaluation, nil
 }
@@ -633,7 +611,7 @@ func (t *dpoTrainer) Stop(ctx context.Context, taskID string) error {
 	ctx, span := t.tracer.Start(ctx, "DPOTrainer.Stop")
 	defer span.End()
 
-	t.logger.Info(ctx, "Stopping DPO training", "task_id", taskID)
+	t.logger.WithContext(ctx).Info("Stopping DPO training", logging.Any("task_id", taskID))
 	t.runningTasks.Delete(taskID)
 
 	return nil
@@ -644,7 +622,7 @@ func (t *dpoTrainer) Pause(ctx context.Context, taskID string) error {
 	ctx, span := t.tracer.Start(ctx, "DPOTrainer.Pause")
 	defer span.End()
 
-	t.logger.Info(ctx, "Pausing DPO training", "task_id", taskID)
+	t.logger.WithContext(ctx).Info("Pausing DPO training", logging.Any("task_id", taskID))
 	return nil
 }
 
@@ -653,7 +631,7 @@ func (t *dpoTrainer) Resume(ctx context.Context, taskID string) error {
 	ctx, span := t.tracer.Start(ctx, "DPOTrainer.Resume")
 	defer span.End()
 
-	t.logger.Info(ctx, "Resuming DPO training", "task_id", taskID)
+	t.logger.WithContext(ctx).Info("Resuming DPO training", logging.Any("task_id", taskID))
 	return nil
 }
 
@@ -748,7 +726,7 @@ func (t *dpoTrainer) generatePairsFromRatings(ctx context.Context, feedbacks []*
 		}
 	}
 
-	t.logger.Debug(ctx, "Generated pairs from ratings", "count", len(pairs))
+	t.logger.WithContext(ctx).Debug("Generated pairs from ratings", logging.Any("count", len(pairs))
 	return pairs
 }
 
@@ -773,7 +751,7 @@ func (t *dpoTrainer) generatePairsFromCorrections(ctx context.Context, feedbacks
 		}
 	}
 
-	t.logger.Debug(ctx, "Generated pairs from corrections", "count", len(pairs))
+	t.logger.WithContext(ctx).Debug("Generated pairs from corrections", logging.Any("count", len(pairs))
 	return pairs
 }
 
@@ -810,7 +788,7 @@ func (t *dpoTrainer) generatePairsByComparison(ctx context.Context, feedbacks []
 		}
 	}
 
-	t.logger.Debug(ctx, "Generated pairs by comparison", "count", len(pairs))
+	t.logger.WithContext(ctx).Debug("Generated pairs by comparison", logging.Any("count", len(pairs))
 	return pairs
 }
 
@@ -885,9 +863,7 @@ func (t *dpoTrainer) evaluateOnValidation(ctx context.Context, model PolicyModel
 func (t *dpoTrainer) updateTaskProgress(ctx context.Context, task *training.TrainingTask) {
 	task.UpdatedAt = time.Now()
 
-	t.logger.Debug(ctx, "Task progress updated",
-		"task_id", task.ID,
-		"progress", task.Progress)
+ t.logger.WithContext(ctx).Debug("Task progress updated", logging.Any("task_id", task.ID), logging.Any("progress", task.Progress))
 
 	t.metricsCollector.Histogram("dpo_training_progress",
 		task.Progress,
@@ -954,7 +930,7 @@ func (m *simplePolicyModel) Save(ctx context.Context, path string) error {
 	defer m.mu.Unlock()
 
 	m.modelPath = path
-	m.logger.Info(ctx, "Policy model saved", "path", path)
+	m.logger.WithContext(ctx).Info("Policy model saved", logging.Any("path", path))
 
 	return nil
 }
@@ -964,7 +940,7 @@ func (m *simplePolicyModel) Load(ctx context.Context, path string) error {
 	defer m.mu.Unlock()
 
 	m.modelPath = path
-	m.logger.Info(ctx, "Policy model loaded", "path", path)
+	m.logger.WithContext(ctx).Info("Policy model loaded", logging.Any("path", path))
 
 	return nil
 }
@@ -975,7 +951,7 @@ func (m *simplePolicyModel) Clone(ctx context.Context) (PolicyModel, error) {
 		logger:    m.logger,
 	}
 
-	m.logger.Info(ctx, "Policy model cloned")
+	m.logger.WithContext(ctx).Info("Policy model cloned")
 
 	return clone, nil
 }

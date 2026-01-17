@@ -123,7 +123,7 @@ type pep struct {
 	pdp              PolicyDecisionPoint
 	auditLogger      AuditLogger
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config             *PEPConfig
@@ -168,7 +168,7 @@ func NewPolicyEnforcementPoint(
 	pdp PolicyDecisionPoint,
 	auditLogger AuditLogger,
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,
 	config *PEPConfig,
 ) PolicyEnforcementPoint {
@@ -199,17 +199,13 @@ func (p *pep) Enforce(ctx context.Context, request *AccessRequest) (*Enforcement
 		defer cancel()
 	}
 
-	p.logger.Debug(ctx, "Enforcing access policy",
-		"request_id", request.RequestID,
-		"subject", request.Subject.ID,
-		"resource", request.Resource.ID,
-		"action", request.Action)
+ p.logger.WithContext(ctx).Debug("Enforcing access policy", logging.Any("request_id", request.RequestID), logging.Any("subject", request.Subject.ID), logging.Any("resource", request.Resource.ID), logging.Any("action", request.Action))
 
 	// 调用 PDP 评估策略
 	decision, err := p.pdp.Evaluate(ctx, request)
 	if err != nil {
 		p.recordError()
-		p.logger.Error(ctx, "Policy evaluation failed", "error", err)
+		p.logger.WithContext(ctx).Error("Policy evaluation failed", logging.Error(err))
 		return nil, errors.Wrap(err, errors.CodeInternalError, "policy evaluation failed")
 	}
 
@@ -231,7 +227,7 @@ func (p *pep) Enforce(ctx context.Context, request *AccessRequest) (*Enforcement
 	if p.config.EnforceObligations && len(decision.Obligations) > 0 {
 		if err := p.handleObligations(ctx, decision.Obligations); err != nil {
 			result.ObligationsMet = false
-			p.logger.Warn(ctx, "Failed to fulfill obligations", "error", err)
+			p.logger.WithContext(ctx).Warn("Failed to fulfill obligations", logging.Error(err))
 
 			if p.config.FailOnObligationError {
 				result.Allowed = false
@@ -251,7 +247,7 @@ func (p *pep) Enforce(ctx context.Context, request *AccessRequest) (*Enforcement
 	if p.config.EnableAudit {
 		auditID, err := p.logAudit(ctx, request, decision, duration)
 		if err != nil {
-			p.logger.Warn(ctx, "Failed to log audit entry", "error", err)
+			p.logger.WithContext(ctx).Warn("Failed to log audit entry", logging.Error(err))
 		} else {
 			result.AuditID = auditID
 		}
@@ -265,10 +261,7 @@ func (p *pep) Enforce(ctx context.Context, request *AccessRequest) (*Enforcement
 		p.recordMetrics(request, decision, duration)
 	}
 
-	p.logger.Info(ctx, "Access policy enforced",
-		"request_id", request.RequestID,
-		"allowed", result.Allowed,
-		"duration_ms", duration.Milliseconds())
+ p.logger.WithContext(ctx).Info("Access policy enforced", logging.Any("request_id", request.RequestID), logging.Any("allowed", result.Allowed), logging.Any("duration_ms", duration.Milliseconds())
 
 	return result, nil
 }
@@ -282,7 +275,7 @@ func (p *pep) EnforceAsync(ctx context.Context, request *AccessRequest) <-chan *
 
 		result, err := p.Enforce(ctx, request)
 		if err != nil {
-			p.logger.Error(ctx, "Async enforcement failed", "error", err)
+			p.logger.WithContext(ctx).Error("Async enforcement failed", logging.Error(err))
 			resultChan <- &EnforcementResult{
 				RequestID:  request.RequestID,
 				Allowed:    false,
@@ -305,7 +298,7 @@ func (p *pep) EnforceBatch(ctx context.Context, requests []*AccessRequest) ([]*E
 	ctx, span := p.tracer.Start(ctx, "PEP.EnforceBatch")
 	defer span.End()
 
-	p.logger.Debug(ctx, "Enforcing batch access policies", "count", len(requests))
+	p.logger.WithContext(ctx).Debug("Enforcing batch access policies", logging.Any("count", len(requests))
 
 	results := make([]*EnforcementResult, len(requests))
 
@@ -323,8 +316,7 @@ func (p *pep) EnforceBatch(ctx context.Context, requests []*AccessRequest) ([]*E
 
 				result, err := p.Enforce(ctx, request)
 				if err != nil {
-					p.logger.Error(ctx, "Batch enforcement failed for request",
-						"request_id", request.RequestID, "error", err)
+     p.logger.WithContext(ctx).Error("Batch enforcement failed for request", logging.Any("request_id", request.RequestID), logging.Error(err))
 					results[index] = &EnforcementResult{
 						RequestID: request.RequestID,
 						Allowed:   false,
@@ -407,7 +399,7 @@ func (p *pep) PostAuthorize(ctx context.Context, request *AccessRequest, result 
 	}
 
 	// 可以在这里添加对结果的进一步检查和过滤
-	p.logger.Debug(ctx, "Post-authorization check passed", "request_id", request.RequestID)
+	p.logger.WithContext(ctx).Debug("Post-authorization check passed", logging.Any("request_id", request.RequestID))
 
 	return nil
 }
@@ -496,8 +488,7 @@ func (p *pep) handleObligations(ctx context.Context, obligations []*Obligation) 
 		}
 
 		if !handled {
-			p.logger.Warn(ctx, "No handler found for obligation",
-				"obligation_id", obligation.ID, "type", obligation.Type)
+   p.logger.WithContext(ctx).Warn("No handler found for obligation", logging.Any("obligation_id", obligation.ID), logging.Any("type", obligation.Type))
 		}
 	}
 
@@ -515,8 +506,7 @@ func (p *pep) applyAdvice(ctx context.Context, adviceList []*Advice) []string {
 		for _, handler := range handlers {
 			if handler.CanApply(advice) {
 				if err := handler.Apply(ctx, advice); err != nil {
-					p.logger.Warn(ctx, "Failed to apply advice",
-						"advice_id", advice.ID, "error", err)
+     p.logger.WithContext(ctx).Warn("Failed to apply advice", logging.Any("advice_id", advice.ID), logging.Error(err))
 				} else {
 					applied = append(applied, advice.ID)
 				}
@@ -705,10 +695,7 @@ func NewLoggingObligationHandler(logger logging.Logger) ObligationHandler {
 }
 
 func (h *LoggingObligationHandler) Handle(ctx context.Context, obligation *Obligation) error {
-	h.logger.Info(ctx, "Obligation fulfilled",
-		"obligation_id", obligation.ID,
-		"type", obligation.Type,
-		"description", obligation.Description)
+ h.logger.WithContext(ctx).Info("Obligation fulfilled", logging.Any("obligation_id", obligation.ID), logging.Any("type", obligation.Type), logging.Any("description", obligation.Description))
 	return nil
 }
 
@@ -727,9 +714,7 @@ func NewNotificationObligationHandler(logger logging.Logger) ObligationHandler {
 
 func (h *NotificationObligationHandler) Handle(ctx context.Context, obligation *Obligation) error {
 	// 实际实现应该发送通知（邮件、消息等）
-	h.logger.Info(ctx, "Notification sent",
-		"obligation_id", obligation.ID,
-		"description", obligation.Description)
+ h.logger.WithContext(ctx).Info("Notification sent", logging.Any("obligation_id", obligation.ID), logging.Any("description", obligation.Description))
 	return nil
 }
 
@@ -749,10 +734,7 @@ func NewLoggingAdviceHandler(logger logging.Logger) AdviceHandler {
 }
 
 func (h *LoggingAdviceHandler) Apply(ctx context.Context, advice *Advice) error {
-	h.logger.Info(ctx, "Advice applied",
-		"advice_id", advice.ID,
-		"type", advice.Type,
-		"description", advice.Description)
+ h.logger.WithContext(ctx).Info("Advice applied", logging.Any("advice_id", advice.ID), logging.Any("type", advice.Type), logging.Any("description", advice.Description))
 	return nil
 }
 

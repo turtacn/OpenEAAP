@@ -101,7 +101,7 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 	if err == nil {
 		entry, err := c.deserializeEntry(data)
 		if err != nil {
-			c.logger.Warn(ctx, "failed to deserialize cache entry", "error", err)
+			c.logger.WithContext(ctx).Warn("failed to deserialize cache entry", logging.Error(err))
 			c.missCount++
 			return nil, nil
 		}
@@ -116,22 +116,19 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 		c.hitCount++
 
 		latency := time.Since(startTime)
-		c.logger.Debug(ctx, "L2 cache exact hit",
-			"key", key,
-			"latency_ms", latency.Milliseconds(),
-		)
+  c.logger.WithContext(ctx).Debug("L2 cache exact hit", logging.Any("key", key), logging.Any("latency_ms", latency.Milliseconds())
 
 		return entry, nil
 	}
 
 	if err != redis.Nil {
-		c.logger.Warn(ctx, "Redis GET error", "error", err)
+		c.logger.WithContext(ctx).Warn("Redis GET error", logging.Error(err))
 	}
 
 	// Try SimHash fuzzy matching
 	entry, err := c.findBySimilarity(ctx, key)
 	if err != nil {
-		c.logger.Warn(ctx, "SimHash matching failed", "error", err)
+		c.logger.WithContext(ctx).Warn("SimHash matching failed", logging.Error(err))
 		c.missCount++
 		return nil, nil
 	}
@@ -140,10 +137,7 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 		c.hitCount++
 
 		latency := time.Since(startTime)
-		c.logger.Debug(ctx, "L2 cache SimHash hit",
-			"key", key,
-			"latency_ms", latency.Milliseconds(),
-		)
+  c.logger.WithContext(ctx).Debug("L2 cache SimHash hit", logging.Any("key", key), logging.Any("latency_ms", latency.Milliseconds())
 
 		return entry, nil
 	}
@@ -152,9 +146,7 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 
 	latency := time.Since(startTime)
 	if latency > 10*time.Millisecond {
-		c.logger.Warn(ctx, "L2 cache GET latency exceeded 10ms",
-			"latency_ms", latency.Milliseconds(),
-		)
+  c.logger.WithContext(ctx).Warn("L2 cache GET latency exceeded 10ms", logging.Any("latency_ms", latency.Milliseconds())
 	}
 
 	return nil, nil
@@ -198,7 +190,7 @@ func (c *L2RedisCache) Set(ctx context.Context, entry *CacheEntry) error {
 
 	// Store SimHash mapping for fuzzy matching
 	if err := c.storeSimHashMapping(ctx, entry.Key, &entryCopy, ttl); err != nil {
-		c.logger.Warn(ctx, "failed to store SimHash mapping", "error", err)
+		c.logger.WithContext(ctx).Warn("failed to store SimHash mapping", logging.Error(err))
 		// Don't fail the entire operation
 	}
 
@@ -206,9 +198,7 @@ func (c *L2RedisCache) Set(ctx context.Context, entry *CacheEntry) error {
 
 	latency := time.Since(startTime)
 	if latency > 10*time.Millisecond {
-		c.logger.Warn(ctx, "L2 cache SET latency exceeded 10ms",
-			"latency_ms", latency.Milliseconds(),
-		)
+  c.logger.WithContext(ctx).Warn("L2 cache SET latency exceeded 10ms", logging.Any("latency_ms", latency.Milliseconds())
 	}
 
 	return nil
@@ -251,7 +241,7 @@ func (c *L2RedisCache) Clear(ctx context.Context) error {
 		}
 	}
 
-	c.logger.Info(ctx, "L2 cache cleared", "deleted_keys", len(keys))
+	c.logger.WithContext(ctx).Info("L2 cache cleared", logging.Any("deleted_keys", len(keys))
 
 	return nil
 }

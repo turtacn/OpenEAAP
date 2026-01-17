@@ -74,7 +74,7 @@ func (r *agentRepo) Create(ctx context.Context, agt *agent.Agent) error {
 	// 执行创建
 	if err := r.db.WithContext(ctx).Create(model).Error; err != nil {
 		if isDuplicateKeyError(err) {
-			return errors.Wrap(err, errors.CodeAlreadyExists, "agent already exists")
+			return errors.NewConflictError("AGENT_ALREADY_EXISTS", "agent already exists").WithCause(err)
 		}
 		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to create agent")
 	}
@@ -143,11 +143,10 @@ func (r *agentRepo) Update(ctx context.Context, agt *agent.Agent) error {
 	}
 
 	if result.RowsAffected == 0 {
-		return errors.New(errors.CodeConflict, "agent version conflict or not found")
+		return errors.NewConflictError("AGENT_CONFLICT", "agent version conflict or not found")
 	}
 
-	// 更新实体的版本号和时间戳
-	agt.Version++
+	// 更新实体的时间戳
 	agt.UpdatedAt = time.Now()
 
 	return nil
@@ -196,31 +195,27 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 	}
 
 	// 应用默认值
-	if filter.Page <= 0 {
-		filter.Page = 1
+	if filter.Limit <= 0 {
+		filter.Limit = 20
 	}
-	if filter.PageSize <= 0 {
-		filter.PageSize = 20
+	if filter.Limit > 100 {
+		filter.Limit = 100
 	}
-	if filter.PageSize > 100 {
-		filter.PageSize = 100
+	if filter.Offset < 0 {
+		filter.Offset = 0
 	}
 
 	// 构建查询
 	query := r.db.WithContext(ctx).Model(&AgentModel{})
 
 	// 应用过滤条件
-	if filter.Name != "" {
-		query = query.Where("name ILIKE ?", "%"+filter.Name+"%")
 	}
-	if filter.RuntimeType != "" {
+	if len(filter.RuntimeType) > 0 {
 		query = query.Where("runtime_type = ?", filter.RuntimeType)
 	}
-	if filter.Status != "" {
+	if len(filter.Status) > 0 {
 		query = query.Where("status = ?", filter.Status)
 	}
-	if filter.CreatedBy != "" {
-		query = query.Where("created_by = ?", filter.CreatedBy)
 	}
 	if !filter.CreatedAfter.IsZero() {
 		query = query.Where("created_at >= ?", filter.CreatedAfter)
@@ -237,9 +232,6 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 
 	// 应用排序
 	orderBy := "created_at DESC"
-	if filter.OrderBy != "" {
-		orderBy = filter.OrderBy
-		if filter.OrderDesc {
 			orderBy += " DESC"
 		} else {
 			orderBy += " ASC"
@@ -248,8 +240,7 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 	query = query.Order(orderBy)
 
 	// 应用分页
-	offset := (filter.Page - 1) * filter.PageSize
-	query = query.Offset(offset).Limit(filter.PageSize)
+	query = query.Offset(filter.Offset).Limit(filter.Limit)
 
 	// 查询数据
 	var models []AgentModel
@@ -455,4 +446,70 @@ func (r *agentRepo) GetStatistics(ctx context.Context) (*agent.AgentStatistics, 
 	return &stats, nil
 }
 
+// Archive archives an agent
+func (r *agentRepo) Archive(ctx context.Context, id string) error {
+	result := r.db.WithContext(ctx).
+		Model(&AgentModel{}).
+		Where("id = ?", id).
+		Update("archived", true)
+	
+	if result.Error != nil {
+		return errors.WrapDatabaseError(result.Error, errors.CodeDatabaseError, "failed to archive agent")
+	}
+	
+	if result.RowsAffected == 0 {
+		return errors.NewNotFoundError(errors.CodeNotFound, "agent not found")
+	}
+	
+	return nil
+}
+
+// GetArchived retrieves archived agents
+func (r *agentRepo) GetArchived(ctx context.Context, filter agent.AgentFilter) ([]*agent.Agent, error) {
+	filter.IncludeArchived = true
+	return r.List(ctx, filter)
+}
+
+// BatchUpdate updates multiple agents
+func (r *agentRepo) BatchUpdate(ctx context.Context, agents []*agent.Agent) error {
+	if len(agents) == 0 {
+		return errors.NewValidationError(errors.CodeInvalidParameter, "agents cannot be empty")
+	}
+
+	for _, agt := range agents {
+		if err := r.Update(ctx, agt); err != nil {
+			return err
+		}
+	}
+	
+	return nil
+}
+
+// BatchDelete deletes multiple agents
+func (r *agentRepo) BatchDelete(ctx context.Context, ids []string) error {
+	if len(ids) == 0 {
+		return errors.NewValidationError(errors.CodeInvalidParameter, "ids cannot be empty")
+	}
+
+	result := r.db.WithContext(ctx).
+		Where("id IN ?", ids).
+		Delete(&AgentModel{})
+	
+	if result.Error != nil {
+		return errors.WrapDatabaseError(result.Error, errors.CodeDatabaseError, "failed to batch delete agents")
+	}
+	
+	return nil
+}
+
 //Personal.AI order the ending
+
+// Count returns the total count of agents matching the filter
+func (r *agentRepo) Count(ctx context.Context, filter agent.AgentFilter) (int64, error) {
+var count int64
+query := r.db.WithContext(ctx).Model(&AgentModel{})
+if err := query.Count(&count).Error; err != nil {
+return 0, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to count agents")
+}
+return count, nil
+}

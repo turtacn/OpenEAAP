@@ -100,7 +100,7 @@ type feedbackCollector struct {
 	repo             FeedbackRepository
 	messageQueue     message.MessageQueue
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config *FeedbackConfig
@@ -177,7 +177,7 @@ func NewFeedbackCollector(
 	repo FeedbackRepository,
 	messageQueue message.MessageQueue,
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,
 	config *FeedbackConfig,
 ) FeedbackCollector {
@@ -217,14 +217,12 @@ func (c *feedbackCollector) Collect(ctx context.Context, feedback *Feedback) err
 	// 异步处理
 	if c.config.EnableAsync {
 		if c.buffer.Add(feedback) {
-			c.logger.Debug(ctx, "Feedback added to buffer",
-				"feedback_id", feedback.ID,
-				"buffer_size", c.buffer.Size())
+   c.logger.WithContext(ctx).Debug("Feedback added to buffer", logging.Any("feedback_id", feedback.ID), logging.Any("buffer_size", c.buffer.Size())
 
 			// 检查是否需要刷新
 			if c.buffer.IsFull() || c.buffer.Size() >= c.config.BatchSize {
 				if err := c.Flush(ctx); err != nil {
-					c.logger.Warn(ctx, "Failed to flush buffer", "error", err)
+					c.logger.WithContext(ctx).Warn("Failed to flush buffer", logging.Error(err))
 				}
 			}
 
@@ -235,7 +233,7 @@ func (c *feedbackCollector) Collect(ctx context.Context, feedback *Feedback) err
 
 		// 缓冲区满，先刷新
 		if err := c.Flush(ctx); err != nil {
-			c.logger.Warn(ctx, "Failed to flush buffer before adding", "error", err)
+			c.logger.WithContext(ctx).Warn("Failed to flush buffer before adding", logging.Error(err))
 		}
 
 		c.buffer.Add(feedback)
@@ -248,7 +246,7 @@ func (c *feedbackCollector) Collect(ctx context.Context, feedback *Feedback) err
 
 	// 发布到消息队列
 	if err := c.publishFeedback(ctx, feedback); err != nil {
-		c.logger.Warn(ctx, "Failed to publish feedback to queue", "error", err)
+		c.logger.WithContext(ctx).Warn("Failed to publish feedback to queue", logging.Error(err))
 		// 不阻塞主流程
 	}
 
@@ -258,10 +256,7 @@ func (c *feedbackCollector) Collect(ctx context.Context, feedback *Feedback) err
 			"type":     string(feedback.FeedbackType),
 		})
 
-	c.logger.Info(ctx, "Feedback collected successfully",
-		"feedback_id", feedback.ID,
-		"model_id", feedback.ModelID,
-		"rating", feedback.Rating)
+ c.logger.WithContext(ctx).Info("Feedback collected successfully", logging.Any("feedback_id", feedback.ID), logging.Any("model_id", feedback.ModelID), logging.Any("rating", feedback.Rating))
 
 	return nil
 }
@@ -300,16 +295,14 @@ func (c *feedbackCollector) CollectBatch(ctx context.Context, feedbacks []*Feedb
 	// 批量发布到消息队列
 	for _, feedback := range feedbacks {
 		if err := c.publishFeedback(ctx, feedback); err != nil {
-			c.logger.Warn(ctx, "Failed to publish feedback",
-				"feedback_id", feedback.ID, "error", err)
+   c.logger.WithContext(ctx).Warn("Failed to publish feedback", logging.Any("feedback_id", feedback.ID), logging.Error(err))
 		}
 	}
 
 	c.metricsCollector.Increment("feedback_batch_collected",
 		map[string]string{"batch_size": fmt.Sprintf("%d", len(feedbacks))})
 
-	c.logger.Info(ctx, "Batch feedback collected successfully",
-		"count", len(feedbacks))
+ c.logger.WithContext(ctx).Info("Batch feedback collected successfully", logging.Any("count", len(feedbacks))
 
 	return nil
 }
@@ -324,7 +317,7 @@ func (c *feedbackCollector) Flush(ctx context.Context) error {
 		return nil
 	}
 
-	c.logger.Debug(ctx, "Flushing feedback buffer", "count", len(feedbacks))
+	c.logger.WithContext(ctx).Debug("Flushing feedback buffer", logging.Any("count", len(feedbacks))
 
 	if err := c.persistBatch(ctx, feedbacks); err != nil {
 		// 失败时放回缓冲区
@@ -337,15 +330,14 @@ func (c *feedbackCollector) Flush(ctx context.Context) error {
 	// 发布到消息队列
 	for _, feedback := range feedbacks {
 		if err := c.publishFeedback(ctx, feedback); err != nil {
-			c.logger.Warn(ctx, "Failed to publish feedback",
-				"feedback_id", feedback.ID, "error", err)
+   c.logger.WithContext(ctx).Warn("Failed to publish feedback", logging.Any("feedback_id", feedback.ID), logging.Error(err))
 		}
 	}
 
 	c.metricsCollector.Increment("feedback_buffer_flushed",
 		map[string]string{"count": fmt.Sprintf("%d", len(feedbacks))})
 
-	c.logger.Info(ctx, "Buffer flushed successfully", "count", len(feedbacks))
+	c.logger.WithContext(ctx).Info("Buffer flushed successfully", logging.Any("count", len(feedbacks))
 
 	return nil
 }
@@ -373,7 +365,7 @@ func (c *feedbackCollector) Query(ctx context.Context, filter *FeedbackFilter) (
 		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to query feedbacks")
 	}
 
-	c.logger.Debug(ctx, "Feedbacks queried", "count", len(feedbacks))
+	c.logger.WithContext(ctx).Debug("Feedbacks queried", logging.Any("count", len(feedbacks))
 
 	return feedbacks, nil
 }
@@ -383,7 +375,7 @@ func (c *feedbackCollector) Archive(ctx context.Context, beforeTime time.Time) e
 	ctx, span := c.tracer.Start(ctx, "FeedbackCollector.Archive")
 	defer span.End()
 
-	c.logger.Info(ctx, "Archiving old feedbacks", "before_time", beforeTime)
+	c.logger.WithContext(ctx).Info("Archiving old feedbacks", logging.Any("before_time", beforeTime))
 
 	if err := c.repo.Archive(ctx, beforeTime); err != nil {
 		return errors.Wrap(err, errors.CodeInternalError, "failed to archive feedbacks")
@@ -391,7 +383,7 @@ func (c *feedbackCollector) Archive(ctx context.Context, beforeTime time.Time) e
 
 	c.metricsCollector.Increment("feedback_archived", nil)
 
-	c.logger.Info(ctx, "Feedbacks archived successfully")
+	c.logger.WithContext(ctx).Info("Feedbacks archived successfully")
 
 	return nil
 }
@@ -406,8 +398,7 @@ func (c *feedbackCollector) persistFeedback(ctx context.Context, feedback *Feedb
 		}
 
 		if i < c.config.RetryAttempts {
-			c.logger.Warn(ctx, "Failed to persist feedback, retrying",
-				"attempt", i+1, "error", err)
+   c.logger.WithContext(ctx).Warn("Failed to persist feedback, retrying", logging.Any("attempt", i+1), logging.Error(err))
 			time.Sleep(c.config.RetryDelay)
 		}
 	}
@@ -428,8 +419,7 @@ func (c *feedbackCollector) persistBatch(ctx context.Context, feedbacks []*Feedb
 		}
 
 		if i < c.config.RetryAttempts {
-			c.logger.Warn(ctx, "Failed to persist batch, retrying",
-				"attempt", i+1, "count", len(feedbacks), "error", err)
+   c.logger.WithContext(ctx).Warn("Failed to persist batch, retrying", logging.Any("attempt", i+1), logging.Any("count", len(feedbacks))
 			time.Sleep(c.config.RetryDelay)
 		}
 	}
@@ -489,14 +479,14 @@ type AutoEvaluation struct {
 // autoEvaluator 自动评估器实现
 type autoEvaluator struct {
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 	tracer           trace.Tracer
 }
 
 // NewAutoEvaluator 创建自动评估器
 func NewAutoEvaluator(
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,
 ) AutoEvaluator {
 	return &autoEvaluator{

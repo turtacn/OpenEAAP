@@ -82,8 +82,10 @@ func (v *Validator) ValidateVar(field interface{}, tag string) error {
 
 // ValidateMap validates a map based on rules
 func (v *Validator) ValidateMap(data map[string]interface{}, rules map[string]interface{}) error {
-	if err := v.validator.ValidateMap(data, rules); err != nil {
-		return v.formatValidationError(err)
+	errMap := v.validator.ValidateMap(data, rules)
+	if errMap != nil && len(errMap) > 0 {
+		// Convert map to error - for now just return a generic error
+		return fmt.Errorf("validation failed: %v", errMap)
 	}
 	return nil
 }

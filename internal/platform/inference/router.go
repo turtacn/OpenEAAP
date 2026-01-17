@@ -104,7 +104,7 @@ type ABTestConfig struct {
 // Router handles model routing and engine selection
 type Router struct {
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 
 	engines          map[string]*EngineConfig
 	enginesMu        sync.RWMutex
@@ -136,7 +136,7 @@ type RouterConfig struct {
 // NewRouter creates a new model router
 func NewRouter(
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector metrics.MetricsCollector,
 	config *RouterConfig,
 ) *Router {
 	r := &Router{
@@ -239,10 +239,7 @@ func (r *Router) Route(ctx context.Context, req *InferenceRequest) (InferenceEng
 	// Try rule-based routing first
 	engineName, matchedRule := r.matchRoutingRule(ctx, req)
 	if engineName != "" {
-		r.logger.Info(ctx, "routing by rule",
-			"rule", matchedRule,
-			"engine", engineName,
-		)
+  r.logger.WithContext(ctx).Info("routing by rule", logging.Any("rule", matchedRule), logging.Any("engine", engineName))
 
 		engine, err := r.getEngine(engineName)
 		if err == nil {
@@ -250,10 +247,7 @@ func (r *Router) Route(ctx context.Context, req *InferenceRequest) (InferenceEng
 			return engine, nil
 		}
 
-		r.logger.Warn(ctx, "rule-matched engine not available",
-			"engine", engineName,
-			"error", err,
-		)
+  r.logger.WithContext(ctx).Warn("rule-matched engine not available", logging.Any("engine", engineName), logging.Error(err))
 	}
 
 	// Fallback to strategy-based routing

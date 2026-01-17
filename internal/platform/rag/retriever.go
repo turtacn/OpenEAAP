@@ -175,11 +175,7 @@ func (r *retrieverImpl) Retrieve(ctx context.Context, req *RetrieveRequest) ([]*
 	}
 
 	latency := time.Since(startTime)
-	r.logger.Info(ctx, "retrieval completed",
-		"query", req.Query,
-		"mode", req.Mode,
-		"chunks_count", len(chunks),
-		"latency_ms", latency.Milliseconds())
+ r.logger.WithContext(ctx).Info("retrieval completed", logging.Any("query", req.Query), logging.Any("mode", req.Mode), logging.Any("chunks_count", len(chunks))
 
 	span.AddTag("chunks_count", len(chunks))
 
@@ -188,7 +184,7 @@ func (r *retrieverImpl) Retrieve(ctx context.Context, req *RetrieveRequest) ([]*
 
 // vectorRetrieval 向量检索
 func (r *retrieverImpl) vectorRetrieval(ctx context.Context, req *RetrieveRequest) ([]*RetrievedChunk, error) {
-	r.logger.Debug(ctx, "performing vector retrieval", "query", req.Query)
+	r.logger.WithContext(ctx).Debug("performing vector retrieval", logging.Any("query", req.Query))
 
 	// 构建向量搜索请求
 	searchReq := &vector.SearchRequest{
@@ -228,7 +224,7 @@ func (r *retrieverImpl) keywordRetrieval(ctx context.Context, req *RetrieveReque
 		return nil, errors.New(errors.CodeUnimplemented, "search engine not configured")
 	}
 
-	r.logger.Debug(ctx, "performing keyword retrieval", "query", req.Query)
+	r.logger.WithContext(ctx).Debug("performing keyword retrieval", logging.Any("query", req.Query))
 
 	// 执行关键词搜索
 	results, err := r.searchEngine.Search(ctx, req.Query, req.TopK*2, req.Metadata)
@@ -259,7 +255,7 @@ func (r *retrieverImpl) graphRetrieval(ctx context.Context, req *RetrieveRequest
 		return nil, errors.New(errors.CodeUnimplemented, "knowledge graph not configured")
 	}
 
-	r.logger.Debug(ctx, "performing graph retrieval", "query", req.Query)
+	r.logger.WithContext(ctx).Debug("performing graph retrieval", logging.Any("query", req.Query))
 
 	// 执行图查询
 	results, err := r.knowledgeGraph.Query(ctx, req.Query, 2) // 最大深度为2
@@ -286,7 +282,7 @@ func (r *retrieverImpl) graphRetrieval(ctx context.Context, req *RetrieveRequest
 
 // hybridRetrieval 混合检索
 func (r *retrieverImpl) hybridRetrieval(ctx context.Context, req *RetrieveRequest) ([]*RetrievedChunk, error) {
-	r.logger.Debug(ctx, "performing hybrid retrieval", "query", req.Query)
+	r.logger.WithContext(ctx).Debug("performing hybrid retrieval", logging.Any("query", req.Query))
 
 	// 并行执行多种检索策略
 	type retrievalResult struct {
@@ -330,7 +326,7 @@ func (r *retrieverImpl) hybridRetrieval(ctx context.Context, req *RetrieveReques
 	for i := 0; i < 3; i++ {
 		result := <-resultChan
 		if result.err != nil {
-			r.logger.Warn(ctx, "retrieval strategy failed", "error", result.err)
+			r.logger.WithContext(ctx).Warn("retrieval strategy failed", logging.Any("error", result.err))
 			continue
 		}
 		if result.chunks != nil {
@@ -463,14 +459,14 @@ func (r *retrieverImpl) HealthCheck(ctx context.Context) error {
 	// 检查搜索引擎（可选）
 	if r.searchEngine != nil {
 		if err := r.searchEngine.HealthCheck(ctx); err != nil {
-			r.logger.Warn(ctx, "search engine unhealthy", "error", err)
+			r.logger.WithContext(ctx).Warn("search engine unhealthy", logging.Error(err))
 		}
 	}
 
 	// 检查知识图谱（可选）
 	if r.knowledgeGraph != nil {
 		if err := r.knowledgeGraph.HealthCheck(ctx); err != nil {
-			r.logger.Warn(ctx, "knowledge graph unhealthy", "error", err)
+			r.logger.WithContext(ctx).Warn("knowledge graph unhealthy", logging.Error(err))
 		}
 	}
 

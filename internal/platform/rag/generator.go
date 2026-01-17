@@ -154,10 +154,12 @@ func (g *generatorImpl) Generate(ctx context.Context, req *GenerateRequest) (*Ge
 	startTime := time.Now()
 
 	// 创建 Span
-	span := g.tracer.StartSpan(ctx, "Generator.Generate")
+	ctx, span := g.tracer.Start(ctx, "Generator.Generate")
 	defer span.End()
-	span.AddTag("query", req.Query)
-	span.AddTag("model", req.ModelName)
+	trace.SetSpanAttributes(ctx, 
+		trace.StringAttr("query", req.Query),
+		trace.StringAttr("model", req.ModelName),
+	)
 
 	// 应用默认值
 	g.applyDefaults(req)
@@ -181,8 +183,8 @@ func (g *generatorImpl) Generate(ctx context.Context, req *GenerateRequest) (*Ge
 
 	llmResp, err := g.llmClient.Complete(ctx, llmReq)
 	if err != nil {
-		span.SetStatus(trace.StatusError, err.Error())
-		return nil, errors.Wrap(err, errors.CodeInternal, "LLM completion failed")
+		trace.RecordSpanError(ctx, err)
+		return nil, errors.Wrap(err, errors.CodeInternalError, "LLM completion failed")
 	}
 
 	answer := llmResp.Content
@@ -198,17 +200,13 @@ func (g *generatorImpl) Generate(ctx context.Context, req *GenerateRequest) (*Ge
 		if g.verifier != nil {
 			verifyResult, err := g.verifier.Verify(ctx, req.Query, answer, req.Context)
 			if err != nil {
-				g.logger.Warn(ctx, "answer verification failed", "error", err)
+				g.logger.WithContext(ctx).Warn("answer verification failed", logging.Error(err))
 			} else {
 				verified = verifyResult.Passed
 				verifyIssues = verifyResult.Issues
 
 				if !verified {
-					g.logger.Warn(ctx, "answer verification failed",
-						"has_hallucination", verifyResult.HasHallucination,
-						"citation_valid", verifyResult.CitationValid,
-						"fact_check_passed", verifyResult.FactCheckPassed,
-						"issues", verifyIssues)
+     g.logger.WithContext(ctx).Warn("answer verification failed", logging.Any("has_hallucination", verifyResult.HasHallucination), logging.Any("citation_valid", verifyResult.CitationValid), logging.Any("fact_check_passed", verifyResult.FactCheckPassed), logging.Any("issues", verifyIssues))
 				}
 			}
 		}
@@ -225,12 +223,7 @@ func (g *generatorImpl) Generate(ctx context.Context, req *GenerateRequest) (*Ge
 		VerifyIssues: verifyIssues,
 	}
 
-	g.logger.Info(ctx, "generation completed",
-		"query", req.Query,
-		"answer_length", len(answer),
-		"tokens_used", llmResp.TokensUsed,
-		"verified", verified,
-		"latency_ms", latency.Milliseconds())
+ g.logger.WithContext(ctx).Info("generation completed", logging.Any("query", req.Query), logging.Any("answer_length", len(answer))
 
 	span.AddTag("tokens_used", llmResp.TokensUsed)
 	span.AddTag("verified", verified)
@@ -455,7 +448,7 @@ func (v *answerVerifierImpl) Verify(ctx context.Context, query, answer, context 
 	uncertainPhrases := []string{"不确定", "不清楚", "无法回答", "没有相关信息"}
 	for _, phrase := range uncertainPhrases {
 		if strings.Contains(answer, phrase) {
-			v.logger.Debug(ctx, "answer contains uncertainty phrase", "phrase", phrase)
+			v.logger.WithContext(ctx).Debug("answer contains uncertainty phrase", logging.Any("phrase", phrase))
 		}
 	}
 

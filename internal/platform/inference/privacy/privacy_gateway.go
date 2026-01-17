@@ -44,7 +44,7 @@ type PrivacyPolicy struct {
 // PrivacyGateway provides PII detection and redaction for inference
 type PrivacyGateway struct {
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 	detector         *PIIDetector
 	policy           *PrivacyPolicy
 	auditLogger      AuditLogger
@@ -107,7 +107,7 @@ type RestoreRequest struct {
 // NewPrivacyGateway creates a new privacy gateway
 func NewPrivacyGateway(
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector *metrics.MetricsCollector,
 	detector *PIIDetector,
 	policy *PrivacyPolicy,
 	auditLogger AuditLogger,
@@ -161,10 +161,7 @@ func (g *PrivacyGateway) ProcessInbound(ctx context.Context, req *ProcessRequest
 	case ActionBlock:
 		response.Blocked = true
 		response.ProcessedText = ""
-		g.logger.Warn(ctx, "request blocked due to PII policy violation",
-			"request_id", req.RequestID,
-			"risk_score", detectionResult.RiskScore,
-		)
+  g.logger.WithContext(ctx).Warn("request blocked due to PII policy violation", logging.Any("request_id", req.RequestID), logging.Any("risk_score", detectionResult.RiskScore))
 
 	case ActionRedact:
 		response.ProcessedText = detectionResult.RedactedText
@@ -173,26 +170,23 @@ func (g *PrivacyGateway) ProcessInbound(ctx context.Context, req *ProcessRequest
 		if g.policy.EnableRestore {
 			token, err := g.generateRestoreToken(ctx, detectionResult)
 			if err != nil {
-				g.logger.Warn(ctx, "failed to generate restore token", "error", err)
+				g.logger.WithContext(ctx).Warn("failed to generate restore token", logging.Error(err))
 			} else {
 				response.RestoreToken = token
 			}
 		}
 
-		g.logger.Info(ctx, "PII redacted from request",
-			"request_id", req.RequestID,
-			"entity_count", len(detectionResult.Entities),
-		)
+  g.logger.WithContext(ctx).Info("PII redacted from request", logging.Any("request_id", req.RequestID), logging.Any("entity_count", len(detectionResult.Entities))
 
 	case ActionEncrypt:
 		if g.encryptor == nil {
-			g.logger.Warn(ctx, "encryptor not configured, falling back to redact")
+			g.logger.WithContext(ctx).Warn("encryptor not configured, falling back to redact")
 			response.ProcessedText = detectionResult.RedactedText
 			response.Action = ActionRedact
 		} else {
 			encryptedText, err := g.encryptPII(ctx, req.Text, detectionResult)
 			if err != nil {
-				g.logger.Warn(ctx, "encryption failed, falling back to redact", "error", err)
+				g.logger.WithContext(ctx).Warn("encryption failed, falling back to redact", logging.Error(err))
 				response.ProcessedText = detectionResult.RedactedText
 				response.Action = ActionRedact
 			} else {
@@ -222,7 +216,7 @@ func (g *PrivacyGateway) ProcessInbound(ctx context.Context, req *ProcessRequest
 		}
 
 		if err := g.auditLogger.LogPrivacyEvent(ctx, auditEvent); err != nil {
-			g.logger.Warn(ctx, "failed to log audit event", "error", err)
+			g.logger.WithContext(ctx).Warn("failed to log audit event", logging.Error(err))
 		}
 	}
 
@@ -248,13 +242,13 @@ func (g *PrivacyGateway) ProcessOutbound(ctx context.Context, text string, resto
 	// Detect PII in response
 	detectionResult, err := g.detector.Detect(ctx, text)
 	if err != nil {
-		g.logger.Warn(ctx, "PII detection failed for outbound", "error", err)
+		g.logger.WithContext(ctx).Warn("PII detection failed for outbound", logging.Error(err))
 		return text, nil
 	}
 
 	// If response contains new PII, redact it
 	if detectionResult.HasPII && detectionResult.RiskScore >= g.policy.MinRiskThreshold {
-		g.logger.Warn(ctx, "new PII detected in response, redacting")
+		g.logger.WithContext(ctx).Warn("new PII detected in response, redacting")
 		text = detectionResult.RedactedText
 	}
 
@@ -294,10 +288,7 @@ func (g *PrivacyGateway) Restore(ctx context.Context, req *RestoreRequest) (stri
 		}
 	}
 
-	g.logger.Info(ctx, "PII restored",
-		"request_id", req.RequestID,
-		"mapping_count", len(mappings),
-	)
+ g.logger.WithContext(ctx).Info("PII restored", logging.Any("request_id", req.RequestID), logging.Any("mapping_count", len(mappings))
 
 	return restoredText, nil
 }
@@ -362,7 +353,7 @@ func (g *PrivacyGateway) generateRestoreToken(ctx context.Context, result *PIIDe
 	if g.encryptor != nil {
 		encrypted, err := g.encryptor.Encrypt(ctx, string(data))
 		if err != nil {
-			g.logger.Warn(ctx, "failed to encrypt restore token", "error", err)
+			g.logger.WithContext(ctx).Warn("failed to encrypt restore token", logging.Error(err))
 			return string(data), nil // Return unencrypted as fallback
 		}
 		return encrypted, nil
@@ -379,7 +370,7 @@ func (g *PrivacyGateway) decodeRestoreToken(ctx context.Context, token string) (
 	if g.encryptor != nil {
 		decrypted, err := g.encryptor.Decrypt(ctx, token)
 		if err != nil {
-			g.logger.Warn(ctx, "failed to decrypt restore token", "error", err)
+			g.logger.WithContext(ctx).Warn("failed to decrypt restore token", logging.Error(err))
 			// Continue with original token
 		} else {
 			data = decrypted

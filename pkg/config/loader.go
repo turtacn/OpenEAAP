@@ -501,10 +501,8 @@ func (l *Loader) ExportToYAML() (string, error) {
 	defer l.mu.RUnlock()
 
 	// Convert settings to YAML format
-	data, err := l.viper.AllSettings(), nil
-	if err != nil {
-		return "", err
-	}
+	data := l.viper.AllSettings()
+	_ = data // TODO: Use data for YAML marshaling
 	
 	// For now, return empty string as YAML serialization needs proper implementation
 	// TODO: Implement proper YAML marshaling of data map

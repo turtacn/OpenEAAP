@@ -185,17 +185,14 @@ func (r *ragEngineImpl) Query(ctx context.Context, req *RAGRequest) (*RAGRespons
 	}
 	latency.Retrieval = time.Since(retrievalStart)
 
-	r.logger.Info(ctx, "retrieval completed",
-		"query", req.Query,
-		"chunks_count", len(retrievedChunks),
-		"latency_ms", latency.Retrieval.Milliseconds())
+ r.logger.WithContext(ctx).Info("retrieval completed", logging.Any("query", req.Query), logging.Any("chunks_count", len(retrievedChunks))
 
 	// 3. 重排序阶段（可选）
 	if req.RerankEnabled && r.reranker != nil {
 		rerankStart := time.Now()
 		retrievedChunks, err = r.rerankChunks(ctx, processedQuery, retrievedChunks)
 		if err != nil {
-			r.logger.Warn(ctx, "reranking failed, using original order", "error", err)
+			r.logger.WithContext(ctx).Warn("reranking failed, using original order", logging.Error(err))
 		}
 		latency.Reranking = time.Since(rerankStart)
 	}
@@ -221,7 +218,7 @@ func (r *ragEngineImpl) Query(ctx context.Context, req *RAGRequest) (*RAGRespons
 		verifyStart := time.Now()
 		verifyResult, err = r.verifyAnswer(ctx, req.Query, answer, retrievedChunks)
 		if err != nil {
-			r.logger.Warn(ctx, "verification failed", "error", err)
+			r.logger.WithContext(ctx).Warn("verification failed", logging.Error(err))
 		} else {
 			verified = verifyResult.HasHallucination == false &&
 				verifyResult.CitationValid &&
@@ -245,12 +242,7 @@ func (r *ragEngineImpl) Query(ctx context.Context, req *RAGRequest) (*RAGRespons
 		VerifyResult:    verifyResult,
 	}
 
-	r.logger.Info(ctx, "RAG query completed",
-		"query", req.Query,
-		"answer_length", len(answer),
-		"confidence", confidence,
-		"verified", verified,
-		"total_latency_ms", latency.Total.Milliseconds())
+ r.logger.WithContext(ctx).Info("RAG query completed", logging.Any("query", req.Query), logging.Any("answer_length", len(answer))
 
 	span.AddTag("confidence", fmt.Sprintf("%.2f", confidence))
 	span.AddTag("verified", verified)
@@ -396,9 +388,7 @@ func (r *ragEngineImpl) buildContext(ctx context.Context, chunks []*RetrievedChu
 
 		// 控制上下文长度
 		if currentLength+len(chunkText) > r.config.MaxContextLength {
-			r.logger.Warn(ctx, "context truncated due to length limit",
-				"max_length", r.config.MaxContextLength,
-				"chunks_included", i)
+   r.logger.WithContext(ctx).Warn("context truncated due to length limit", logging.Any("max_length", r.config.MaxContextLength), logging.Any("chunks_included", i))
 			break
 		}
 

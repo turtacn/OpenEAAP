@@ -288,7 +288,7 @@ type AuditStorage interface {
 type auditLogger struct {
 	storage          AuditStorage
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config      *AuditLoggerConfig
@@ -317,7 +317,7 @@ type AuditLoggerConfig struct {
 func NewAuditLogger(
 	storage AuditStorage,
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector *metrics.MetricsCollector,
 	tracer trace.Tracer,
 	config *AuditLoggerConfig,
 ) AuditLogger {
@@ -353,32 +353,28 @@ func (a *auditLogger) Log(ctx context.Context, entry *AuditEntry) error {
 	}
 
 	// 从上下文提取追踪信息
-	if traceID := trace.GetTraceID(ctx); traceID != "" {
+	if traceID := a.tracer.GetTraceID(ctx); traceID != "" {
 		entry.TraceID = traceID
 	}
-	if spanID := trace.GetSpanID(ctx); spanID != "" {
+	if spanID := a.tracer.GetSpanID(ctx); spanID != "" {
 		entry.SpanID = spanID
 	}
 
 	// 检查采样率
 	if a.config.SamplingRate < 1.0 {
 		if randomFloat() > a.config.SamplingRate {
-			a.logger.Debug(ctx, "Audit entry sampled out", "id", entry.ID)
+			a.logger.WithContext(ctx).Debug("Audit entry sampled out", logging.Any("id", entry.ID))
 			return nil
 		}
 	}
 
 	// 检查排除模式
 	if a.shouldExclude(entry) {
-		a.logger.Debug(ctx, "Audit entry excluded", "id", entry.ID)
+		a.logger.WithContext(ctx).Debug("Audit entry excluded", logging.Any("id", entry.ID))
 		return nil
 	}
 
-	a.logger.Debug(ctx, "Recording audit entry",
-		"id", entry.ID,
-		"event_type", entry.EventType,
-		"actor", entry.ActorID,
-		"resource", entry.ResourceID)
+ a.logger.WithContext(ctx).Debug("Recording audit entry", logging.Any("id", entry.ID), logging.Any("event_type", entry.EventType), logging.Any("actor", entry.ActorID), logging.Any("resource", entry.ResourceID))
 
 	// 添加到缓冲区
 	if a.config.BufferSize > 0 {
@@ -408,7 +404,7 @@ func (a *auditLogger) LogBatch(ctx context.Context, entries []*AuditEntry) error
 	ctx, span := a.tracer.Start(ctx, "AuditLogger.LogBatch")
 	defer span.End()
 
-	a.logger.Debug(ctx, "Recording batch audit entries", "count", len(entries))
+	a.logger.WithContext(ctx).Debug("Recording batch audit entries", logging.Any("count", len(entries))
 
 	// 设置默认值
 	for _, entry := range entries {
@@ -422,7 +418,7 @@ func (a *auditLogger) LogBatch(ctx context.Context, entries []*AuditEntry) error
 
 	// 批量写入
 	if err := a.storage.WriteBatch(ctx, entries); err != nil {
-		a.logger.Error(ctx, "Failed to write batch audit entries", "error", err)
+		a.logger.WithContext(ctx).Error("Failed to write batch audit entries", logging.Error(err))
 		return errors.Wrap(err, errors.CodeInternalError, "failed to write batch audit entries")
 	}
 
@@ -431,7 +427,7 @@ func (a *auditLogger) LogBatch(ctx context.Context, entries []*AuditEntry) error
 		a.recordMetrics(entry)
 	}
 
-	a.logger.Info(ctx, "Batch audit entries recorded", "count", len(entries))
+	a.logger.WithContext(ctx).Info("Batch audit entries recorded", logging.Any("count", len(entries))
 
 	return nil
 }
@@ -441,14 +437,14 @@ func (a *auditLogger) Query(ctx context.Context, filter *AuditFilter) ([]*AuditE
 	ctx, span := a.tracer.Start(ctx, "AuditLogger.Query")
 	defer span.End()
 
-	a.logger.Debug(ctx, "Querying audit entries", "filter", filter)
+	a.logger.WithContext(ctx).Debug("Querying audit entries", logging.Any("filter", filter))
 
 	entries, err := a.storage.Read(ctx, filter)
 	if err != nil {
 		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to query audit entries")
 	}
 
-	a.logger.Info(ctx, "Audit entries queried", "count", len(entries))
+	a.logger.WithContext(ctx).Info("Audit entries queried", logging.Any("count", len(entries))
 
 	return entries, nil
 }
@@ -458,8 +454,7 @@ func (a *auditLogger) QueryWithPagination(ctx context.Context, filter *AuditFilt
 	ctx, span := a.tracer.Start(ctx, "AuditLogger.QueryWithPagination")
 	defer span.End()
 
-	a.logger.Debug(ctx, "Querying audit entries with pagination",
-		"page", page, "page_size", pageSize)
+ a.logger.WithContext(ctx).Debug("Querying audit entries with pagination", logging.Any("page", page), logging.Any("page_size", pageSize))
 
 	// 设置分页参数
 	if filter == nil {
@@ -511,7 +506,7 @@ func (a *auditLogger) GetStatistics(ctx context.Context, filter *AuditFilter) (*
 	ctx, span := a.tracer.Start(ctx, "AuditLogger.GetStatistics")
 	defer span.End()
 
-	a.logger.Debug(ctx, "Getting audit statistics")
+	a.logger.WithContext(ctx).Debug("Getting audit statistics")
 
 	// 查询所有符合条件的审计日志
 	entries, err := a.Query(ctx, filter)
@@ -601,14 +596,14 @@ func (a *auditLogger) Delete(ctx context.Context, filter *AuditFilter) (int64, e
 	ctx, span := a.tracer.Start(ctx, "AuditLogger.Delete")
 	defer span.End()
 
-	a.logger.Info(ctx, "Deleting audit entries", "filter", filter)
+	a.logger.WithContext(ctx).Info("Deleting audit entries", logging.Any("filter", filter))
 
 	count, err := a.storage.Delete(ctx, filter)
 	if err != nil {
 		return 0, errors.Wrap(err, errors.CodeInternalError, "failed to delete audit entries")
 	}
 
-	a.logger.Info(ctx, "Audit entries deleted", "count", count)
+	a.logger.WithContext(ctx).Info("Audit entries deleted", logging.Any("count", count))
 
 	return count, nil
 }
@@ -618,7 +613,7 @@ func (a *auditLogger) Archive(ctx context.Context, filter *AuditFilter, archiveP
 	ctx, span := a.tracer.Start(ctx, "AuditLogger.Archive")
 	defer span.End()
 
-	a.logger.Info(ctx, "Archiving audit entries", "path", archivePath)
+	a.logger.WithContext(ctx).Info("Archiving audit entries", logging.Any("path", archivePath))
 
 	// 查询要归档的数据
 	entries, err := a.Query(ctx, filter)
@@ -636,8 +631,7 @@ func (a *auditLogger) Archive(ctx context.Context, filter *AuditFilter, archiveP
 	// 实际应该使用更健壮的文件写入和压缩
 	_ = data
 
-	a.logger.Info(ctx, "Audit entries archived",
-		"count", len(entries), "path", archivePath)
+ a.logger.WithContext(ctx).Info("Audit entries archived", logging.Any("count", len(entries))
 
 	return nil
 }
@@ -704,10 +698,10 @@ func (a *auditLogger) flush(ctx context.Context) error {
 	a.buffer = a.buffer[:0]
 	a.bufferMutex.Unlock()
 
-	a.logger.Debug(ctx, "Flushing audit buffer", "count", len(entries))
+	a.logger.WithContext(ctx).Debug("Flushing audit buffer", logging.Any("count", len(entries))
 
 	if err := a.storage.WriteBatch(ctx, entries); err != nil {
-		a.logger.Error(ctx, "Failed to flush audit buffer", "error", err)
+		a.logger.WithContext(ctx).Error("Failed to flush audit buffer", logging.Error(err))
 		return err
 	}
 
@@ -720,8 +714,7 @@ func (a *auditLogger) writeWithRetry(ctx context.Context, entry *AuditEntry) err
 	for i := 0; i <= a.config.MaxRetries; i++ {
 		if err := a.storage.Write(ctx, entry); err != nil {
 			lastErr = err
-			a.logger.Warn(ctx, "Failed to write audit entry, retrying",
-				"attempt", i+1, "error", err)
+   a.logger.WithContext(ctx).Warn("Failed to write audit entry, retrying", logging.Any("attempt", i+1), logging.Error(err))
 
 			if i < a.config.MaxRetries {
 				time.Sleep(a.config.RetryDelay)

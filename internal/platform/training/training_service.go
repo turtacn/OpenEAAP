@@ -228,12 +228,12 @@ type TaskRepository interface {
 // trainingService 训练服务实现
 type trainingService struct {
 	taskRepo         TaskRepository
-	modelRepo        model.Repository
+	modelRepo        interface{}
 	rlhfEngine       TrainingEngine
 	dpoEngine        TrainingEngine
 	messageQueue     message.MessageQueue
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config       *TrainingConfig
@@ -271,12 +271,12 @@ type WorkerPool struct {
 // NewTrainingService 创建训练服务
 func NewTrainingService(
 	taskRepo TaskRepository,
-	modelRepo model.Repository,
+	modelRepo interface{},
 	rlhfEngine TrainingEngine,
 	dpoEngine TrainingEngine,
 	messageQueue message.MessageQueue,
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector *metrics.MetricsCollector,
 	tracer trace.Tracer,
 	config *TrainingConfig,
 ) TrainingService {
@@ -314,14 +314,12 @@ func (s *trainingService) CreateTask(ctx context.Context, req *TrainingRequest) 
 
 	startTime := time.Now()
 	defer func() {
-		s.metricsCollector.Histogram("training_create_task_duration_ms",
+		// s.metricsCollector.Histogram("training_create_task_duration_ms",
 			float64(time.Since(startTime).Milliseconds()),
 			map[string]string{"training_type": string(req.TrainingType)})
 	}()
 
-	s.logger.Info(ctx, "Creating training task",
-		"model_id", req.ModelID,
-		"type", req.TrainingType)
+ s.logger.WithContext(ctx).Info("Creating training task", logging.Any("model_id", req.ModelID), logging.Any("type", req.TrainingType))
 
 	// 验证模型存在
 	if _, err := s.modelRepo.GetByID(ctx, req.ModelID); err != nil {
@@ -363,9 +361,7 @@ func (s *trainingService) CreateTask(ctx context.Context, req *TrainingRequest) 
 			"training_type": string(req.TrainingType),
 		})
 
-	s.logger.Info(ctx, "Training task created successfully",
-		"task_id", task.ID,
-		"model_id", req.ModelID)
+ s.logger.WithContext(ctx).Info("Training task created successfully", logging.Any("task_id", task.ID), logging.Any("model_id", req.ModelID))
 
 	return task, nil
 }
@@ -375,7 +371,7 @@ func (s *trainingService) StartTask(ctx context.Context, taskID string) error {
 	ctx, span := s.tracer.Start(ctx, "TrainingService.StartTask")
 	defer span.End()
 
-	s.logger.Info(ctx, "Starting training task", "task_id", taskID)
+	s.logger.WithContext(ctx).Info("Starting training task", logging.Any("task_id", taskID))
 
 	// 获取任务
 	task, err := s.taskRepo.GetByID(ctx, taskID)
@@ -405,7 +401,7 @@ func (s *trainingService) StartTask(ctx context.Context, taskID string) error {
 		s.runningTasks.Store(taskID, task)
 		s.metricsCollector.Increment("training_task_started",
 			map[string]string{"task_id": taskID})
-		s.logger.Info(ctx, "Training task started", "task_id", taskID)
+		s.logger.WithContext(ctx).Info("Training task started", logging.Any("task_id", taskID))
 	default:
 		task.Status = TaskStatusPending
 		s.taskRepo.Update(ctx, task)
@@ -420,7 +416,7 @@ func (s *trainingService) StopTask(ctx context.Context, taskID string) error {
 	ctx, span := s.tracer.Start(ctx, "TrainingService.StopTask")
 	defer span.End()
 
-	s.logger.Info(ctx, "Stopping training task", "task_id", taskID)
+	s.logger.WithContext(ctx).Info("Stopping training task", logging.Any("task_id", taskID))
 
 	// 获取任务
 	task, err := s.taskRepo.GetByID(ctx, taskID)
@@ -437,7 +433,7 @@ func (s *trainingService) StopTask(ctx context.Context, taskID string) error {
 	// 调用训练引擎停止
 	engine := s.getEngine(task.TrainingType)
 	if err := engine.Stop(ctx, taskID); err != nil {
-		s.logger.Warn(ctx, "Failed to stop training engine", "error", err)
+		s.logger.WithContext(ctx).Warn("Failed to stop training engine", logging.Error(err))
 	}
 
 	// 更新状态
@@ -455,7 +451,7 @@ func (s *trainingService) StopTask(ctx context.Context, taskID string) error {
 	s.metricsCollector.Increment("training_task_stopped",
 		map[string]string{"task_id": taskID})
 
-	s.logger.Info(ctx, "Training task stopped", "task_id", taskID)
+	s.logger.WithContext(ctx).Info("Training task stopped", logging.Any("task_id", taskID))
 
 	return nil
 }
@@ -465,7 +461,7 @@ func (s *trainingService) PauseTask(ctx context.Context, taskID string) error {
 	ctx, span := s.tracer.Start(ctx, "TrainingService.PauseTask")
 	defer span.End()
 
-	s.logger.Info(ctx, "Pausing training task", "task_id", taskID)
+	s.logger.WithContext(ctx).Info("Pausing training task", logging.Any("task_id", taskID))
 
 	task, err := s.taskRepo.GetByID(ctx, taskID)
 	if err != nil {
@@ -492,7 +488,7 @@ func (s *trainingService) PauseTask(ctx context.Context, taskID string) error {
 	s.metricsCollector.Increment("training_task_paused",
 		map[string]string{"task_id": taskID})
 
-	s.logger.Info(ctx, "Training task paused", "task_id", taskID)
+	s.logger.WithContext(ctx).Info("Training task paused", logging.Any("task_id", taskID))
 
 	return nil
 }
@@ -502,7 +498,7 @@ func (s *trainingService) ResumeTask(ctx context.Context, taskID string) error {
 	ctx, span := s.tracer.Start(ctx, "TrainingService.ResumeTask")
 	defer span.End()
 
-	s.logger.Info(ctx, "Resuming training task", "task_id", taskID)
+	s.logger.WithContext(ctx).Info("Resuming training task", logging.Any("task_id", taskID))
 
 	task, err := s.taskRepo.GetByID(ctx, taskID)
 	if err != nil {
@@ -529,7 +525,7 @@ func (s *trainingService) ResumeTask(ctx context.Context, taskID string) error {
 	s.metricsCollector.Increment("training_task_resumed",
 		map[string]string{"task_id": taskID})
 
-	s.logger.Info(ctx, "Training task resumed", "task_id", taskID)
+	s.logger.WithContext(ctx).Info("Training task resumed", logging.Any("task_id", taskID))
 
 	return nil
 }
@@ -565,7 +561,7 @@ func (s *trainingService) DeleteTask(ctx context.Context, taskID string) error {
 	ctx, span := s.tracer.Start(ctx, "TrainingService.DeleteTask")
 	defer span.End()
 
-	s.logger.Info(ctx, "Deleting training task", "task_id", taskID)
+	s.logger.WithContext(ctx).Info("Deleting training task", logging.Any("task_id", taskID))
 
 	task, err := s.taskRepo.GetByID(ctx, taskID)
 	if err != nil {
@@ -583,7 +579,7 @@ func (s *trainingService) DeleteTask(ctx context.Context, taskID string) error {
 	s.metricsCollector.Increment("training_task_deleted",
 		map[string]string{"task_id": taskID})
 
-	s.logger.Info(ctx, "Training task deleted", "task_id", taskID)
+	s.logger.WithContext(ctx).Info("Training task deleted", logging.Any("task_id", taskID))
 
 	return nil
 }
@@ -622,7 +618,7 @@ func (s *trainingService) GetTaskLogs(ctx context.Context, taskID string, limit 
 
 // executeTraining 执行训练
 func (s *trainingService) executeTraining(ctx context.Context, task *TrainingTask) error {
-	s.logger.Info(ctx, "Executing training", "task_id", task.ID)
+	s.logger.WithContext(ctx).Info("Executing training", logging.Any("task_id", task.ID))
 
 	// 获取数据集（简化实现）
 	dataset := &TrainingDataset{
@@ -651,7 +647,7 @@ func (s *trainingService) executeTraining(ctx context.Context, task *TrainingTas
 	task.Progress = 1.0
 
 	if err := s.taskRepo.Update(ctx, task); err != nil {
-		s.logger.Error(ctx, "Failed to update task after completion", "error", err)
+		s.logger.WithContext(ctx).Error("Failed to update task after completion", logging.Error(err))
 	}
 
 	s.runningTasks.Delete(task.ID)
@@ -659,14 +655,14 @@ func (s *trainingService) executeTraining(ctx context.Context, task *TrainingTas
 	s.metricsCollector.Increment("training_task_completed",
 		map[string]string{"task_id": task.ID})
 
-	s.logger.Info(ctx, "Training completed successfully", "task_id", task.ID)
+	s.logger.WithContext(ctx).Info("Training completed successfully", logging.Any("task_id", task.ID))
 
 	return nil
 }
 
 // handleTrainingError 处理训练错误
 func (s *trainingService) handleTrainingError(ctx context.Context, task *TrainingTask, err error) {
-	s.logger.Error(ctx, "Training failed", "task_id", task.ID, "error", err)
+	s.logger.WithContext(ctx).Error("Training failed", logging.Any("task_id", task.ID), logging.Error(err))
 
 	now := time.Now()
 	task.Status = TaskStatusFailed
@@ -674,7 +670,7 @@ func (s *trainingService) handleTrainingError(ctx context.Context, task *Trainin
 	task.ErrorMessage = err.Error()
 
 	if updateErr := s.taskRepo.Update(ctx, task); updateErr != nil {
-		s.logger.Error(ctx, "Failed to update task after error", "error", updateErr)
+		s.logger.WithContext(ctx).Error("Failed to update task after error", logging.Error(updateErr))
 	}
 
 	s.runningTasks.Delete(task.ID)

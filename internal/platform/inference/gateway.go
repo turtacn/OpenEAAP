@@ -80,7 +80,7 @@ type InferenceEngine interface {
 type Gateway struct {
 	logger          logging.Logger
 	tracer          trace.Tracer
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 	cacheManager    *cache.CacheManager
 	privacyGateway  *privacy.PrivacyGateway
 	router          *Router
@@ -122,7 +122,7 @@ type GatewayConfig struct {
 func NewGateway(
 	logger logging.Logger,
 	tracer trace.Tracer,
-	metricsCollector metrics.Collector,
+	metricsCollector metrics.MetricsCollector,
 	cacheManager *cache.CacheManager,
 	privacyGateway *privacy.PrivacyGateway,
 	router *Router,
@@ -167,7 +167,7 @@ func (g *Gateway) Infer(ctx context.Context, req *InferenceRequest) (*InferenceR
 	if g.rateLimiter != nil {
 		allowed, err := g.rateLimiter.Allow(ctx, authCtx.UserID)
 		if err != nil {
-			g.logger.Error(ctx, "rate limit check failed", "error", err)
+			g.logger.WithContext(ctx).Error("rate limit check failed", logging.Error(err))
 		}
 		if !allowed {
 			g.recordMetrics("infer", "rate_limited", time.Since(startTime))
@@ -179,7 +179,7 @@ func (g *Gateway) Infer(ctx context.Context, req *InferenceRequest) (*InferenceR
 	if g.privacyGateway != nil {
 		filteredReq, err := g.privacyGateway.FilterRequest(ctx, req)
 		if err != nil {
-			g.logger.Error(ctx, "privacy filtering failed", "error", err)
+			g.logger.WithContext(ctx).Error("privacy filtering failed", logging.Error(err))
 			g.recordMetrics("infer", "privacy_failed", time.Since(startTime))
 			return nil, errors.Wrap(err, errors.CodeInternalError, "privacy filtering failed")
 		}
@@ -190,7 +190,7 @@ func (g *Gateway) Infer(ctx context.Context, req *InferenceRequest) (*InferenceR
 	if g.cacheManager != nil {
 		cachedResp, err := g.cacheManager.Get(ctx, req)
 		if err == nil && cachedResp != nil {
-			g.logger.Info(ctx, "cache hit", "model", req.Model)
+			g.logger.WithContext(ctx).Info("cache hit", logging.Any("model", req.Model))
 			g.recordMetrics("infer", "cache_hit", time.Since(startTime))
 			span.SetAttribute("cached", true)
 
@@ -200,7 +200,7 @@ func (g *Gateway) Infer(ctx context.Context, req *InferenceRequest) (*InferenceR
 		}
 
 		if err != nil {
-			g.logger.Warn(ctx, "cache lookup failed", "error", err)
+			g.logger.WithContext(ctx).Warn("cache lookup failed", logging.Error(err))
 		}
 	}
 
@@ -219,7 +219,7 @@ func (g *Gateway) Infer(ctx context.Context, req *InferenceRequest) (*InferenceR
 	// Perform inference
 	resp, err := engine.Infer(ctx, req)
 	if err != nil {
-		g.logger.Error(ctx, "inference failed", "error", err, "engine", engine.Name())
+		g.logger.WithContext(ctx).Error("inference failed", logging.Error(err), logging.Any("engine", engine.Name())
 		g.recordMetrics("infer", "inference_failed", time.Since(startTime))
 		return nil, errors.Wrap(err, errors.CodeInternalError, "inference failed")
 	}
@@ -227,7 +227,7 @@ func (g *Gateway) Infer(ctx context.Context, req *InferenceRequest) (*InferenceR
 	// Store in cache
 	if g.cacheManager != nil && resp != nil {
 		if err := g.cacheManager.Set(ctx, req, resp); err != nil {
-			g.logger.Warn(ctx, "failed to cache response", "error", err)
+			g.logger.WithContext(ctx).Warn("failed to cache response", logging.Error(err))
 		}
 	}
 
@@ -235,7 +235,7 @@ func (g *Gateway) Infer(ctx context.Context, req *InferenceRequest) (*InferenceR
 	if g.privacyGateway != nil {
 		restoredResp, err := g.privacyGateway.RestoreResponse(ctx, resp)
 		if err != nil {
-			g.logger.Warn(ctx, "privacy restoration failed", "error", err)
+			g.logger.WithContext(ctx).Warn("privacy restoration failed", logging.Error(err))
 		} else {
 			resp = restoredResp
 		}
@@ -259,12 +259,7 @@ func (g *Gateway) Infer(ctx context.Context, req *InferenceRequest) (*InferenceR
 			"type":  "total",
 		})
 
-	g.logger.Info(ctx, "inference completed",
-		"model", req.Model,
-		"latency_ms", resp.Latency.Milliseconds(),
-		"cached", resp.Cached,
-		"tokens", resp.Usage.TotalTokens,
-	)
+ g.logger.WithContext(ctx).Info("inference completed", logging.Any("model", req.Model), logging.Any("latency_ms", resp.Latency.Milliseconds())
 
 	return resp, nil
 }
@@ -293,7 +288,7 @@ func (g *Gateway) InferStream(ctx context.Context, req *InferenceRequest) (<-cha
 	if g.rateLimiter != nil {
 		allowed, err := g.rateLimiter.Allow(ctx, authCtx.UserID)
 		if err != nil {
-			g.logger.Error(ctx, "rate limit check failed", "error", err)
+			g.logger.WithContext(ctx).Error("rate limit check failed", logging.Error(err))
 		}
 		if !allowed {
 			g.recordMetrics("infer_stream", "rate_limited", time.Since(startTime))
@@ -305,7 +300,7 @@ func (g *Gateway) InferStream(ctx context.Context, req *InferenceRequest) (<-cha
 	if g.privacyGateway != nil {
 		filteredReq, err := g.privacyGateway.FilterRequest(ctx, req)
 		if err != nil {
-			g.logger.Error(ctx, "privacy filtering failed", "error", err)
+			g.logger.WithContext(ctx).Error("privacy filtering failed", logging.Error(err))
 			g.recordMetrics("infer_stream", "privacy_failed", time.Since(startTime))
 			return nil, errors.Wrap(err, errors.CodeInternalError, "privacy filtering failed")
 		}
@@ -324,7 +319,7 @@ func (g *Gateway) InferStream(ctx context.Context, req *InferenceRequest) (<-cha
 	// Perform streaming inference
 	chunkChan, err := engine.InferStream(ctx, req)
 	if err != nil {
-		g.logger.Error(ctx, "streaming inference failed", "error", err, "engine", engine.Name())
+		g.logger.WithContext(ctx).Error("streaming inference failed", logging.Error(err), logging.Any("engine", engine.Name())
 		g.recordMetrics("infer_stream", "inference_failed", time.Since(startTime))
 		return nil, errors.Wrap(err, errors.CodeInternalError, "streaming inference failed")
 	}
@@ -348,7 +343,7 @@ func (g *Gateway) InferStream(ctx context.Context, req *InferenceRequest) (<-cha
 			if g.privacyGateway != nil && chunk.Delta != "" {
 				restoredDelta, err := g.privacyGateway.RestoreText(ctx, chunk.Delta)
 				if err != nil {
-					g.logger.Warn(ctx, "chunk privacy restoration failed", "error", err)
+					g.logger.WithContext(ctx).Warn("chunk privacy restoration failed", logging.Error(err))
 				} else {
 					chunk.Delta = restoredDelta
 				}
@@ -378,11 +373,7 @@ func (g *Gateway) InferStream(ctx context.Context, req *InferenceRequest) (<-cha
 				})
 		}
 
-		g.logger.Info(ctx, "streaming inference completed",
-			"model", req.Model,
-			"latency_ms", totalLatency.Milliseconds(),
-			"tokens", totalTokens,
-		)
+  g.logger.WithContext(ctx).Info("streaming inference completed", logging.Any("model", req.Model), logging.Any("latency_ms", totalLatency.Milliseconds())
 	}()
 
 	return wrappedChan, nil
@@ -437,12 +428,12 @@ func (g *Gateway) HealthCheck(ctx context.Context) error {
 
 	for _, engine := range engines {
 		if err := engine.HealthCheck(ctx); err != nil {
-			g.logger.Error(ctx, "engine health check failed", "engine", engine.Name(), "error", err)
+			g.logger.WithContext(ctx).Error("engine health check failed", logging.Any("engine", engine.Name()), logging.Error(err))
 			return errors.Wrap(err, errors.CodeInternalError, fmt.Sprintf("engine %s is unhealthy", engine.Name()))
 		}
 	}
 
-	g.logger.Info(ctx, "all engines healthy", "count", len(engines))
+	g.logger.WithContext(ctx).Info("all engines healthy", logging.Any("count", len(engines))
 	return nil
 }
 

@@ -143,7 +143,7 @@ type rlhfTrainer struct {
 	backend          DistributedBackend
 	rewardModel      RewardModel
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config       *RLHFConfig
@@ -168,7 +168,7 @@ func NewRLHFTrainer(
 	backend DistributedBackend,
 	rewardModel RewardModel,
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,
 	config *RLHFConfig,
 ) RLHFTrainer {
@@ -195,7 +195,7 @@ func (t *rlhfTrainer) Train(ctx context.Context, task *training.TrainingTask, da
 			map[string]string{"task_id": task.ID})
 	}()
 
-	t.logger.Info(ctx, "Starting RLHF training", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("Starting RLHF training", logging.Any("task_id", task.ID))
 
 	// 初始化分布式环境
 	if err := t.backend.Initialize(ctx, t.config.DistribConfig); err != nil {
@@ -207,7 +207,7 @@ func (t *rlhfTrainer) Train(ctx context.Context, task *training.TrainingTask, da
 	defer t.runningTasks.Delete(task.ID)
 
 	// 阶段 1: 监督微调 (SFT)
-	t.logger.Info(ctx, "Phase 1: Supervised Fine-Tuning", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("Phase 1: Supervised Fine-Tuning", logging.Any("task_id", task.ID))
 	if err := t.TrainSFT(ctx, task, dataset); err != nil {
 		return errors.Wrap(err, errors.CodeInternalError, "SFT training failed")
 	}
@@ -216,7 +216,7 @@ func (t *rlhfTrainer) Train(ctx context.Context, task *training.TrainingTask, da
 	t.updateTaskProgress(ctx, task)
 
 	// 阶段 2: 训练奖励模型
-	t.logger.Info(ctx, "Phase 2: Reward Model Training", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("Phase 2: Reward Model Training", logging.Any("task_id", task.ID))
 	if err := t.TrainRewardModel(ctx, task, dataset); err != nil {
 		return errors.Wrap(err, errors.CodeInternalError, "reward model training failed")
 	}
@@ -225,7 +225,7 @@ func (t *rlhfTrainer) Train(ctx context.Context, task *training.TrainingTask, da
 	t.updateTaskProgress(ctx, task)
 
 	// 阶段 3: PPO 强化学习
-	t.logger.Info(ctx, "Phase 3: PPO Reinforcement Learning", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("Phase 3: PPO Reinforcement Learning", logging.Any("task_id", task.ID))
 	if err := t.TrainPPO(ctx, task, t.rewardModel); err != nil {
 		return errors.Wrap(err, errors.CodeInternalError, "PPO training failed")
 	}
@@ -234,11 +234,11 @@ func (t *rlhfTrainer) Train(ctx context.Context, task *training.TrainingTask, da
 	t.updateTaskProgress(ctx, task)
 
 	// 最终评估
-	t.logger.Info(ctx, "Final evaluation", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("Final evaluation", logging.Any("task_id", task.ID))
 	finalModelPath := fmt.Sprintf("%s/final_model", t.config.CheckpointDir)
 	evalResult, err := t.EvaluateModel(ctx, finalModelPath, dataset)
 	if err != nil {
-		t.logger.Warn(ctx, "Final evaluation failed", "error", err)
+		t.logger.WithContext(ctx).Warn("Final evaluation failed", logging.Error(err))
 	} else {
 		task.Metrics = map[string]float64{
 			"accuracy":     evalResult.Accuracy,
@@ -250,7 +250,7 @@ func (t *rlhfTrainer) Train(ctx context.Context, task *training.TrainingTask, da
 	t.metricsCollector.Increment("rlhf_training_completed",
 		map[string]string{"task_id": task.ID})
 
-	t.logger.Info(ctx, "RLHF training completed successfully", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("RLHF training completed successfully", logging.Any("task_id", task.ID))
 
 	return nil
 }
@@ -260,7 +260,7 @@ func (t *rlhfTrainer) TrainSFT(ctx context.Context, task *training.TrainingTask,
 	ctx, span := t.tracer.Start(ctx, "RLHFTrainer.TrainSFT")
 	defer span.End()
 
-	t.logger.Info(ctx, "Starting SFT training", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("Starting SFT training", logging.Any("task_id", task.ID))
 
 	// 准备 SFT 训练配置
 	sftConfig := t.prepareSFTConfig(task, dataset)
@@ -277,19 +277,19 @@ func (t *rlhfTrainer) TrainSFT(ctx context.Context, task *training.TrainingTask,
 
 	// 同步所有进程
 	if err := t.backend.Barrier(ctx); err != nil {
-		t.logger.Warn(ctx, "Failed to synchronize after SFT", "error", err)
+		t.logger.WithContext(ctx).Warn("Failed to synchronize after SFT", logging.Error(err))
 	}
 
 	// 保存检查点
 	checkpointPath := fmt.Sprintf("%s/sft_checkpoint", t.config.CheckpointDir)
 	if err := t.saveCheckpoint(ctx, task, "sft", checkpointPath); err != nil {
-		t.logger.Warn(ctx, "Failed to save SFT checkpoint", "error", err)
+		t.logger.WithContext(ctx).Warn("Failed to save SFT checkpoint", logging.Error(err))
 	}
 
 	t.metricsCollector.Increment("rlhf_sft_completed",
 		map[string]string{"task_id": task.ID})
 
-	t.logger.Info(ctx, "SFT training completed", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("SFT training completed", logging.Any("task_id", task.ID))
 
 	return nil
 }
@@ -299,7 +299,7 @@ func (t *rlhfTrainer) TrainRewardModel(ctx context.Context, task *training.Train
 	ctx, span := t.tracer.Start(ctx, "RLHFTrainer.TrainRewardModel")
 	defer span.End()
 
-	t.logger.Info(ctx, "Starting reward model training", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("Starting reward model training", logging.Any("task_id", task.ID))
 
 	// 准备奖励模型训练配置
 	rewardConfig := t.prepareRewardConfig(task, dataset)
@@ -316,7 +316,7 @@ func (t *rlhfTrainer) TrainRewardModel(ctx context.Context, task *training.Train
 
 	// 同步所有进程
 	if err := t.backend.Barrier(ctx); err != nil {
-		t.logger.Warn(ctx, "Failed to synchronize after reward training", "error", err)
+		t.logger.WithContext(ctx).Warn("Failed to synchronize after reward training", logging.Error(err))
 	}
 
 	// 加载训练好的奖励模型
@@ -327,13 +327,13 @@ func (t *rlhfTrainer) TrainRewardModel(ctx context.Context, task *training.Train
 
 	// 验证奖励模型
 	if err := t.validateRewardModel(ctx, dataset); err != nil {
-		t.logger.Warn(ctx, "Reward model validation failed", "error", err)
+		t.logger.WithContext(ctx).Warn("Reward model validation failed", logging.Error(err))
 	}
 
 	t.metricsCollector.Increment("rlhf_reward_training_completed",
 		map[string]string{"task_id": task.ID})
 
-	t.logger.Info(ctx, "Reward model training completed", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("Reward model training completed", logging.Any("task_id", task.ID))
 
 	return nil
 }
@@ -343,7 +343,7 @@ func (t *rlhfTrainer) TrainPPO(ctx context.Context, task *training.TrainingTask,
 	ctx, span := t.tracer.Start(ctx, "RLHFTrainer.TrainPPO")
 	defer span.End()
 
-	t.logger.Info(ctx, "Starting PPO training", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("Starting PPO training", logging.Any("task_id", task.ID))
 
 	ppoConfig := t.config.PPOConfig
 	totalSteps := t.config.SFTConfig.Epochs * 1000 // 简化计算
@@ -376,12 +376,7 @@ func (t *rlhfTrainer) TrainPPO(ctx context.Context, task *training.TrainingTask,
 
 			// 记录指标
 			if step%t.config.SFTConfig.LoggingSteps == 0 {
-				t.logger.Info(ctx, "PPO training progress",
-					"step", step,
-					"epoch", epoch,
-					"loss", loss,
-					"kl_divergence", klDiv,
-					"mean_reward", mean(rewards))
+    t.logger.WithContext(ctx).Info("PPO training progress", logging.Any("step", step), logging.Any("epoch", epoch), logging.Any("loss", loss), logging.Any("kl_divergence", klDiv), logging.Any("mean_reward", mean(rewards))
 
 				t.metricsCollector.Histogram("ppo_loss", loss,
 					map[string]string{"task_id": task.ID})
@@ -394,16 +389,15 @@ func (t *rlhfTrainer) TrainPPO(ctx context.Context, task *training.TrainingTask,
 			// 自适应 KL 惩罚
 			if ppoConfig.AdaptiveKL && klDiv > ppoConfig.TargetKL*1.5 {
 				ppoConfig.InitKLCoef *= 1.5
-				t.logger.Info(ctx, "Increased KL coefficient", "new_coef", ppoConfig.InitKLCoef)
+				t.logger.WithContext(ctx).Info("Increased KL coefficient", logging.Any("new_coef", ppoConfig.InitKLCoef))
 			} else if ppoConfig.AdaptiveKL && klDiv < ppoConfig.TargetKL/1.5 {
 				ppoConfig.InitKLCoef /= 1.5
-				t.logger.Info(ctx, "Decreased KL coefficient", "new_coef", ppoConfig.InitKLCoef)
+				t.logger.WithContext(ctx).Info("Decreased KL coefficient", logging.Any("new_coef", ppoConfig.InitKLCoef))
 			}
 
 			// 提前停止检查
 			if klDiv > ppoConfig.TargetKL*2.0 {
-				t.logger.Warn(ctx, "KL divergence too high, stopping epoch",
-					"kl_div", klDiv, "target", ppoConfig.TargetKL)
+    t.logger.WithContext(ctx).Warn("KL divergence too high, stopping epoch", logging.Any("kl_div", klDiv), logging.Any("target", ppoConfig.TargetKL))
 				break
 			}
 		}
@@ -412,7 +406,7 @@ func (t *rlhfTrainer) TrainPPO(ctx context.Context, task *training.TrainingTask,
 		if step%t.config.SFTConfig.SaveSteps == 0 {
 			checkpointPath := fmt.Sprintf("%s/ppo_checkpoint_step_%d", t.config.CheckpointDir, step)
 			if err := t.saveCheckpoint(ctx, task, "ppo", checkpointPath); err != nil {
-				t.logger.Warn(ctx, "Failed to save PPO checkpoint", "error", err)
+				t.logger.WithContext(ctx).Warn("Failed to save PPO checkpoint", logging.Error(err))
 			}
 		}
 
@@ -420,12 +414,9 @@ func (t *rlhfTrainer) TrainPPO(ctx context.Context, task *training.TrainingTask,
 		if step%t.config.SFTConfig.EvalSteps == 0 && step > 0 {
 			evalResult, err := t.evaluateCurrentModel(ctx, task)
 			if err != nil {
-				t.logger.Warn(ctx, "Evaluation failed", "error", err)
+				t.logger.WithContext(ctx).Warn("Evaluation failed", logging.Error(err))
 			} else {
-				t.logger.Info(ctx, "Evaluation results",
-					"step", step,
-					"accuracy", evalResult.Accuracy,
-					"reward_score", evalResult.RewardScore)
+    t.logger.WithContext(ctx).Info("Evaluation results", logging.Any("step", step), logging.Any("accuracy", evalResult.Accuracy), logging.Any("reward_score", evalResult.RewardScore))
 			}
 		}
 
@@ -438,7 +429,7 @@ func (t *rlhfTrainer) TrainPPO(ctx context.Context, task *training.TrainingTask,
 	t.metricsCollector.Increment("rlhf_ppo_completed",
 		map[string]string{"task_id": task.ID})
 
-	t.logger.Info(ctx, "PPO training completed", "task_id", task.ID)
+	t.logger.WithContext(ctx).Info("PPO training completed", logging.Any("task_id", task.ID))
 
 	return nil
 }
@@ -448,7 +439,7 @@ func (t *rlhfTrainer) EvaluateModel(ctx context.Context, modelPath string, testD
 	ctx, span := t.tracer.Start(ctx, "RLHFTrainer.EvaluateModel")
 	defer span.End()
 
-	t.logger.Info(ctx, "Evaluating model", "model_path", modelPath)
+	t.logger.WithContext(ctx).Info("Evaluating model", logging.Any("model_path", modelPath))
 
 	// 简化实现：实际应加载模型并在测试集上评估
 	result := &EvaluationResult{
@@ -466,10 +457,7 @@ func (t *rlhfTrainer) EvaluateModel(ctx context.Context, modelPath string, testD
 		EvaluatedAt:   time.Now(),
 	}
 
-	t.logger.Info(ctx, "Model evaluation completed",
-		"accuracy", result.Accuracy,
-		"perplexity", result.Perplexity,
-		"reward_score", result.RewardScore)
+ t.logger.WithContext(ctx).Info("Model evaluation completed", logging.Any("accuracy", result.Accuracy), logging.Any("perplexity", result.Perplexity), logging.Any("reward_score", result.RewardScore))
 
 	return result, nil
 }
@@ -479,7 +467,7 @@ func (t *rlhfTrainer) Stop(ctx context.Context, taskID string) error {
 	ctx, span := t.tracer.Start(ctx, "RLHFTrainer.Stop")
 	defer span.End()
 
-	t.logger.Info(ctx, "Stopping RLHF training", "task_id", taskID)
+	t.logger.WithContext(ctx).Info("Stopping RLHF training", logging.Any("task_id", taskID))
 
 	t.runningTasks.Delete(taskID)
 
@@ -491,7 +479,7 @@ func (t *rlhfTrainer) Pause(ctx context.Context, taskID string) error {
 	ctx, span := t.tracer.Start(ctx, "RLHFTrainer.Pause")
 	defer span.End()
 
-	t.logger.Info(ctx, "Pausing RLHF training", "task_id", taskID)
+	t.logger.WithContext(ctx).Info("Pausing RLHF training", logging.Any("task_id", taskID))
 
 	// 实际实现应保存当前状态
 
@@ -503,7 +491,7 @@ func (t *rlhfTrainer) Resume(ctx context.Context, taskID string) error {
 	ctx, span := t.tracer.Start(ctx, "RLHFTrainer.Resume")
 	defer span.End()
 
-	t.logger.Info(ctx, "Resuming RLHF training", "task_id", taskID)
+	t.logger.WithContext(ctx).Info("Resuming RLHF training", logging.Any("task_id", taskID))
 
 	// 实际实现应从保存的状态恢复
 
@@ -576,13 +564,13 @@ func (t *rlhfTrainer) prepareRewardConfig(task *training.TrainingTask, dataset *
 
 func (t *rlhfTrainer) prepareSFTDataset(ctx context.Context, dataset *training.TrainingDataset, outputPath string) error {
 	// 实际实现应将数据集转换为 SFT 格式并保存
-	t.logger.Debug(ctx, "Preparing SFT dataset", "output_path", outputPath)
+	t.logger.WithContext(ctx).Debug("Preparing SFT dataset", logging.Any("output_path", outputPath))
 	return nil
 }
 
 func (t *rlhfTrainer) prepareRewardDataset(ctx context.Context, dataset *training.TrainingDataset, outputPath string) error {
 	// 实际实现应准备偏好对数据集
-	t.logger.Debug(ctx, "Preparing reward dataset", "output_path", outputPath)
+	t.logger.WithContext(ctx).Debug("Preparing reward dataset", logging.Any("output_path", outputPath))
 	return nil
 }
 
@@ -604,7 +592,7 @@ func (t *rlhfTrainer) validateRewardModel(ctx context.Context, dataset *training
 		}
 	}
 
-	t.logger.Info(ctx, "Reward model validation passed")
+	t.logger.WithContext(ctx).Info("Reward model validation passed")
 	return nil
 }
 
@@ -691,12 +679,7 @@ func (t *rlhfTrainer) ppoUpdate(ctx context.Context, samples []InputOutputPair, 
 	klDiv := 0.01 // 简化实现：实际应计算真实 KL 散度
 
 	// 梯度更新（实际应调用优化器）
-	t.logger.Debug(ctx, "PPO update",
-		"policy_loss", policyLoss,
-		"value_loss", valueLoss,
-		"entropy_loss", entropyLoss,
-		"total_loss", totalLoss,
-		"kl_divergence", klDiv)
+ t.logger.WithContext(ctx).Debug("PPO update", logging.Any("policy_loss", policyLoss), logging.Any("value_loss", valueLoss), logging.Any("entropy_loss", entropyLoss), logging.Any("total_loss", totalLoss), logging.Any("kl_divergence", klDiv))
 
 	return totalLoss, klDiv
 }
@@ -715,10 +698,7 @@ func (t *rlhfTrainer) saveCheckpoint(ctx context.Context, task *training.Trainin
 
 	task.Checkpoints = append(task.Checkpoints, checkpoint)
 
-	t.logger.Info(ctx, "Checkpoint saved",
-		"phase", phase,
-		"path", path,
-		"epoch", checkpoint.Epoch)
+ t.logger.WithContext(ctx).Info("Checkpoint saved", logging.Any("phase", phase), logging.Any("path", path), logging.Any("epoch", checkpoint.Epoch))
 
 	return nil
 }
@@ -736,9 +716,7 @@ func (t *rlhfTrainer) evaluateCurrentModel(ctx context.Context, task *training.T
 func (t *rlhfTrainer) updateTaskProgress(ctx context.Context, task *training.TrainingTask) {
 	task.UpdatedAt = time.Now()
 
-	t.logger.Debug(ctx, "Task progress updated",
-		"task_id", task.ID,
-		"progress", task.Progress)
+ t.logger.WithContext(ctx).Debug("Task progress updated", logging.Any("task_id", task.ID), logging.Any("progress", task.Progress))
 
 	t.metricsCollector.Histogram("rlhf_training_progress",
 		task.Progress,
@@ -798,7 +776,7 @@ func (m *simpleRewardModel) Save(ctx context.Context, path string) error {
 	defer m.mu.Unlock()
 
 	m.modelPath = path
-	m.logger.Info(ctx, "Reward model saved", "path", path)
+	m.logger.WithContext(ctx).Info("Reward model saved", logging.Any("path", path))
 
 	return nil
 }
@@ -808,7 +786,7 @@ func (m *simpleRewardModel) Load(ctx context.Context, path string) error {
 	defer m.mu.Unlock()
 
 	m.modelPath = path
-	m.logger.Info(ctx, "Reward model loaded", "path", path)
+	m.logger.WithContext(ctx).Info("Reward model loaded", logging.Any("path", path))
 
 	return nil
 }
@@ -817,7 +795,7 @@ func (m *simpleRewardModel) Load(ctx context.Context, path string) error {
 type deepspeedBackend struct {
 	config           *DistributedConfig
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 
 	rank        int
 	worldSize   int
@@ -828,7 +806,7 @@ type deepspeedBackend struct {
 // NewDeepSpeedBackend 创建 DeepSpeed 后端
 func NewDeepSpeedBackend(
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector metrics.MetricsCollector,
 ) DistributedBackend {
 	return &deepspeedBackend{
 		logger:           logger,
@@ -848,10 +826,7 @@ func (b *deepspeedBackend) Initialize(ctx context.Context, config *DistributedCo
 	b.rank = config.Rank
 	b.worldSize = config.WorldSize
 
-	b.logger.Info(ctx, "Initializing DeepSpeed backend",
-		"rank", b.rank,
-		"world_size", b.worldSize,
-		"zero_stage", config.ZeroStage)
+ b.logger.WithContext(ctx).Info("Initializing DeepSpeed backend", logging.Any("rank", b.rank), logging.Any("world_size", b.worldSize), logging.Any("zero_stage", config.ZeroStage))
 
 	// 实际实现应初始化 DeepSpeed 环境
 	// 包括设置分布式通信、ZeRO 优化器等
@@ -861,23 +836,19 @@ func (b *deepspeedBackend) Initialize(ctx context.Context, config *DistributedCo
 	b.metricsCollector.Increment("deepspeed_initialized",
 		map[string]string{"world_size": fmt.Sprintf("%d", b.worldSize)})
 
-	b.logger.Info(ctx, "DeepSpeed backend initialized successfully")
+	b.logger.WithContext(ctx).Info("DeepSpeed backend initialized successfully")
 
 	return nil
 }
 
 func (b *deepspeedBackend) Train(ctx context.Context, config *TrainingConfig) error {
-	b.logger.Info(ctx, "Starting DeepSpeed training",
-		"model_path", config.ModelPath,
-		"epochs", config.Epochs)
+ b.logger.WithContext(ctx).Info("Starting DeepSpeed training", logging.Any("model_path", config.ModelPath), logging.Any("epochs", config.Epochs))
 
 	// 实际实现应调用 DeepSpeed 训练流程
 	// 包括模型加载、数据加载器、训练循环等
 
 	for epoch := 0; epoch < config.Epochs; epoch++ {
-		b.logger.Info(ctx, "Training epoch",
-			"epoch", epoch+1,
-			"total_epochs", config.Epochs)
+  b.logger.WithContext(ctx).Info("Training epoch", logging.Any("epoch", epoch+1), logging.Any("total_epochs", config.Epochs))
 
 		// 模拟训练过程
 		time.Sleep(100 * time.Millisecond)
@@ -890,11 +861,11 @@ func (b *deepspeedBackend) Train(ctx context.Context, config *TrainingConfig) er
 
 		// 保存检查点
 		if (epoch+1)%config.SaveSteps == 0 {
-			b.logger.Info(ctx, "Saving checkpoint", "epoch", epoch+1)
+			b.logger.WithContext(ctx).Info("Saving checkpoint", logging.Any("epoch", epoch+1))
 		}
 	}
 
-	b.logger.Info(ctx, "DeepSpeed training completed")
+	b.logger.WithContext(ctx).Info("DeepSpeed training completed")
 
 	return nil
 }
@@ -912,7 +883,7 @@ func (b *deepspeedBackend) GetWorldSize() int {
 }
 
 func (b *deepspeedBackend) Barrier(ctx context.Context) error {
-	b.logger.Debug(ctx, "Synchronizing processes at barrier")
+	b.logger.WithContext(ctx).Debug("Synchronizing processes at barrier")
 
 	// 实际实现应调用分布式通信的 barrier
 	time.Sleep(10 * time.Millisecond)
@@ -928,13 +899,13 @@ func (b *deepspeedBackend) Cleanup(ctx context.Context) error {
 		return nil
 	}
 
-	b.logger.Info(ctx, "Cleaning up DeepSpeed backend")
+	b.logger.WithContext(ctx).Info("Cleaning up DeepSpeed backend")
 
 	// 实际实现应清理分布式资源
 
 	b.initialized = false
 
-	b.logger.Info(ctx, "DeepSpeed backend cleaned up")
+	b.logger.WithContext(ctx).Info("DeepSpeed backend cleaned up")
 
 	return nil
 }
@@ -943,7 +914,7 @@ func (b *deepspeedBackend) Cleanup(ctx context.Context) error {
 type megatronBackend struct {
 	config           *DistributedConfig
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 
 	rank        int
 	worldSize   int
@@ -954,7 +925,7 @@ type megatronBackend struct {
 // NewMegatronBackend 创建 Megatron 后端
 func NewMegatronBackend(
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector metrics.MetricsCollector,
 ) DistributedBackend {
 	return &megatronBackend{
 		logger:           logger,
@@ -974,11 +945,7 @@ func (b *megatronBackend) Initialize(ctx context.Context, config *DistributedCon
 	b.rank = config.Rank
 	b.worldSize = config.WorldSize
 
-	b.logger.Info(ctx, "Initializing Megatron backend",
-		"rank", b.rank,
-		"world_size", b.worldSize,
-		"tensor_parallel", config.TensorParallel,
-		"pipeline_parallel", config.PipelineParallel)
+ b.logger.WithContext(ctx).Info("Initializing Megatron backend", logging.Any("rank", b.rank), logging.Any("world_size", b.worldSize), logging.Any("tensor_parallel", config.TensorParallel), logging.Any("pipeline_parallel", config.PipelineParallel))
 
 	// 实际实现应初始化 Megatron-LM 环境
 	// 包括张量并行、流水线并行等
@@ -988,22 +955,18 @@ func (b *megatronBackend) Initialize(ctx context.Context, config *DistributedCon
 	b.metricsCollector.Increment("megatron_initialized",
 		map[string]string{"world_size": fmt.Sprintf("%d", b.worldSize)})
 
-	b.logger.Info(ctx, "Megatron backend initialized successfully")
+	b.logger.WithContext(ctx).Info("Megatron backend initialized successfully")
 
 	return nil
 }
 
 func (b *megatronBackend) Train(ctx context.Context, config *TrainingConfig) error {
-	b.logger.Info(ctx, "Starting Megatron training",
-		"model_path", config.ModelPath,
-		"epochs", config.Epochs)
+ b.logger.WithContext(ctx).Info("Starting Megatron training", logging.Any("model_path", config.ModelPath), logging.Any("epochs", config.Epochs))
 
 	// 实际实现应调用 Megatron-LM 训练流程
 
 	for epoch := 0; epoch < config.Epochs; epoch++ {
-		b.logger.Info(ctx, "Training epoch",
-			"epoch", epoch+1,
-			"total_epochs", config.Epochs)
+  b.logger.WithContext(ctx).Info("Training epoch", logging.Any("epoch", epoch+1), logging.Any("total_epochs", config.Epochs))
 
 		time.Sleep(100 * time.Millisecond)
 
@@ -1013,7 +976,7 @@ func (b *megatronBackend) Train(ctx context.Context, config *TrainingConfig) err
 			map[string]string{"epoch": fmt.Sprintf("%d", epoch)})
 	}
 
-	b.logger.Info(ctx, "Megatron training completed")
+	b.logger.WithContext(ctx).Info("Megatron training completed")
 
 	return nil
 }
@@ -1031,7 +994,7 @@ func (b *megatronBackend) GetWorldSize() int {
 }
 
 func (b *megatronBackend) Barrier(ctx context.Context) error {
-	b.logger.Debug(ctx, "Synchronizing processes at barrier")
+	b.logger.WithContext(ctx).Debug("Synchronizing processes at barrier")
 	time.Sleep(10 * time.Millisecond)
 	return nil
 }
@@ -1044,9 +1007,9 @@ func (b *megatronBackend) Cleanup(ctx context.Context) error {
 		return nil
 	}
 
-	b.logger.Info(ctx, "Cleaning up Megatron backend")
+	b.logger.WithContext(ctx).Info("Cleaning up Megatron backend")
 	b.initialized = false
-	b.logger.Info(ctx, "Megatron backend cleaned up")
+	b.logger.WithContext(ctx).Info("Megatron backend cleaned up")
 
 	return nil
 }

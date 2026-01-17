@@ -50,7 +50,7 @@ func (h *AgentHandler) CreateAgent(c *gin.Context) {
 
 	var req dto.CreateAgentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error(ctx, "Failed to bind request", "error", err)
+		h.logger.WithContext(ctx).Error("Failed to bind request", logging.Error(err))
 		span.RecordError(err)
 		c.JSON(http.StatusBadRequest, NewErrorResponse(
 			errors.ErrInvalidRequest,
@@ -59,17 +59,17 @@ func (h *AgentHandler) CreateAgent(c *gin.Context) {
 		return
 	}
 
-	h.logger.Info(ctx, "Creating agent", "name", req.Name, "runtime_type", req.RuntimeType)
+	h.logger.WithContext(ctx).Info("Creating agent", logging.Any("name", req.Name), logging.Any("runtime_type", req.RuntimeType))
 
 	agent, err := h.agentService.CreateAgent(ctx, &req)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to create agent", "error", err)
+		h.logger.WithContext(ctx).Error("Failed to create agent", logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
 	}
 
-	h.logger.Info(ctx, "Agent created successfully", "agent_id", agent.ID)
+	h.logger.WithContext(ctx).Info("Agent created successfully", logging.Any("agent_id", agent.ID))
 	span.SetAttribute("agent.id", agent.ID)
 	span.SetAttribute("agent.name", agent.Name)
 
@@ -100,11 +100,11 @@ func (h *AgentHandler) GetAgent(c *gin.Context) {
 	}
 
 	span.SetAttribute("agent.id", agentID)
-	h.logger.Debug(ctx, "Fetching agent", "agent_id", agentID)
+	h.logger.WithContext(ctx).Debug("Fetching agent", logging.Any("agent_id", agentID))
 
 	agent, err := h.agentService.GetAgent(ctx, agentID)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to get agent", "agent_id", agentID, "error", err)
+		h.logger.WithContext(ctx).Error("Failed to get agent", logging.Any("agent_id", agentID), logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
@@ -154,11 +154,11 @@ func (h *AgentHandler) ListAgents(c *gin.Context) {
 	span.SetAttribute("pagination.page", page)
 	span.SetAttribute("pagination.page_size", pageSize)
 
-	h.logger.Debug(ctx, "Listing agents", "page", page, "page_size", pageSize)
+	h.logger.WithContext(ctx).Debug("Listing agents", logging.Any("page", page), logging.Any("page_size", pageSize))
 
 	agents, err := h.agentService.ListAgents(ctx, filterReq)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to list agents", "error", err)
+		h.logger.WithContext(ctx).Error("Failed to list agents", logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
@@ -195,7 +195,7 @@ func (h *AgentHandler) UpdateAgent(c *gin.Context) {
 
 	var req dto.UpdateAgentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error(ctx, "Failed to bind request", "error", err)
+		h.logger.WithContext(ctx).Error("Failed to bind request", logging.Error(err))
 		span.RecordError(err)
 		c.JSON(http.StatusBadRequest, NewErrorResponse(
 			errors.ErrInvalidRequest,
@@ -205,17 +205,17 @@ func (h *AgentHandler) UpdateAgent(c *gin.Context) {
 	}
 
 	span.SetAttribute("agent.id", agentID)
-	h.logger.Info(ctx, "Updating agent", "agent_id", agentID)
+	h.logger.WithContext(ctx).Info("Updating agent", logging.Any("agent_id", agentID))
 
 	agent, err := h.agentService.UpdateAgent(ctx, agentID, &req)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to update agent", "agent_id", agentID, "error", err)
+		h.logger.WithContext(ctx).Error("Failed to update agent", logging.Any("agent_id", agentID), logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
 	}
 
-	h.logger.Info(ctx, "Agent updated successfully", "agent_id", agentID)
+	h.logger.WithContext(ctx).Info("Agent updated successfully", logging.Any("agent_id", agentID))
 	c.JSON(http.StatusOK, agent)
 }
 
@@ -243,16 +243,16 @@ func (h *AgentHandler) DeleteAgent(c *gin.Context) {
 	}
 
 	span.SetAttribute("agent.id", agentID)
-	h.logger.Info(ctx, "Deleting agent", "agent_id", agentID)
+	h.logger.WithContext(ctx).Info("Deleting agent", logging.Any("agent_id", agentID))
 
 	if err := h.agentService.DeleteAgent(ctx, agentID); err != nil {
-		h.logger.Error(ctx, "Failed to delete agent", "agent_id", agentID, "error", err)
+		h.logger.WithContext(ctx).Error("Failed to delete agent", logging.Any("agent_id", agentID), logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
 	}
 
-	h.logger.Info(ctx, "Agent deleted successfully", "agent_id", agentID)
+	h.logger.WithContext(ctx).Info("Agent deleted successfully", logging.Any("agent_id", agentID))
 	c.Status(http.StatusNoContent)
 }
 
@@ -284,7 +284,7 @@ func (h *AgentHandler) ExecuteAgent(c *gin.Context) {
 
 	var req dto.ExecuteAgentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error(ctx, "Failed to bind request", "error", err)
+		h.logger.WithContext(ctx).Error("Failed to bind request", logging.Error(err))
 		span.RecordError(err)
 		c.JSON(http.StatusBadRequest, NewErrorResponse(
 			errors.ErrInvalidRequest,
@@ -295,17 +295,17 @@ func (h *AgentHandler) ExecuteAgent(c *gin.Context) {
 
 	span.SetAttribute("agent.id", agentID)
 	span.SetAttribute("execution.stream", req.Stream)
-	h.logger.Info(ctx, "Executing agent", "agent_id", agentID, "stream", req.Stream)
+	h.logger.WithContext(ctx).Info("Executing agent", logging.Any("agent_id", agentID), logging.Any("stream", req.Stream))
 
 	result, err := h.agentService.ExecuteAgent(ctx, agentID, &req)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to execute agent", "agent_id", agentID, "error", err)
+		h.logger.WithContext(ctx).Error("Failed to execute agent", logging.Any("agent_id", agentID), logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
 	}
 
-	h.logger.Info(ctx, "Agent executed successfully", "agent_id", agentID, "execution_id", result.ExecutionID)
+	h.logger.WithContext(ctx).Info("Agent executed successfully", logging.Any("agent_id", agentID), logging.Any("execution_id", result.ExecutionID))
 	span.SetAttribute("execution.id", result.ExecutionID)
 
 	c.JSON(http.StatusOK, result)
@@ -339,7 +339,7 @@ func (h *AgentHandler) TestAgent(c *gin.Context) {
 
 	var req dto.TestAgentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error(ctx, "Failed to bind request", "error", err)
+		h.logger.WithContext(ctx).Error("Failed to bind request", logging.Error(err))
 		span.RecordError(err)
 		c.JSON(http.StatusBadRequest, NewErrorResponse(
 			errors.ErrInvalidRequest,
@@ -349,17 +349,17 @@ func (h *AgentHandler) TestAgent(c *gin.Context) {
 	}
 
 	span.SetAttribute("agent.id", agentID)
-	h.logger.Info(ctx, "Testing agent", "agent_id", agentID)
+	h.logger.WithContext(ctx).Info("Testing agent", logging.Any("agent_id", agentID))
 
 	result, err := h.agentService.TestAgent(ctx, agentID, &req)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to test agent", "agent_id", agentID, "error", err)
+		h.logger.WithContext(ctx).Error("Failed to test agent", logging.Any("agent_id", agentID), logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
 	}
 
-	h.logger.Info(ctx, "Agent tested successfully", "agent_id", agentID)
+	h.logger.WithContext(ctx).Info("Agent tested successfully", logging.Any("agent_id", agentID))
 	c.JSON(http.StatusOK, result)
 }
 

@@ -105,7 +105,7 @@ type Cache interface {
 // CacheManager manages the three-tier cache hierarchy
 type CacheManager struct {
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 	config           *CacheConfig
 
 	l1Cache          Cache
@@ -118,7 +118,7 @@ type CacheManager struct {
 // NewCacheManager creates a new cache manager
 func NewCacheManager(
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector *metrics.MetricsCollector,
 	config *CacheConfig,
 	l1Cache Cache,
 	l2Cache Cache,
@@ -150,7 +150,7 @@ func (cm *CacheManager) Get(ctx context.Context, req interface{}) (interface{}, 
 		entry, err := cm.l1Cache.Get(ctx, key)
 		if err == nil && entry != nil {
 			cm.recordCacheHit(LevelL1, time.Since(startTime))
-			cm.logger.Debug(ctx, "L1 cache hit", "key", key)
+			cm.logger.WithContext(ctx).Debug("L1 cache hit", logging.Any("key", key))
 
 			// Update access statistics
 			cm.updateAccessStats(ctx, entry, LevelL1)
@@ -164,7 +164,7 @@ func (cm *CacheManager) Get(ctx context.Context, req interface{}) (interface{}, 
 		entry, err := cm.l2Cache.Get(ctx, key)
 		if err == nil && entry != nil {
 			cm.recordCacheHit(LevelL2, time.Since(startTime))
-			cm.logger.Debug(ctx, "L2 cache hit", "key", key)
+			cm.logger.WithContext(ctx).Debug("L2 cache hit", logging.Any("key", key))
 
 			// Promote to L1 for faster future access
 			if cm.config.L1Enabled && cm.l1Cache != nil {
@@ -173,7 +173,7 @@ func (cm *CacheManager) Get(ctx context.Context, req interface{}) (interface{}, 
 				l1Entry.ExpiresAt = time.Now().Add(cm.config.L1TTL)
 
 				if err := cm.l1Cache.Set(ctx, &l1Entry); err != nil {
-					cm.logger.Warn(ctx, "failed to promote to L1", "error", err)
+					cm.logger.WithContext(ctx).Warn("failed to promote to L1", logging.Error(err))
 				}
 			}
 
@@ -189,10 +189,7 @@ func (cm *CacheManager) Get(ctx context.Context, req interface{}) (interface{}, 
 			// Check similarity threshold
 			if entry.Similarity >= cm.config.L3SimilarityThreshold {
 				cm.recordCacheHit(LevelL3, time.Since(startTime))
-				cm.logger.Debug(ctx, "L3 cache hit",
-					"key", key,
-					"similarity", entry.Similarity,
-				)
+    cm.logger.WithContext(ctx).Debug("L3 cache hit", logging.Any("key", key), logging.Any("similarity", entry.Similarity))
 
 				// Promote to L2 and L1
 				if cm.config.L2Enabled && cm.l2Cache != nil {
@@ -202,7 +199,7 @@ func (cm *CacheManager) Get(ctx context.Context, req interface{}) (interface{}, 
 					l2Entry.Key = key // Use exact key for L2
 
 					if err := cm.l2Cache.Set(ctx, &l2Entry); err != nil {
-						cm.logger.Warn(ctx, "failed to promote to L2", "error", err)
+						cm.logger.WithContext(ctx).Warn("failed to promote to L2", logging.Error(err))
 					}
 				}
 
@@ -213,7 +210,7 @@ func (cm *CacheManager) Get(ctx context.Context, req interface{}) (interface{}, 
 					l1Entry.Key = key
 
 					if err := cm.l1Cache.Set(ctx, &l1Entry); err != nil {
-						cm.logger.Warn(ctx, "failed to promote to L1", "error", err)
+						cm.logger.WithContext(ctx).Warn("failed to promote to L1", logging.Error(err))
 					}
 				}
 
@@ -257,9 +254,9 @@ func (cm *CacheManager) Set(ctx context.Context, req interface{}, resp interface
 		}
 
 		if err := cm.l3Cache.Set(ctx, l3Entry); err != nil {
-			cm.logger.Warn(ctx, "failed to set L3 cache", "error", err)
+			cm.logger.WithContext(ctx).Warn("failed to set L3 cache", logging.Error(err))
 		} else {
-			cm.logger.Debug(ctx, "L3 cache set", "key", key, "ttl", ttl.L3)
+			cm.logger.WithContext(ctx).Debug("L3 cache set", logging.Any("key", key), logging.Any("ttl", ttl.L3))
 		}
 	}
 
@@ -277,9 +274,9 @@ func (cm *CacheManager) Set(ctx context.Context, req interface{}, resp interface
 		}
 
 		if err := cm.l2Cache.Set(ctx, l2Entry); err != nil {
-			cm.logger.Warn(ctx, "failed to set L2 cache", "error", err)
+			cm.logger.WithContext(ctx).Warn("failed to set L2 cache", logging.Error(err))
 		} else {
-			cm.logger.Debug(ctx, "L2 cache set", "key", key, "ttl", ttl.L2)
+			cm.logger.WithContext(ctx).Debug("L2 cache set", logging.Any("key", key), logging.Any("ttl", ttl.L2))
 		}
 	}
 
@@ -297,9 +294,9 @@ func (cm *CacheManager) Set(ctx context.Context, req interface{}, resp interface
 		}
 
 		if err := cm.l1Cache.Set(ctx, l1Entry); err != nil {
-			cm.logger.Warn(ctx, "failed to set L1 cache", "error", err)
+			cm.logger.WithContext(ctx).Warn("failed to set L1 cache", logging.Error(err))
 		} else {
-			cm.logger.Debug(ctx, "L1 cache set", "key", key, "ttl", ttl.L1)
+			cm.logger.WithContext(ctx).Debug("L1 cache set", logging.Any("key", key), logging.Any("ttl", ttl.L1))
 		}
 	}
 
@@ -336,20 +333,17 @@ func (cm *CacheManager) Invalidate(ctx context.Context, req interface{}) error {
 	}
 
 	if len(errs) > 0 {
-		cm.logger.Warn(ctx, "cache invalidation had errors",
-			"key", key,
-			"error_count", len(errs),
-		)
+  cm.logger.WithContext(ctx).Warn("cache invalidation had errors", logging.Any("key", key), logging.Any("error_count", len(errs))
 	}
 
-	cm.logger.Info(ctx, "cache invalidated", "key", key)
+	cm.logger.WithContext(ctx).Info("cache invalidated", logging.Any("key", key))
 
 	return nil
 }
 
 // InvalidatePattern invalidates all entries matching a pattern
 func (cm *CacheManager) InvalidatePattern(ctx context.Context, pattern string) error {
-	cm.logger.Info(ctx, "invalidating cache pattern", "pattern", pattern)
+	cm.logger.WithContext(ctx).Info("invalidating cache pattern", logging.Any("pattern", pattern))
 
 	// This would require cache implementations to support pattern matching
 	// For now, just clear all caches
@@ -382,7 +376,7 @@ func (cm *CacheManager) ClearAll(ctx context.Context) error {
 		return errors.New(errors.CodeInternalError, fmt.Sprintf("failed to clear %d cache levels", len(errs)))
 	}
 
-	cm.logger.Info(ctx, "all caches cleared")
+	cm.logger.WithContext(ctx).Info("all caches cleared")
 
 	return nil
 }

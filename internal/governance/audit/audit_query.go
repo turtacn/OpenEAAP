@@ -392,7 +392,7 @@ type ChartData struct {
 type auditQueryService struct {
 	auditLogger      AuditLogger
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	cache    sync.Map
@@ -403,7 +403,7 @@ type auditQueryService struct {
 func NewAuditQueryService(
 	auditLogger AuditLogger,
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,
 	cacheTTL time.Duration,
 ) AuditQueryService {
@@ -421,7 +421,7 @@ func (s *auditQueryService) Query(ctx context.Context, query *QueryRequest) (*Qu
 	ctx, span := s.tracer.Start(ctx, "AuditQueryService.Query")
 	defer span.End()
 
-	s.logger.Debug(ctx, "Querying audit logs", "filter", query.Filter)
+	s.logger.WithContext(ctx).Debug("Querying audit logs", logging.Any("filter", query.Filter))
 
 	// 查询日志
 	entries, err := s.auditLogger.Query(ctx, query.Filter)
@@ -544,7 +544,7 @@ func (s *auditQueryService) AdvancedQuery(ctx context.Context, criteria *QueryCr
 	ctx, span := s.tracer.Start(ctx, "AuditQueryService.AdvancedQuery")
 	defer span.End()
 
-	s.logger.Debug(ctx, "Executing advanced query", "criteria", criteria)
+	s.logger.WithContext(ctx).Debug("Executing advanced query", logging.Any("criteria", criteria))
 
 	// 转换条件为过滤器
 	filter := s.criteriaToFilter(criteria)
@@ -595,7 +595,7 @@ func (s *auditQueryService) GenerateReport(ctx context.Context, request *ReportR
 	ctx, span := s.tracer.Start(ctx, "AuditQueryService.GenerateReport")
 	defer span.End()
 
-	s.logger.Info(ctx, "Generating audit report", "type", request.ReportType)
+	s.logger.WithContext(ctx).Info("Generating audit report", logging.Any("type", request.ReportType))
 
 	// 查询审计日志
 	entries, err := s.auditLogger.Query(ctx, request.Filter)
@@ -659,7 +659,7 @@ func (s *auditQueryService) GenerateReport(ctx context.Context, request *ReportR
 		report.Charts = s.generateCharts(entries, request.Sections)
 	}
 
-	s.logger.Info(ctx, "Audit report generated", "report_id", report.ID)
+	s.logger.WithContext(ctx).Info("Audit report generated", logging.Any("report_id", report.ID))
 
 	return report, nil
 }
@@ -669,7 +669,7 @@ func (s *auditQueryService) ExportReport(ctx context.Context, report *AuditRepor
 	ctx, span := s.tracer.Start(ctx, "AuditQueryService.ExportReport")
 	defer span.End()
 
-	s.logger.Info(ctx, "Exporting audit report", "format", format)
+	s.logger.WithContext(ctx).Info("Exporting audit report", logging.Any("format", format))
 
 	switch format {
 	case FormatJSON:
@@ -691,7 +691,7 @@ func (s *auditQueryService) GetTrends(ctx context.Context, request *TrendRequest
 	ctx, span := s.tracer.Start(ctx, "AuditQueryService.GetTrends")
 	defer span.End()
 
-	s.logger.Debug(ctx, "Analyzing trends", "metric", request.Metric)
+	s.logger.WithContext(ctx).Debug("Analyzing trends", logging.Any("metric", request.Metric))
 
 	entries, err := s.auditLogger.Query(ctx, request.Filter)
 	if err != nil {
@@ -719,7 +719,7 @@ func (s *auditQueryService) GetAnomalies(ctx context.Context, request *AnomalyRe
 	ctx, span := s.tracer.Start(ctx, "AuditQueryService.GetAnomalies")
 	defer span.End()
 
-	s.logger.Debug(ctx, "Detecting anomalies", "sensitivity", request.Sensitivity)
+	s.logger.WithContext(ctx).Debug("Detecting anomalies", logging.Any("sensitivity", request.Sensitivity))
 
 	entries, err := s.auditLogger.Query(ctx, request.Filter)
 	if err != nil {
