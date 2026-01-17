@@ -123,7 +123,7 @@ type pep struct {
 	pdp              PolicyDecisionPoint
 	auditLogger      AuditLogger
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config             *PEPConfig
@@ -373,7 +373,7 @@ func (p *pep) PreAuthorize(ctx context.Context, subjectID, resourceID, action st
 	}
 
 	if !result.Allowed {
-		return errors.New(errors.CodePermissionDenied,
+		return errors.New(errors.PermissionError,
 			fmt.Sprintf("access denied: %s", result.Decision.Reason))
 	}
 
@@ -394,7 +394,7 @@ func (p *pep) PostAuthorize(ctx context.Context, request *AccessRequest, result 
 	}
 
 	if !enforcementResult.Allowed {
-		return errors.New(errors.CodePermissionDenied,
+		return errors.New(errors.PermissionError,
 			fmt.Sprintf("post-authorization denied: %s", enforcementResult.Decision.Reason))
 	}
 

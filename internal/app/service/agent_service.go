@@ -268,7 +268,7 @@ type agentService struct {
 	deploymentSvc    deployment.DeploymentService
 	testingSvc       testing.TestingService
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	cache sync.Map

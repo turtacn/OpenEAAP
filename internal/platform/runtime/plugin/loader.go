@@ -553,7 +553,7 @@ func (pl *PluginLoader) Shutdown(ctx context.Context) error {
 	select {
 	case <-done:
 	case <-ctx.Done():
-		return errors.New(errors.CodeDeadlineExceeded, "shutdown timeout")
+		return errors.New(errors.DeadlineError, "shutdown timeout")
 	}
 
 	// 卸载所有插件

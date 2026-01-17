@@ -288,7 +288,7 @@ type AuditStorage interface {
 type auditLogger struct {
 	storage          AuditStorage
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config      *AuditLoggerConfig
@@ -317,7 +317,7 @@ type AuditLoggerConfig struct {
 func NewAuditLogger(
 	storage AuditStorage,
 	logger logging.Logger,
-	metricsCollector *metrics.MetricsCollector,
+	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,
 	config *AuditLoggerConfig,
 ) AuditLogger {

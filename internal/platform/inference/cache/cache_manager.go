@@ -105,7 +105,7 @@ type Cache interface {
 // CacheManager manages the three-tier cache hierarchy
 type CacheManager struct {
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	config           *CacheConfig
 
 	l1Cache          Cache
@@ -118,7 +118,7 @@ type CacheManager struct {
 // NewCacheManager creates a new cache manager
 func NewCacheManager(
 	logger logging.Logger,
-	metricsCollector *metrics.MetricsCollector,
+	metricsCollector metrics.MetricsCollector,
 	config *CacheConfig,
 	l1Cache Cache,
 	l2Cache Cache,
@@ -187,9 +187,9 @@ func (cm *CacheManager) Get(ctx context.Context, req interface{}) (interface{}, 
 		entry, err := cm.l3Cache.Get(ctx, key)
 		if err == nil && entry != nil {
 			// Check similarity threshold
-			if entry.Similarity >= cm.config.L3SimilarityThreshold {
+			if entry.Score >= cm.config.L3SimilarityThreshold {
 				cm.recordCacheHit(LevelL3, time.Since(startTime))
-    cm.logger.WithContext(ctx).Debug("L3 cache hit", logging.Any("key", key), logging.Any("similarity", entry.Similarity))
+    cm.logger.WithContext(ctx).Debug("L3 cache hit", logging.Any("key", key), logging.Any("similarity", entry.Score))
 
 				// Promote to L2 and L1
 				if cm.config.L2Enabled && cm.l2Cache != nil {

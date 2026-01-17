@@ -442,13 +442,13 @@ func (h *AgentGRPCHandler) handleError(err error) error {
 			return status.Error(codes.AlreadyExists, appErr.Message)
 		case pkgerrors.CodeInvalidArgument:
 			return status.Error(codes.InvalidArgument, appErr.Message)
-		case pkgerrors.CodePermissionDenied:
+		case pkgerrors.PermissionError:
 			return status.Error(codes.PermissionDenied, appErr.Message)
 		case pkgerrors.CodeUnauthenticated:
 			return status.Error(codes.Unauthenticated, appErr.Message)
 		case pkgerrors.CodeResourceExhausted:
 			return status.Error(codes.ResourceExhausted, appErr.Message)
-		case pkgerrors.CodeDeadlineExceeded:
+		case pkgerrors.DeadlineError:
 			return status.Error(codes.DeadlineExceeded, appErr.Message)
 		default:
 			return status.Error(codes.Internal, appErr.Message)

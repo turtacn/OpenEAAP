@@ -106,7 +106,7 @@ type policyLoader struct {
 	policyRepo       PolicyRepository
 	configCenter     ConfigCenter
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config           *PolicyLoaderConfig

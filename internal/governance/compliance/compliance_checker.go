@@ -522,7 +522,7 @@ type complianceChecker struct {
 	policyEngine     policy.PolicyDecisionPoint
 	auditLogger      audit.AuditLogger
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	frameworks sync.Map // map[FrameworkType]*ComplianceFramework

@@ -373,7 +373,7 @@ func (c *L2RedisCache) findBySimilarity(ctx context.Context, key string) (*Cache
 
 		// Calculate actual similarity
 		similarity := c.calculateSimilarity(key, member)
-		entry.Similarity = similarity
+		entry.Score = similarity
 
 		// Return if similarity is high enough (> 0.95)
 		if similarity > 0.95 {

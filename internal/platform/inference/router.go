@@ -104,7 +104,7 @@ type ABTestConfig struct {
 // Router handles model routing and engine selection
 type Router struct {
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 
 	engines          map[string]*EngineConfig
 	enginesMu        sync.RWMutex

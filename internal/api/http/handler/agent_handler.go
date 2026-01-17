@@ -398,7 +398,7 @@ func handleServiceError(c *gin.Context, err error) {
 		))
 	case errors.IsUnauthorizedError(err):
 		c.JSON(http.StatusUnauthorized, NewErrorResponse(
-			errors.ErrUnauthorized,
+			errors.UnauthorizedError,
 			err.Error(),
 		))
 	case errors.IsForbiddenError(err):

@@ -129,7 +129,7 @@ func (m *AuthMiddleware) Handler() gin.HandlerFunc {
 				span.RecordError(err)
 				if !optional {
 					c.JSON(http.StatusUnauthorized, gin.H{
-						"code":    errors.ErrUnauthorized,
+						"code":    errors.UnauthorizedError,
 						"message": "Invalid or expired JWT token",
 					})
 					c.Abort()
@@ -147,7 +147,7 @@ func (m *AuthMiddleware) Handler() gin.HandlerFunc {
 				span.RecordError(err)
 				if !optional {
 					c.JSON(http.StatusUnauthorized, gin.H{
-						"code":    errors.ErrUnauthorized,
+						"code":    errors.UnauthorizedError,
 						"message": "Invalid API key",
 					})
 					c.Abort()
@@ -160,7 +160,7 @@ func (m *AuthMiddleware) Handler() gin.HandlerFunc {
 		if userInfo == nil && !optional {
 			m.logger.Warn(ctx, "No valid authentication provided", "path", path)
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    errors.ErrUnauthorized,
+				"code":    errors.UnauthorizedError,
 				"message": "Authentication required",
 			})
 			c.Abort()
@@ -318,7 +318,7 @@ func RequireRole(logger logging.Logger, requiredRole string) gin.HandlerFunc {
 		if !exists {
 			logger.Warn(c.Request.Context(), "User role not found in context")
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    errors.ErrUnauthorized,
+				"code":    errors.UnauthorizedError,
 				"message": "Authentication required",
 			})
 			c.Abort()
@@ -346,7 +346,7 @@ func RequireAnyRole(logger logging.Logger, requiredRoles ...string) gin.HandlerF
 		if !exists {
 			logger.Warn(c.Request.Context(), "User role not found in context")
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    errors.ErrUnauthorized,
+				"code":    errors.UnauthorizedError,
 				"message": "Authentication required",
 			})
 			c.Abort()

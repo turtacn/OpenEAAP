@@ -31,7 +31,7 @@ type Server struct {
 	listener         net.Listener
 	logger           logging.Logger
 	tracer           trace.Tracer
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 
 	// 处理器
 	agentHandler    *handler.AgentGRPCHandler

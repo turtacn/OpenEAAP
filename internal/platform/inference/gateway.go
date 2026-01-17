@@ -80,7 +80,7 @@ type InferenceEngine interface {
 type Gateway struct {
 	logger          logging.Logger
 	tracer          trace.Tracer
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	cacheManager    *cache.CacheManager
 	privacyGateway  *privacy.PrivacyGateway
 	router          *Router

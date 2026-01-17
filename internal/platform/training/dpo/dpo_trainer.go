@@ -122,7 +122,7 @@ type DPOConfig struct {
 type dpoTrainer struct {
 	backend          training.DistributedBackend
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config         *DPOConfig

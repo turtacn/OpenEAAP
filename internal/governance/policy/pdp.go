@@ -197,7 +197,7 @@ type PolicyRepository interface {
 type pdp struct {
 	policyRepo       PolicyRepository
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config          *PDPConfig
@@ -222,7 +222,7 @@ type PDPConfig struct {
 func NewPolicyDecisionPoint(
 	policyRepo PolicyRepository,
 	logger logging.Logger,
-	metricsCollector *metrics.MetricsCollector,
+	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,
 	config *PDPConfig,
 ) PolicyDecisionPoint {

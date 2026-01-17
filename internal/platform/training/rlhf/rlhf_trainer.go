@@ -143,7 +143,7 @@ type rlhfTrainer struct {
 	backend          DistributedBackend
 	rewardModel      RewardModel
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config       *RLHFConfig
@@ -795,7 +795,7 @@ func (m *simpleRewardModel) Load(ctx context.Context, path string) error {
 type deepspeedBackend struct {
 	config           *DistributedConfig
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 
 	rank        int
 	worldSize   int
@@ -914,7 +914,7 @@ func (b *deepspeedBackend) Cleanup(ctx context.Context) error {
 type megatronBackend struct {
 	config           *DistributedConfig
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 
 	rank        int
 	worldSize   int

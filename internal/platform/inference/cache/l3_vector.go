@@ -132,9 +132,9 @@ func (c *L3VectorCache) Get(ctx context.Context, key string) (*CacheEntry, error
 	topResult := searchResult[0]
 
 	// Check similarity threshold
-	if topResult.Similarity < c.similarityThreshold {
+	if topResult.Score < c.similarityThreshold {
 		c.missCount++
-  c.logger.WithContext(ctx).Debug("similarity below threshold", logging.Any("similarity", topResult.Similarity), logging.Any("threshold", c.similarityThreshold))
+  c.logger.WithContext(ctx).Debug("similarity below threshold", logging.Any("similarity", topResult.Score), logging.Any("threshold", c.similarityThreshold))
 		return nil, nil
 	}
 
@@ -165,7 +165,7 @@ func (c *L3VectorCache) Get(ctx context.Context, key string) (*CacheEntry, error
 		Request:    request,
 		Response:   response,
 		Level:      LevelL3,
-		Similarity: topResult.Similarity,
+		Similarity: topResult.Score,
 		CreatedAt:  time.Unix(topResult.CreatedAt, 0),
 		ExpiresAt:  time.Unix(topResult.ExpiresAt, 0),
 	}
@@ -173,7 +173,7 @@ func (c *L3VectorCache) Get(ctx context.Context, key string) (*CacheEntry, error
 	c.hitCount++
 
 	latency := time.Since(startTime)
- c.logger.WithContext(ctx).Debug("L3 cache hit", logging.Any("key", key), logging.Any("similarity", topResult.Similarity), logging.Any("latency_ms", latency.Milliseconds()))
+ c.logger.WithContext(ctx).Debug("L3 cache hit", logging.Any("key", key), logging.Any("similarity", topResult.Score), logging.Any("latency_ms", latency.Milliseconds()))
 
 	if latency > 50*time.Millisecond {
   c.logger.WithContext(ctx).Warn("L3 cache GET latency exceeded 50ms", logging.Any("latency_ms", latency.Milliseconds()))
@@ -472,7 +472,7 @@ func (c *L3VectorCache) searchSimilar(ctx context.Context, embedding []float32) 
 		entries := c.parseSearchResult(result)
 		for i, entry := range entries {
 			if i < len(searchResult[0].Scores) {
-				entry.Similarity = float64(searchResult[0].Scores[i])
+				entry.Score = float64(searchResult[0].Scores[i])
 			}
 			results = append(results, entry)
 		}

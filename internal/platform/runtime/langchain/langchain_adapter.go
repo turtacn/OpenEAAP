@@ -609,7 +609,7 @@ func (lca *LangChainAdapter) Shutdown(ctx context.Context) error {
 	case <-done:
 		lca.logger.Info("langchain adapter shutdown completed", "runtime_id", lca.id)
 	case <-ctx.Done():
-		return errors.NewInternalError(errors.CodeDeadlineExceeded, "shutdown timeout")
+		return errors.NewInternalError(errors.DeadlineError, "shutdown timeout")
 	}
 
 	// 关闭客户端

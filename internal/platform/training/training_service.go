@@ -3,12 +3,10 @@ package training
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/openeeap/openeeap/internal/domain/model"
 	"github.com/openeeap/openeeap/internal/infrastructure/message"
 	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/internal/observability/metrics"
@@ -233,7 +231,7 @@ type trainingService struct {
 	dpoEngine        TrainingEngine
 	messageQueue     message.MessageQueue
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config       *TrainingConfig
@@ -276,7 +274,7 @@ func NewTrainingService(
 	dpoEngine TrainingEngine,
 	messageQueue message.MessageQueue,
 	logger logging.Logger,
-	metricsCollector *metrics.MetricsCollector,
+	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,
 	config *TrainingConfig,
 ) TrainingService {

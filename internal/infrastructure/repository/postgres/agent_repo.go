@@ -104,6 +104,23 @@ func (r *agentRepo) GetByID(ctx context.Context, id string) (*agent.Agent, error
 	return r.toEntity(&model)
 }
 
+// GetByName retrieves an agent by name
+func (r *agentRepo) GetByName(ctx context.Context, name string) (*agent.Agent, error) {
+	if name == "" {
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "agent name cannot be empty")
+	}
+
+	var model AgentModel
+	if err := r.db.WithContext(ctx).First(&model, "name = ?", name).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.NewNotFoundError(errors.CodeNotFound, "agent not found")
+		}
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get agent")
+	}
+
+	return r.toEntity(&model)
+}
+
 // Update 更新 Agent
 func (r *agentRepo) Update(ctx context.Context, agt *agent.Agent) error {
 	if agt == nil {

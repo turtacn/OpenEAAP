@@ -100,7 +100,7 @@ type feedbackCollector struct {
 	repo             FeedbackRepository
 	messageQueue     message.MessageQueue
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config *FeedbackConfig
@@ -479,7 +479,7 @@ type AutoEvaluation struct {
 // autoEvaluator 自动评估器实现
 type autoEvaluator struct {
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	tracer           trace.Tracer
 }
 

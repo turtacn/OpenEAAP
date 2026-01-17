@@ -22,7 +22,7 @@ import (
 // VLLMClient provides a client for vLLM inference engine
 type VLLMClient struct {
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	baseURL          string
 	httpClient       *http.Client
 	apiKey           string
