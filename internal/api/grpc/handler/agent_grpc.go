@@ -12,7 +12,8 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/openeeap/openeeap/api/proto"
+	// TODO: generate proto files
+	//"github.com/openeeap/openeeap/api/proto"
 	"github.com/openeeap/openeeap/internal/app/dto"
 	"github.com/openeeap/openeeap/internal/app/service"
 	"github.com/openeeap/openeeap/internal/domain/agent"

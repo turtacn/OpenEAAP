@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/pkg/errors"
-	"github.com/openeeap/openeeap/pkg/logger"
 )
 
 // KafkaClient Kafka 消息队列客户端接口
@@ -358,10 +358,10 @@ type BrokerInfo struct {
 // NewKafkaClient 创建 Kafka 客户端
 func NewKafkaClient(config *KafkaConfig) (KafkaClient, error) {
 	if config == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "config cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "config cannot be nil")
 	}
 	if len(config.Brokers) == 0 {
-		return nil, errors.New(errors.CodeInvalidParameter, "brokers cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "brokers cannot be empty")
 	}
 
 	// 设置默认值
@@ -444,14 +444,14 @@ func NewKafkaClient(config *KafkaConfig) (KafkaClient, error) {
 	// 创建同步生产者
 	producer, err := sarama.NewSyncProducer(config.Brokers, saramaConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to create sync producer")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to create sync producer")
 	}
 
 	// 创建异步生产者
 	asyncProducer, err := sarama.NewAsyncProducer(config.Brokers, saramaConfig)
 	if err != nil {
 		producer.Close()
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to create async producer")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to create async producer")
 	}
 
 	// 创建管理客户端
@@ -459,7 +459,7 @@ func NewKafkaClient(config *KafkaConfig) (KafkaClient, error) {
 	if err != nil {
 		producer.Close()
 		asyncProducer.Close()
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to create cluster admin")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to create cluster admin")
 	}
 
 	kc := &kafkaClient{
@@ -479,7 +479,7 @@ func NewKafkaClient(config *KafkaConfig) (KafkaClient, error) {
 
 	if err := kc.Ping(ctx); err != nil {
 		kc.Close()
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to ping kafka")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to ping kafka")
 	}
 
 	return kc, nil
@@ -491,10 +491,10 @@ func (kc *kafkaClient) SendMessage(ctx context.Context, req *SendMessageRequest)
 		return nil, errors.New(errors.CodeInternalError, "kafka client is closed")
 	}
 	if req == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "send message request cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "send message request cannot be nil")
 	}
 	if req.Topic == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "topic cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "topic cannot be empty")
 	}
 
 	// 构建消息
@@ -526,7 +526,7 @@ func (kc *kafkaClient) SendMessage(ctx context.Context, req *SendMessageRequest)
 	// 发送消息
 	partition, offset, err := kc.producer.SendMessage(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to send message")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to send message")
 	}
 
 	return &SendMessageResponse{
@@ -542,10 +542,10 @@ func (kc *kafkaClient) SendMessages(ctx context.Context, req *SendMessagesReques
 		return nil, errors.New(errors.CodeInternalError, "kafka client is closed")
 	}
 	if req == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "send messages request cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "send messages request cannot be nil")
 	}
 	if len(req.Messages) == 0 {
-		return nil, errors.New(errors.CodeInvalidParameter, "messages cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "messages cannot be empty")
 	}
 
 	// 构建消息列表
@@ -612,10 +612,10 @@ func (kc *kafkaClient) SendMessageAsync(ctx context.Context, req *SendMessageReq
 		return errors.New(errors.CodeInternalError, "kafka client is closed")
 	}
 	if req == nil {
-		return errors.New(errors.CodeInvalidParameter, "send message request cannot be nil")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "send message request cannot be nil")
 	}
 	if req.Topic == "" {
-		return errors.New(errors.CodeInvalidParameter, "topic cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "topic cannot be empty")
 	}
 
 	// 构建消息
@@ -675,13 +675,13 @@ func (kc *kafkaClient) Subscribe(ctx context.Context, req *SubscribeRequest) (Co
 		return nil, errors.New(errors.CodeInternalError, "kafka client is closed")
 	}
 	if req == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "subscribe request cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "subscribe request cannot be nil")
 	}
 	if req.Topic == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "topic cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "topic cannot be empty")
 	}
 	if req.Handler == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "message handler cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "message handler cannot be nil")
 	}
 
 	kc.mu.Lock()
@@ -714,14 +714,14 @@ func (kc *kafkaClient) Subscribe(ctx context.Context, req *SubscribeRequest) (Co
 	// 创建消费者
 	saramaConsumer, err := sarama.NewConsumer(kc.config.Brokers, config)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to create consumer")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to create consumer")
 	}
 
 	// 创建分区消费者（简化版，实际应该支持多分区）
 	partitionConsumer, err := saramaConsumer.ConsumePartition(req.Topic, 0, sarama.OffsetNewest)
 	if err != nil {
 		saramaConsumer.Close()
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to create partition consumer")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to create partition consumer")
 	}
 
 	consumerCtx, cancel := context.WithCancel(context.Background())
@@ -758,7 +758,7 @@ func (kc *kafkaClient) Unsubscribe(ctx context.Context, consumerID string) error
 
 	consumer, exists := kc.consumers[consumerID]
 	if !exists {
-		return errors.New(errors.CodeNotFound, "consumer not found")
+		return errors.NewNotFoundError(errors.CodeNotFound, "consumer not found")
 	}
 
 	if err := consumer.Stop(); err != nil {
@@ -775,10 +775,10 @@ func (kc *kafkaClient) CreateTopic(ctx context.Context, config *TopicConfig) err
 		return errors.New(errors.CodeInternalError, "kafka client is closed")
 	}
 	if config == nil {
-		return errors.New(errors.CodeInvalidParameter, "topic config cannot be nil")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "topic config cannot be nil")
 	}
 	if config.Name == "" {
-		return errors.New(errors.CodeInvalidParameter, "topic name cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "topic name cannot be empty")
 	}
 
 	detail := &sarama.TopicDetail{
@@ -789,7 +789,7 @@ func (kc *kafkaClient) CreateTopic(ctx context.Context, config *TopicConfig) err
 
 	err := kc.admin.CreateTopic(config.Name, detail, false)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to create topic")
+		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to create topic")
 	}
 
 	return nil
@@ -801,12 +801,12 @@ func (kc *kafkaClient) DeleteTopic(ctx context.Context, topic string) error {
 		return errors.New(errors.CodeInternalError, "kafka client is closed")
 	}
 	if topic == "" {
-		return errors.New(errors.CodeInvalidParameter, "topic cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "topic cannot be empty")
 	}
 
 	err := kc.admin.DeleteTopic(topic)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to delete topic")
+		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to delete topic")
 	}
 
 	return nil
@@ -820,7 +820,7 @@ func (kc *kafkaClient) ListTopics(ctx context.Context) ([]string, error) {
 
 	topics, err := kc.admin.ListTopics()
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to list topics")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to list topics")
 	}
 
 	topicList := make([]string, 0, len(topics))
@@ -837,16 +837,16 @@ func (kc *kafkaClient) GetTopicMetadata(ctx context.Context, topic string) (*Top
 		return nil, errors.New(errors.CodeInternalError, "kafka client is closed")
 	}
 	if topic == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "topic cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "topic cannot be empty")
 	}
 
 	metadata, err := kc.admin.DescribeTopics([]string{topic})
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to describe topic")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to describe topic")
 	}
 
 	if len(metadata) == 0 {
-		return nil, errors.New(errors.CodeNotFound, "topic not found")
+		return nil, errors.NewNotFoundError(errors.CodeNotFound, "topic not found")
 	}
 
 	topicMeta := metadata[0]
@@ -873,12 +873,12 @@ func (kc *kafkaClient) TopicExists(ctx context.Context, topic string) (bool, err
 		return false, errors.New(errors.CodeInternalError, "kafka client is closed")
 	}
 	if topic == "" {
-		return false, errors.New(errors.CodeInvalidParameter, "topic cannot be empty")
+		return false, errors.NewValidationError(errors.CodeInvalidParameter, "topic cannot be empty")
 	}
 
 	topics, err := kc.admin.ListTopics()
 	if err != nil {
-		return false, errors.Wrap(err, errors.CodeInternalError, "failed to list topics")
+		return false, errors.WrapInternalError(err, errors.CodeInternalError, "failed to list topics")
 	}
 
 	_, exists := topics[topic]
@@ -891,13 +891,13 @@ func (kc *kafkaClient) CreateConsumerGroup(ctx context.Context, config *Consumer
 		return nil, errors.New(errors.CodeInternalError, "kafka client is closed")
 	}
 	if config == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "consumer group config cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "consumer group config cannot be nil")
 	}
 	if config.GroupID == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "group id cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "group id cannot be empty")
 	}
 	if len(config.Topics) == 0 {
-		return nil, errors.New(errors.CodeInvalidParameter, "topics cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "topics cannot be empty")
 	}
 
 	kc.mu.Lock()
@@ -939,7 +939,7 @@ func (kc *kafkaClient) CreateConsumerGroup(ctx context.Context, config *Consumer
 	// 创建消费者组
 	group, err := sarama.NewConsumerGroup(kc.config.Brokers, config.GroupID, saramaConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to create consumer group")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to create consumer group")
 	}
 
 	groupCtx, cancel := context.WithCancel(context.Background())
@@ -968,7 +968,7 @@ func (kc *kafkaClient) DeleteConsumerGroup(ctx context.Context, groupID string) 
 		return errors.New(errors.CodeInternalError, "kafka client is closed")
 	}
 	if groupID == "" {
-		return errors.New(errors.CodeInvalidParameter, "group id cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "group id cannot be empty")
 	}
 
 	kc.mu.Lock()
@@ -976,7 +976,7 @@ func (kc *kafkaClient) DeleteConsumerGroup(ctx context.Context, groupID string) 
 
 	cg, exists := kc.consumerGroups[groupID]
 	if !exists {
-		return errors.New(errors.CodeNotFound, "consumer group not found")
+		return errors.NewNotFoundError(errors.CodeNotFound, "consumer group not found")
 	}
 
 	if err := cg.Stop(); err != nil {
@@ -996,7 +996,7 @@ func (kc *kafkaClient) ListConsumerGroups(ctx context.Context) ([]string, error)
 
 	groups, err := kc.admin.ListConsumerGroups()
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to list consumer groups")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to list consumer groups")
 	}
 
 	groupList := make([]string, 0, len(groups))
@@ -1013,16 +1013,16 @@ func (kc *kafkaClient) GetConsumerGroupInfo(ctx context.Context, groupID string)
 		return nil, errors.New(errors.CodeInternalError, "kafka client is closed")
 	}
 	if groupID == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "group id cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "group id cannot be empty")
 	}
 
 	groups, err := kc.admin.DescribeConsumerGroups([]string{groupID})
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to describe consumer group")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to describe consumer group")
 	}
 
 	if len(groups) == 0 {
-		return nil, errors.New(errors.CodeNotFound, "consumer group not found")
+		return nil, errors.NewNotFoundError(errors.CodeNotFound, "consumer group not found")
 	}
 
 	group := groups[0]
@@ -1055,7 +1055,7 @@ func (kc *kafkaClient) GetClusterMetadata(ctx context.Context) (*ClusterMetadata
 
 	metadata, err := kc.admin.DescribeCluster()
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to describe cluster")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to describe cluster")
 	}
 
 	brokers := make([]*BrokerInfo, 0, len(metadata.Brokers))
@@ -1069,7 +1069,7 @@ func (kc *kafkaClient) GetClusterMetadata(ctx context.Context) (*ClusterMetadata
 
 	topics, err := kc.admin.ListTopics()
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to list topics")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to list topics")
 	}
 
 	topicList := make([]string, 0, len(topics))
@@ -1093,7 +1093,7 @@ func (kc *kafkaClient) GetBrokers(ctx context.Context) ([]*BrokerInfo, error) {
 
 	metadata, err := kc.admin.DescribeCluster()
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to describe cluster")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to describe cluster")
 	}
 
 	brokers := make([]*BrokerInfo, 0, len(metadata.Brokers))
@@ -1116,7 +1116,7 @@ func (kc *kafkaClient) Ping(ctx context.Context) error {
 	// 通过列出主题来检查连接
 	_, err := kc.admin.ListTopics()
 	if err != nil {
-		return errors.Wrap(err, errors.CodeDatabaseError, "kafka connection check failed")
+		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "kafka connection check failed")
 	}
 
 	return nil
@@ -1220,11 +1220,11 @@ func (c *consumer) Stop() error {
 	c.cancel()
 
 	if err := c.partition.Close(); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to close partition consumer")
+		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to close partition consumer")
 	}
 
 	if err := c.consumer.Close(); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to close consumer")
+		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to close consumer")
 	}
 
 	return nil

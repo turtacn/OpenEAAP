@@ -361,7 +361,7 @@ func (g *generatorImpl) extractSources(answer, context string) []string {
 				parts := strings.Split(line, "来源:")
 				if len(parts) >= 2 {
 					source := strings.TrimSpace(parts[1])
-					if source != "" && !contains(sources, source) {
+					if source != "" && !containsString(sources, source) {
 						sources = append(sources, source)
 					}
 				}
@@ -536,7 +536,7 @@ func checkFactConsistency(answer, context string) bool {
 
 	// 检查答案中的数字是否都在上下文中
 	for _, num := range answerNumbers {
-		if !contains(contextNumbers, num) {
+		if !containsString(contextNumbers, num) {
 			return false
 		}
 	}
@@ -567,8 +567,8 @@ func extractNumbers(text string) []string {
 	return numbers
 }
 
-// contains 检查切片是否包含元素
-func contains(slice []string, item string) bool {
+// containsString 检查切片是否包含元素
+func containsString(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {
 			return true

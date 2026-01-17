@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -186,6 +187,14 @@ type ErrorResponse struct {
 	RequestID string                 `json:"request_id,omitempty" example:"req-123"`
 	Timestamp time.Time              `json:"timestamp" example:"2026-01-15T10:00:00Z"`
 	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// Error implements the error interface for ErrorResponse
+func (e *ErrorResponse) Error() string {
+	if e.Details != "" {
+		return fmt.Sprintf("[%d] %s: %s", e.Code, e.Message, e.Details)
+	}
+	return fmt.Sprintf("[%d] %s", e.Code, e.Message)
 }
 
 // NewErrorResponse 创建错误响应

@@ -6,14 +6,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/internal/platform/runtime"
 	"github.com/openeeap/openeeap/pkg/errors"
-	"github.com/openeeap/openeeap/pkg/logger"
 )
 
 // PluginManager 插件管理器
 type PluginManager struct {
-	logger           logger.Logger
+	logger           logging.Logger
 	loader           *PluginLoader
 	registry         *PluginRegistry
 	versionControl   *VersionControl

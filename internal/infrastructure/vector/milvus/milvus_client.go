@@ -180,7 +180,7 @@ type CollectionStats struct {
 // NewMilvusClient 创建 Milvus 客户端
 func NewMilvusClient(config *MilvusConfig) (MilvusClient, error) {
 	if config == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "config cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "config cannot be nil")
 	}
 
 	// 设置默认值
@@ -202,7 +202,7 @@ func NewMilvusClient(config *MilvusConfig) (MilvusClient, error) {
 		DBName:   config.Database,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to connect to milvus")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to connect to milvus")
 	}
 
 	mc := &milvusClient{
@@ -216,7 +216,7 @@ func NewMilvusClient(config *MilvusConfig) (MilvusClient, error) {
 
 	if err := mc.Ping(ctx); err != nil {
 		c.Close()
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to ping milvus")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to ping milvus")
 	}
 
 	return mc, nil
@@ -225,13 +225,13 @@ func NewMilvusClient(config *MilvusConfig) (MilvusClient, error) {
 // CreateCollection 创建集合
 func (mc *milvusClient) CreateCollection(ctx context.Context, config *CollectionConfig) error {
 	if config == nil {
-		return errors.New(errors.CodeInvalidParameter, "collection config cannot be nil")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "collection config cannot be nil")
 	}
 	if config.Name == "" {
-		return errors.New(errors.CodeInvalidParameter, "collection name cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
 	}
 	if config.Schema == nil || len(config.Schema.Fields) == 0 {
-		return errors.New(errors.CodeInvalidParameter, "collection schema cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "collection schema cannot be empty")
 	}
 
 	// 检查集合是否已存在
@@ -258,7 +258,7 @@ func (mc *milvusClient) CreateCollection(ctx context.Context, config *Collection
 		if fieldSchema.DataType == entity.FieldTypeFloatVector ||
 			fieldSchema.DataType == entity.FieldTypeBinaryVector {
 			if fieldSchema.Dimension <= 0 {
-				return errors.New(errors.CodeInvalidParameter,
+				return errors.NewValidationError(errors.CodeInvalidParameter,
 					fmt.Sprintf("invalid dimension for vector field %s", fieldSchema.Name))
 			}
 			field.TypeParams = map[string]string{
@@ -280,7 +280,7 @@ func (mc *milvusClient) CreateCollection(ctx context.Context, config *Collection
 	// 创建集合
 	err = mc.client.CreateCollection(ctx, schema, config.ShardNum)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeDatabaseError, "failed to create collection")
+		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to create collection")
 	}
 
 	return nil
@@ -289,12 +289,12 @@ func (mc *milvusClient) CreateCollection(ctx context.Context, config *Collection
 // DropCollection 删除集合
 func (mc *milvusClient) DropCollection(ctx context.Context, collectionName string) error {
 	if collectionName == "" {
-		return errors.New(errors.CodeInvalidParameter, "collection name cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
 	}
 
 	err := mc.client.DropCollection(ctx, collectionName)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeDatabaseError, "failed to drop collection")
+		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to drop collection")
 	}
 
 	return nil
@@ -303,12 +303,12 @@ func (mc *milvusClient) DropCollection(ctx context.Context, collectionName strin
 // HasCollection 检查集合是否存在
 func (mc *milvusClient) HasCollection(ctx context.Context, collectionName string) (bool, error) {
 	if collectionName == "" {
-		return false, errors.New(errors.CodeInvalidParameter, "collection name cannot be empty")
+		return false, errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
 	}
 
 	exists, err := mc.client.HasCollection(ctx, collectionName)
 	if err != nil {
-		return false, errors.Wrap(err, errors.CodeDatabaseError, "failed to check collection existence")
+		return false, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to check collection existence")
 	}
 
 	return exists, nil
@@ -317,12 +317,12 @@ func (mc *milvusClient) HasCollection(ctx context.Context, collectionName string
 // DescribeCollection 描述集合
 func (mc *milvusClient) DescribeCollection(ctx context.Context, collectionName string) (*CollectionInfo, error) {
 	if collectionName == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "collection name cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
 	}
 
 	coll, err := mc.client.DescribeCollection(ctx, collectionName)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to describe collection")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to describe collection")
 	}
 
 	// 转换字段架构
@@ -361,7 +361,7 @@ func (mc *milvusClient) DescribeCollection(ctx context.Context, collectionName s
 func (mc *milvusClient) ListCollections(ctx context.Context) ([]string, error) {
 	collections, err := mc.client.ListCollections(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to list collections")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to list collections")
 	}
 
 	names := make([]string, 0, len(collections))
@@ -375,13 +375,13 @@ func (mc *milvusClient) ListCollections(ctx context.Context) ([]string, error) {
 // Insert 插入向量
 func (mc *milvusClient) Insert(ctx context.Context, collectionName string, vectors [][]float32, metadata []map[string]interface{}) ([]int64, error) {
 	if collectionName == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "collection name cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
 	}
 	if len(vectors) == 0 {
-		return nil, errors.New(errors.CodeInvalidParameter, "vectors cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "vectors cannot be empty")
 	}
 	if len(metadata) != len(vectors) {
-		return nil, errors.New(errors.CodeInvalidParameter, "metadata length must match vectors length")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "metadata length must match vectors length")
 	}
 
 	// 获取集合信息
@@ -443,7 +443,7 @@ func (mc *milvusClient) Insert(ctx context.Context, collectionName string, vecto
 	// 插入数据
 	result, err := mc.client.Insert(ctx, collectionName, "", columns...)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to insert vectors")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to insert vectors")
 	}
 
 	return result.IDs().(*entity.ColumnInt64).Data(), nil
@@ -452,10 +452,10 @@ func (mc *milvusClient) Insert(ctx context.Context, collectionName string, vecto
 // Delete 删除向量
 func (mc *milvusClient) Delete(ctx context.Context, collectionName string, ids []int64) error {
 	if collectionName == "" {
-		return errors.New(errors.CodeInvalidParameter, "collection name cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
 	}
 	if len(ids) == 0 {
-		return errors.New(errors.CodeInvalidParameter, "ids cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "ids cannot be empty")
 	}
 
 	// 构建删除表达式
@@ -463,7 +463,7 @@ func (mc *milvusClient) Delete(ctx context.Context, collectionName string, ids [
 
 	err := mc.client.Delete(ctx, collectionName, "", expr)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeDatabaseError, "failed to delete vectors")
+		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to delete vectors")
 	}
 
 	return nil
@@ -472,13 +472,13 @@ func (mc *milvusClient) Delete(ctx context.Context, collectionName string, ids [
 // Search 相似度搜索
 func (mc *milvusClient) Search(ctx context.Context, params *SearchParams) ([]SearchResult, error) {
 	if params == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "search params cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "search params cannot be nil")
 	}
 	if params.CollectionName == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "collection name cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
 	}
 	if len(params.Vectors) == 0 {
-		return nil, errors.New(errors.CodeInvalidParameter, "query vectors cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "query vectors cannot be empty")
 	}
 	if params.TopK <= 0 {
 		params.TopK = 10
@@ -493,7 +493,7 @@ func (mc *milvusClient) Search(ctx context.Context, params *SearchParams) ([]Sea
 	// 构建搜索参数
 	sp, err := entity.NewIndexFlatSearchParam()
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to create search param")
+		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to create search param")
 	}
 
 	// 执行搜索
@@ -511,7 +511,7 @@ func (mc *milvusClient) Search(ctx context.Context, params *SearchParams) ([]Sea
 		client.WithSearchQueryConsistencyLevel(params.ConsistencyLevel),
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to search vectors")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to search vectors")
 	}
 
 	// 转换搜索结果
@@ -544,13 +544,13 @@ func (mc *milvusClient) Search(ctx context.Context, params *SearchParams) ([]Sea
 // HybridSearch 混合检索
 func (mc *milvusClient) HybridSearch(ctx context.Context, params *HybridSearchParams) ([]SearchResult, error) {
 	if params == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "hybrid search params cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "hybrid search params cannot be nil")
 	}
 	if params.CollectionName == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "collection name cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
 	}
 	if len(params.VectorSearches) == 0 {
-		return nil, errors.New(errors.CodeInvalidParameter, "vector searches cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "vector searches cannot be empty")
 	}
 
 	// 执行多个向量搜索
@@ -630,24 +630,24 @@ func (mc *milvusClient) mergeSearchResults(allResults [][]SearchResult, params *
 // CreateIndex 创建索引
 func (mc *milvusClient) CreateIndex(ctx context.Context, collectionName string, fieldName string, indexConfig *IndexConfig) error {
 	if collectionName == "" {
-		return errors.New(errors.CodeInvalidParameter, "collection name cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
 	}
 	if fieldName == "" {
-		return errors.New(errors.CodeInvalidParameter, "field name cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "field name cannot be empty")
 	}
 	if indexConfig == nil {
-		return errors.New(errors.CodeInvalidParameter, "index config cannot be nil")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "index config cannot be nil")
 	}
 
 	// 构建索引
 	idx, err := entity.NewIndexIvfFlat(indexConfig.MetricType, 1024)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to create index")
+		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to create index")
 	}
 
 	err = mc.client.CreateIndex(ctx, collectionName, fieldName, idx, false)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeDatabaseError, "failed to create index")
+		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to create index")
 	}
 
 	return nil
@@ -656,15 +656,15 @@ func (mc *milvusClient) CreateIndex(ctx context.Context, collectionName string, 
 // DropIndex 删除索引
 func (mc *milvusClient) DropIndex(ctx context.Context, collectionName string, fieldName string) error {
 	if collectionName == "" {
-		return errors.New(errors.CodeInvalidParameter, "collection name cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
 	}
 	if fieldName == "" {
-		return errors.New(errors.CodeInvalidParameter, "field name cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "field name cannot be empty")
 	}
 
 	err := mc.client.DropIndex(ctx, collectionName, fieldName)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeDatabaseError, "failed to drop index")
+		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to drop index")
 	}
 
 	return nil
@@ -673,19 +673,19 @@ func (mc *milvusClient) DropIndex(ctx context.Context, collectionName string, fi
 // DescribeIndex 描述索引
 func (mc *milvusClient) DescribeIndex(ctx context.Context, collectionName string, fieldName string) (*IndexInfo, error) {
 	if collectionName == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "collection name cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
 	}
 	if fieldName == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "field name cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "field name cannot be empty")
 	}
 
 	indexes, err := mc.client.DescribeIndex(ctx, collectionName, fieldName)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to describe index")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to describe index")
 	}
 
 	if len(indexes) == 0 {
-		return nil, errors.New(errors.CodeNotFound, "index not found")
+		return nil, errors.NewNotFoundError(errors.CodeNotFound, "index not found")
 	}
 
 	idx := indexes[0]
@@ -699,12 +699,12 @@ func (mc *milvusClient) DescribeIndex(ctx context.Context, collectionName string
 // LoadCollection 加载集合到内存
 func (mc *milvusClient) LoadCollection(ctx context.Context, collectionName string) error {
 	if collectionName == "" {
-		return errors.New(errors.CodeInvalidParameter, "collection name cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
 	}
 
 	err := mc.client.LoadCollection(ctx, collectionName, false)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeDatabaseError, "failed to load collection")
+		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to load collection")
 	}
 
 	return nil
@@ -713,12 +713,12 @@ func (mc *milvusClient) LoadCollection(ctx context.Context, collectionName strin
 // ReleaseCollection 释放集合
 func (mc *milvusClient) ReleaseCollection(ctx context.Context, collectionName string) error {
 	if collectionName == "" {
-		return errors.New(errors.CodeInvalidParameter, "collection name cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
 	}
 
 	err := mc.client.ReleaseCollection(ctx, collectionName)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeDatabaseError, "failed to release collection")
+		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to release collection")
 	}
 
 	return nil
@@ -727,12 +727,12 @@ func (mc *milvusClient) ReleaseCollection(ctx context.Context, collectionName st
 // GetCollectionStatistics 获取集合统计信息
 func (mc *milvusClient) GetCollectionStatistics(ctx context.Context, collectionName string) (*CollectionStats, error) {
 	if collectionName == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "collection name cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
 	}
 
 	stats, err := mc.client.GetCollectionStatistics(ctx, collectionName)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get collection statistics")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get collection statistics")
 	}
 
 	return &CollectionStats{
@@ -744,12 +744,12 @@ func (mc *milvusClient) GetCollectionStatistics(ctx context.Context, collectionN
 // Flush 刷新数据到磁盘
 func (mc *milvusClient) Flush(ctx context.Context, collectionNames ...string) error {
 	if len(collectionNames) == 0 {
-		return errors.New(errors.CodeInvalidParameter, "collection names cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "collection names cannot be empty")
 	}
 
 	err := mc.client.Flush(ctx, collectionNames[0], false)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeDatabaseError, "failed to flush collection")
+		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to flush collection")
 	}
 
 	return nil
@@ -765,7 +765,7 @@ func (mc *milvusClient) Ping(ctx context.Context) error {
 	// 通过列出集合来检查连接状态
 	_, err := mc.client.ListCollections(ctx)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeDatabaseError, "milvus connection check failed")
+		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "milvus connection check failed")
 	}
 	return nil
 }

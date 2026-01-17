@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/pkg/errors"
-	"github.com/openeeap/openeeap/pkg/logger"
 )
 
 // Scheduler 调度器接口

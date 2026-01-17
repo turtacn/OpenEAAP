@@ -8,11 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/openeeap/openeeap/internal/domain/entity"
-	"github.com/openeeap/openeeap/internal/infrastructure/llm"
+	"github.com/openeeap/openeeap/internal/domain/agent"
+	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/internal/platform/runtime"
 	"github.com/openeeap/openeeap/pkg/errors"
-	"github.com/openeeap/openeeap/pkg/logger"
 )
 
 // NativeRuntime 原生运行时实现

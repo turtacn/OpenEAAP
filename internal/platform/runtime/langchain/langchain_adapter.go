@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/internal/platform/runtime"
 	"github.com/openeeap/openeeap/pkg/errors"
-	"github.com/openeeap/openeeap/pkg/logger"
 )
 
 // LangChainAdapter LangChain适配器

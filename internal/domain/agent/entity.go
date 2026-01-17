@@ -693,4 +693,58 @@ func (a *Agent) GetSuccessRate() float64 {
 	return float64(a.Stats.SuccessfulExecutions) / float64(a.Stats.TotalExecutions)
 }
 
+// Clone creates a deep copy of the agent
+func (a *Agent) Clone() *Agent {
+	if a == nil {
+		return nil
+	}
+	
+	clone := &Agent{
+		ID:             a.ID,
+		Name:           a.Name,
+		Description:    a.Description,
+		RuntimeType:    a.RuntimeType,
+		Config:         a.Config, // AgentConfig is value type, automatically copied
+		Status:         a.Status,
+		OwnerID:        a.OwnerID,
+		Version:        a.Version,
+		Model:          a.Model, // ModelInfo is value type, automatically copied
+		Stats:          a.Stats, // ExecutionStats is value type, automatically copied
+		CreatedAt:      a.CreatedAt,
+		UpdatedAt:      a.UpdatedAt,
+	}
+	
+	// Deep copy slices
+	if len(a.Tags) > 0 {
+		clone.Tags = make([]string, len(a.Tags))
+		copy(clone.Tags, a.Tags)
+	}
+	
+	if len(a.Capabilities) > 0 {
+		clone.Capabilities = make([]string, len(a.Capabilities))
+		copy(clone.Capabilities, a.Capabilities)
+	}
+	
+	// Deep copy map
+	if len(a.Metadata) > 0 {
+		clone.Metadata = make(map[string]interface{}, len(a.Metadata))
+		for k, v := range a.Metadata {
+			clone.Metadata[k] = v
+		}
+	}
+	
+	// Copy pointers to time
+	if a.LastExecutedAt != nil {
+		t := *a.LastExecutedAt
+		clone.LastExecutedAt = &t
+	}
+	
+	if a.DeletedAt != nil {
+		t := *a.DeletedAt
+		clone.DeletedAt = &t
+	}
+	
+	return clone
+}
+
 //Personal.AI order the ending
