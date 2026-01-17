@@ -555,7 +555,7 @@ func (l *policyLoader) StartAutoReload(ctx context.Context, interval time.Durati
 	defer l.mu.Unlock()
 
 	if l.autoReloadTicker != nil {
-		return errors.New(errors.CodeAlreadyExists, "auto-reload already started")
+		return errors.New(errors.ConflictError, "auto-reload already started")
 	}
 
 	l.autoReloadTicker = time.NewTicker(interval)
@@ -655,17 +655,17 @@ func (l *policyLoader) loadFromConfigCenter(ctx context.Context) ([]*Policy, err
 
 func (l *policyLoader) validatePolicy(policy *Policy) error {
 	if policy.ID == "" {
-		return errors.New(errors.CodeInvalidArgument, "policy ID is required")
+		return errors.ValidationError( "policy ID is required")
 	}
 	if policy.Name == "" {
-		return errors.New(errors.CodeInvalidArgument, "policy name is required")
+		return errors.ValidationError( "policy name is required")
 	}
 	if policy.Effect != EffectPermit && policy.Effect != EffectDeny {
-		return errors.New(errors.CodeInvalidArgument,
+		return errors.ValidationError(
 			fmt.Sprintf("invalid policy effect: %s", policy.Effect))
 	}
 	if policy.Type != PolicyTypeRBAC && policy.Type != PolicyTypeABAC {
-		return errors.New(errors.CodeInvalidArgument,
+		return errors.ValidationError(
 			fmt.Sprintf("invalid policy type: %s", policy.Type))
 	}
 

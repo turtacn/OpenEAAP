@@ -161,11 +161,11 @@ func NewRouter(
 // RegisterEngine registers an inference engine
 func (r *Router) RegisterEngine(config *EngineConfig) error {
 	if config.Name == "" {
-		return errors.New(errors.CodeInvalidArgument, "engine name is required")
+		return errors.ValidationError( "engine name is required")
 	}
 
 	if config.Engine == nil {
-		return errors.New(errors.CodeInvalidArgument, "engine instance is required")
+		return errors.ValidationError( "engine instance is required")
 	}
 
 	r.enginesMu.Lock()
@@ -212,7 +212,7 @@ func (r *Router) UnregisterEngine(name string) error {
 // AddRoutingRule adds a routing rule
 func (r *Router) AddRoutingRule(rule *RoutingRule) error {
 	if rule.Name == "" {
-		return errors.New(errors.CodeInvalidArgument, "rule name is required")
+		return errors.ValidationError( "rule name is required")
 	}
 
 	r.rulesMu.Lock()

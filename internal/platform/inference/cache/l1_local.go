@@ -90,7 +90,7 @@ func (c *L1LocalCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 // Set stores an entry in L1 cache
 func (c *L1LocalCache) Set(ctx context.Context, entry *CacheEntry) error {
 	if entry == nil {
-		return errors.New(errors.CodeInvalidArgument, "cache entry cannot be nil")
+		return errors.ValidationError( "cache entry cannot be nil")
 	}
 
 	c.entryMu.Lock()

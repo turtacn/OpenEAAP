@@ -681,7 +681,7 @@ func (s *auditQueryService) ExportReport(ctx context.Context, report *AuditRepor
 	case FormatPDF:
 		return s.exportPDF(report, writer)
 	default:
-		return errors.New(errors.CodeInvalidArgument,
+		return errors.ValidationError(
 			fmt.Sprintf("unsupported export format: %s", format))
 	}
 }
@@ -1513,7 +1513,7 @@ func (s *auditQueryService) exportHTML(report *AuditReport, writer io.Writer) er
 
 func (s *auditQueryService) exportPDF(report *AuditReport, writer io.Writer) error {
 	// 简化：PDF 生成需要第三方库
-	return errors.New(errors.CodeUnimplemented, "PDF export not implemented")
+	return errors.InternalError( "PDF export not implemented")
 }
 
 // Utility functions

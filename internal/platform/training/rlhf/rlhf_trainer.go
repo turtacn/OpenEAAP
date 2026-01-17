@@ -819,7 +819,7 @@ func (b *deepspeedBackend) Initialize(ctx context.Context, config *DistributedCo
 	defer b.mu.Unlock()
 
 	if b.initialized {
-		return errors.New(errors.CodeAlreadyExists, "backend already initialized")
+		return errors.New(errors.ConflictError, "backend already initialized")
 	}
 
 	b.config = config
@@ -938,7 +938,7 @@ func (b *megatronBackend) Initialize(ctx context.Context, config *DistributedCon
 	defer b.mu.Unlock()
 
 	if b.initialized {
-		return errors.New(errors.CodeAlreadyExists, "backend already initialized")
+		return errors.New(errors.ConflictError, "backend already initialized")
 	}
 
 	b.config = config

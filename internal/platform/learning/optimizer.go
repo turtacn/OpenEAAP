@@ -389,7 +389,7 @@ func (o *optimizer) GeneratePromptSuggestions(ctx context.Context, modelID strin
 
 	currentPrompt := o.extractPrompt(mdl)
 	if currentPrompt == "" {
-		return nil, errors.New(errors.CodeInvalidArgument, "no prompt found in model config")
+		return nil, errors.ValidationError( "no prompt found in model config")
 	}
 
 	// 分析问题模式
@@ -531,7 +531,7 @@ func (o *optimizer) ApplyOptimization(ctx context.Context, plan *OptimizationPla
 	o.logger.WithContext(ctx).Info("Applying optimization plan", logging.Any("plan_id", plan.ID))
 
 	if plan.Status != "pending" && plan.Status != "approved" {
-		return errors.New(errors.CodeInvalidArgument,
+		return errors.ValidationError(
 			fmt.Sprintf("cannot apply plan with status: %s", plan.Status))
 	}
 
@@ -1026,7 +1026,7 @@ func (o *optimizer) applyRecommendation(ctx context.Context, modelID string, rec
 	case "strategy_optimization":
 		return o.applyStrategyOptimization(ctx, modelID, rec)
 	default:
-		return errors.New(errors.CodeInvalidArgument,
+		return errors.ValidationError(
 			fmt.Sprintf("unknown recommendation type: %s", rec.Type))
 	}
 }

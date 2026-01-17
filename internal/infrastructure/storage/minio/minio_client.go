@@ -362,7 +362,7 @@ func (mc *minioClient) CreateBucket(ctx context.Context, config *BucketConfig) e
 		return err
 	}
 	if exists {
-		return errors.NewInternalError(errors.CodeAlreadyExists, "bucket already exists")
+		return errors.ConflictError("bucket already exists")
 	}
 
 	// 创建存储桶选项

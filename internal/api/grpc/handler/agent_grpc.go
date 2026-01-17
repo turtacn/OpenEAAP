@@ -438,7 +438,7 @@ func (h *AgentGRPCHandler) handleError(err error) error {
 		switch appErr.Code {
 		case pkgerrors.CodeNotFound:
 			return status.Error(codes.NotFound, appErr.Message)
-		case pkgerrors.CodeAlreadyExists:
+		case pkgerrors.ConflictError:
 			return status.Error(codes.AlreadyExists, appErr.Message)
 		case pkgerrors.CodeInvalidArgument:
 			return status.Error(codes.InvalidArgument, appErr.Message)

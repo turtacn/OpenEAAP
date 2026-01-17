@@ -1038,13 +1038,13 @@ func (s *agentService) ImportAgent(ctx context.Context, data *AgentExport) (*Age
 
 func (s *agentService) validateCreateRequest(ctx context.Context, req *CreateAgentRequest) error {
 	if req.Name == "" {
-		return errors.New(errors.CodeInvalidArgument, "name is required")
+		return errors.ValidationError( "name is required")
 	}
 	if req.ModelID == "" {
-		return errors.New(errors.CodeInvalidArgument, "model_id is required")
+		return errors.ValidationError( "model_id is required")
 	}
 	if req.Type == "" {
-		return errors.New(errors.CodeInvalidArgument, "type is required")
+		return errors.ValidationError( "type is required")
 	}
 	return nil
 }

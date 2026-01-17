@@ -152,7 +152,7 @@ func (r *workflowRepo) Create(ctx context.Context, wf *workflow.Workflow) error 
 		// 创建 Workflow
 		if err := tx.Create(model).Error; err != nil {
 			if isDuplicateKeyError(err) {
-				return errors.Wrap(err, errors.CodeAlreadyExists, "workflow already exists")
+				return errors.Wrap(err, errors.ConflictError, "workflow already exists")
 			}
 			return errors.Wrap(err, errors.CodeDatabaseError, "failed to create workflow")
 		}

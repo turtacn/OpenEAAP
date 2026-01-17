@@ -898,7 +898,7 @@ func NewInMemoryPolicyRepository() PolicyRepository {
 
 func (r *InMemoryPolicyRepository) Create(ctx context.Context, policy *Policy) error {
 	if _, exists := r.policies.Load(policy.ID); exists {
-		return errors.NewInternalError(errors.CodeAlreadyExists, "policy already exists")
+		return errors.ConflictError("policy already exists")
 	}
 
 	r.policies.Store(policy.ID, policy)

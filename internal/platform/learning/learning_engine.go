@@ -438,13 +438,13 @@ func (e *learningEngine) subscribeFeedbackQueue(ctx context.Context) error {
 // validateFeedback 验证反馈数据
 func (e *learningEngine) validateFeedback(feedback *Feedback) error {
 	if feedback.ModelID == "" {
-		return errors.New(errors.CodeInvalidArgument, "model_id is required")
+		return errors.ValidationError( "model_id is required")
 	}
 	if feedback.Input == "" {
-		return errors.New(errors.CodeInvalidArgument, "input is required")
+		return errors.ValidationError( "input is required")
 	}
 	if feedback.Rating < 1 || feedback.Rating > 5 {
-		return errors.New(errors.CodeInvalidArgument, "rating must be between 1 and 5")
+		return errors.ValidationError( "rating must be between 1 and 5")
 	}
 	return nil
 }

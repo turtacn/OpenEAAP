@@ -121,7 +121,7 @@ func (r *modelRepo) Create(ctx context.Context, mdl *model.Model) error {
 	// 执行创建
 	if err := r.db.WithContext(ctx).Create(dbModel).Error; err != nil {
 		if isDuplicateKeyError(err) {
-			return errors.Wrap(err, errors.CodeAlreadyExists, "model already exists")
+			return errors.Wrap(err, errors.ConflictError, "model already exists")
 		}
 		return errors.Wrap(err, errors.CodeDatabaseError, "failed to create model")
 	}
@@ -411,7 +411,7 @@ func (r *modelRepo) CreateVersion(ctx context.Context, version *model.ModelVersi
 
 	if err := r.db.WithContext(ctx).Create(versionModel).Error; err != nil {
 		if isDuplicateKeyError(err) {
-			return errors.Wrap(err, errors.CodeAlreadyExists, "model version already exists")
+			return errors.Wrap(err, errors.ConflictError, "model version already exists")
 		}
 		return errors.Wrap(err, errors.CodeDatabaseError, "failed to create model version")
 	}

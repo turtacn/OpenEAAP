@@ -59,7 +59,7 @@ type vectorCacheEntry struct {
 // NewL3VectorCache creates a new L3 vector cache instance
 func NewL3VectorCache(logger logging.Logger, config *VectorConfig) (*L3VectorCache, error) {
 	if config == nil {
-		return nil, errors.New(errors.CodeInvalidArgument, "vector config cannot be nil")
+		return nil, errors.ValidationError( "vector config cannot be nil")
 	}
 
 	// Connect to Milvus
@@ -185,7 +185,7 @@ func (c *L3VectorCache) Get(ctx context.Context, key string) (*CacheEntry, error
 // Set stores an entry in L3 vector cache
 func (c *L3VectorCache) Set(ctx context.Context, entry *CacheEntry) error {
 	if entry == nil {
-		return errors.New(errors.CodeInvalidArgument, "cache entry cannot be nil")
+		return errors.ValidationError( "cache entry cannot be nil")
 	}
 
 	startTime := time.Now()

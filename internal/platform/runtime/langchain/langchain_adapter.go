@@ -662,7 +662,7 @@ func (lca *LangChainAdapter) LoadPlugin(ctx context.Context, plugin *runtime.Plu
 
 	// 检查插件是否已加载
 	if _, exists := lca.plugins[plugin.ID]; exists {
-		return errors.NewInternalError(errors.CodeAlreadyExists, "plugin already loaded")
+		return errors.ConflictError("plugin already loaded")
 	}
 
 	// 验证插件

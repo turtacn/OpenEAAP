@@ -72,7 +72,7 @@ type KafkaConfig struct {
 	ConsumerConfig    *ConsumerConfig    // 消费者配置
 	CompressionCodec  CompressionCodec   // 压缩编解码器
 	EnableIdempotence bool          // 启用幂等性
-	Logger            logger.Logger // 日志记录器
+	Logger            logging.Logger // 日志记录器
 }
 
 // SASLConfig SASL 配置
@@ -251,7 +251,7 @@ type consumer struct {
 	mu           sync.RWMutex
 	ctx          context.Context
 	cancel       context.CancelFunc
-	logger       logger.Logger
+	logger       logging.Logger
 }
 
 // TopicConfig 主题配置
@@ -317,7 +317,7 @@ type consumerGroup struct {
 	mu           sync.RWMutex
 	ctx          context.Context
 	cancel       context.CancelFunc
-	logger       logger.Logger
+	logger       logging.Logger
 }
 
 // ConsumerGroupInfo 消费者组信息
@@ -688,7 +688,7 @@ func (kc *kafkaClient) Subscribe(ctx context.Context, req *SubscribeRequest) (Co
 	defer kc.mu.Unlock()
 
 	if _, exists := kc.consumers[req.ConsumerID]; exists {
-		return nil, errors.NewInternalError(errors.CodeAlreadyExists, "consumer already exists")
+		return nil, errors.ConflictError("consumer already exists")
 	}
 
 	// 创建 Sarama 配置
@@ -904,7 +904,7 @@ func (kc *kafkaClient) CreateConsumerGroup(ctx context.Context, config *Consumer
 	defer kc.mu.Unlock()
 
 	if _, exists := kc.consumerGroups[config.GroupID]; exists {
-		return nil, errors.NewInternalError(errors.CodeAlreadyExists, "consumer group already exists")
+		return nil, errors.ConflictError("consumer group already exists")
 	}
 
 	// 创建 Sarama 配置
@@ -1145,16 +1145,16 @@ func (kc *kafkaClient) Close() error {
 
 	// 关闭生产者
 	if err := kc.producer.Close(); err != nil {
-		kc.logger.Error("failed to close producer", "error", err)
+		kc.logger.Error("failed to close producer", logging.Error(err))
 	}
 
 	if err := kc.asyncProducer.Close(); err != nil {
-		kc.logger.Error("failed to close async producer", "error", err)
+		kc.logger.Error("failed to close async producer", logging.Error(err))
 	}
 
 	// 关闭管理客户端
 	if err := kc.admin.Close(); err != nil {
-		kc.logger.Error("failed to close admin", "error", err)
+		kc.logger.Error("failed to close admin", logging.Error(err))
 	}
 
 	return nil
@@ -1266,7 +1266,7 @@ func (c *consumer) GetOffset() int64 {
 type consumerGroupHandler struct {
 	handler      MessageHandler
 	errorHandler ErrorHandler
-	logger       logger.Logger
+	logger       logging.Logger
 }
 
 // Setup 设置

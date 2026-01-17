@@ -146,7 +146,7 @@ func (r *rerankerImpl) Rerank(ctx context.Context, req *RerankRequest) ([]*Retri
 	case RerankMethodHybrid:
 		rerankedChunks, err = r.rerankByHybrid(ctx, req.Query, req.Chunks)
 	default:
-		return nil, errors.New(errors.CodeInvalidArgument,
+		return nil, errors.ValidationError(
 			fmt.Sprintf("unsupported rerank method: %s", req.Method))
 	}
 
@@ -330,7 +330,7 @@ func (r *rerankerImpl) calculateSimilarity(text1, text2 string) float32 {
 // rerankByModel 使用ML模型重排序
 func (r *rerankerImpl) rerankByModel(ctx context.Context, query string, chunks []*RetrievedChunk) ([]*RetrievedChunk, error) {
 	if r.modelClient == nil {
-		return nil, errors.New(errors.CodeUnimplemented, "rerank model client not configured")
+		return nil, errors.InternalError("rerank model client not configured")
 	}
 
 	r.logger.WithContext(ctx).Debug("reranking by model")

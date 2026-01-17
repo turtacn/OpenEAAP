@@ -382,7 +382,7 @@ func (s *trainingService) StartTask(ctx context.Context, taskID string) error {
 
 	// 检查状态
 	if task.Status != TaskStatusPending && task.Status != TaskStatusPaused {
-		return errors.New(errors.CodeInvalidArgument,
+		return errors.ValidationError(
 			fmt.Sprintf("cannot start task with status: %s", task.Status))
 	}
 
@@ -427,7 +427,7 @@ func (s *trainingService) StopTask(ctx context.Context, taskID string) error {
 
 	// 检查状态
 	if task.Status != TaskStatusRunning && task.Status != TaskStatusPaused {
-		return errors.New(errors.CodeInvalidArgument,
+		return errors.ValidationError(
 			fmt.Sprintf("cannot stop task with status: %s", task.Status))
 	}
 
@@ -470,7 +470,7 @@ func (s *trainingService) PauseTask(ctx context.Context, taskID string) error {
 	}
 
 	if task.Status != TaskStatusRunning {
-		return errors.New(errors.CodeInvalidArgument,
+		return errors.ValidationError(
 			fmt.Sprintf("cannot pause task with status: %s", task.Status))
 	}
 
@@ -507,7 +507,7 @@ func (s *trainingService) ResumeTask(ctx context.Context, taskID string) error {
 	}
 
 	if task.Status != TaskStatusPaused {
-		return errors.New(errors.CodeInvalidArgument,
+		return errors.ValidationError(
 			fmt.Sprintf("cannot resume task with status: %s", task.Status))
 	}
 

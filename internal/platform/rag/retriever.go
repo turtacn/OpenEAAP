@@ -158,7 +158,7 @@ func (r *retrieverImpl) Retrieve(ctx context.Context, req *RetrieveRequest) ([]*
 	case RetrievalModeHybrid:
 		chunks, err = r.hybridRetrieval(ctx, req)
 	default:
-		return nil, errors.New(errors.CodeInvalidArgument,
+		return nil, errors.ValidationError(
 			fmt.Sprintf("unsupported retrieval mode: %s", req.Mode))
 	}
 
@@ -223,7 +223,7 @@ func (r *retrieverImpl) vectorRetrieval(ctx context.Context, req *RetrieveReques
 // keywordRetrieval 关键词检索
 func (r *retrieverImpl) keywordRetrieval(ctx context.Context, req *RetrieveRequest) ([]*RetrievedChunk, error) {
 	if r.searchEngine == nil {
-		return nil, errors.New(errors.CodeUnimplemented, "search engine not configured")
+		return nil, errors.InternalError( "search engine not configured")
 	}
 
 	r.logger.WithContext(ctx).Debug("performing keyword retrieval", logging.Any("query", req.Query))
@@ -254,7 +254,7 @@ func (r *retrieverImpl) keywordRetrieval(ctx context.Context, req *RetrieveReque
 // graphRetrieval 知识图谱检索
 func (r *retrieverImpl) graphRetrieval(ctx context.Context, req *RetrieveRequest) ([]*RetrievedChunk, error) {
 	if r.knowledgeGraph == nil {
-		return nil, errors.New(errors.CodeUnimplemented, "knowledge graph not configured")
+		return nil, errors.InternalError( "knowledge graph not configured")
 	}
 
 	r.logger.WithContext(ctx).Debug("performing graph retrieval", logging.Any("query", req.Query))
