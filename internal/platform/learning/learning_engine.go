@@ -216,7 +216,7 @@ func (e *learningEngine) ProcessFeedback(ctx context.Context, feedback *Feedback
 
 	startTime := time.Now()
 	defer func() {
-		e.metricsCollector.RecordDuration("learning_process_feedback_duration_ms",
+		e.metricsCollector.ObserveDuration("learning_process_feedback_duration_ms",
 			float64(time.Since(startTime).Milliseconds()),
 			map[string]string{"model_id": feedback.ModelID})
 	}()

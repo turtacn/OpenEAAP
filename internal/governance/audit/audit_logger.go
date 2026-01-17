@@ -749,7 +749,7 @@ func (a *auditLogger) recordMetrics(entry *AuditEntry) {
 		})
 
 	if entry.Duration > 0 {
-		a.metricsCollector.RecordDuration("audit_operation_duration_ms",
+		a.metricsCollector.ObserveDuration("audit_operation_duration_ms",
 			float64(entry.Duration.Milliseconds()),
 			map[string]string{
 				"event_type": string(entry.EventType),

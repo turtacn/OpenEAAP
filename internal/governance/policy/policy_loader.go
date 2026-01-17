@@ -176,7 +176,7 @@ func (l *policyLoader) Load(ctx context.Context) ([]*Policy, error) {
 	startTime := time.Now()
 	defer func() {
 		duration := time.Since(startTime)
-		l.metricsCollector.RecordDuration("policy_load_duration_ms",
+		l.metricsCollector.ObserveDuration("policy_load_duration_ms",
 			float64(duration.Milliseconds()),
 			map[string]string{"source": "all"})
 	}()

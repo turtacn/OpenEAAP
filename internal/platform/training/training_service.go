@@ -314,7 +314,7 @@ func (s *trainingService) CreateTask(ctx context.Context, req *TrainingRequest) 
 
 	startTime := time.Now()
 	defer func() {
-		// s.metricsCollector.RecordDuration("training_create_task_duration_ms",
+		// s.metricsCollector.ObserveDuration("training_create_task_duration_ms",
 		// 	float64(time.Since(startTime).Milliseconds()),
 		// 	map[string]string{"training_type": string(req.TrainingType)})
 		_ = startTime // Suppress unused variable warning

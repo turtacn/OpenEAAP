@@ -177,7 +177,7 @@ func (t *dpoTrainer) Train(ctx context.Context, task *training.TrainingTask, dat
 	startTime := time.Now()
 	defer func() {
 		duration := time.Since(startTime)
-		t.metricsCollector.RecordDuration("dpo_training_duration_seconds",
+		t.metricsCollector.ObserveDuration("dpo_training_duration_seconds",
 			duration.Seconds(),
 			map[string]string{"task_id": task.ID})
 	}()
@@ -382,7 +382,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 			if batchCount%t.trainingConfig.LoggingSteps == 0 {
     t.logger.WithContext(ctx).Debug("Batch training", logging.Any("epoch", epoch+1), logging.Any("batch", batchCount), logging.Any("loss", loss))
 
-				t.metricsCollector.RecordDuration("dpo_batch_loss",
+				t.metricsCollector.ObserveDuration("dpo_batch_loss",
 					loss,
 					map[string]string{
 						"task_id": task.ID,
@@ -397,7 +397,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 
   t.logger.WithContext(ctx).Info("Epoch completed", logging.Any("epoch", epoch+1), logging.Any("avg_loss", avgEpochLoss))
 
-		t.metricsCollector.RecordDuration("dpo_epoch_loss",
+		t.metricsCollector.ObserveDuration("dpo_epoch_loss",
 			avgEpochLoss,
 			map[string]string{
 				"task_id": task.ID,
@@ -865,7 +865,7 @@ func (t *dpoTrainer) updateTaskProgress(ctx context.Context, task *training.Trai
 
  t.logger.WithContext(ctx).Debug("Task progress updated", logging.Any("task_id", task.ID), logging.Any("progress", task.Progress))
 
-	t.metricsCollector.RecordDuration("dpo_training_progress",
+	t.metricsCollector.ObserveDuration("dpo_training_progress",
 		task.Progress,
 		map[string]string{"task_id": task.ID})
 }

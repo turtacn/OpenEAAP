@@ -190,7 +190,7 @@ func (t *rlhfTrainer) Train(ctx context.Context, task *training.TrainingTask, da
 	startTime := time.Now()
 	defer func() {
 		duration := time.Since(startTime)
-		t.metricsCollector.RecordDuration("rlhf_training_duration_seconds",
+		t.metricsCollector.ObserveDuration("rlhf_training_duration_seconds",
 			duration.Seconds(),
 			map[string]string{"task_id": task.ID})
 	}()
@@ -378,11 +378,11 @@ func (t *rlhfTrainer) TrainPPO(ctx context.Context, task *training.TrainingTask,
 			if step%t.config.SFTConfig.LoggingSteps == 0 {
     t.logger.WithContext(ctx).Info("PPO training progress", logging.Any("step", step), logging.Any("epoch", epoch), logging.Any("loss", loss), logging.Any("kl_divergence", klDiv), logging.Any("mean_reward", mean(rewards))
 
-				t.metricsCollector.RecordDuration("ppo_loss", loss,
+				t.metricsCollector.ObserveDuration("ppo_loss", loss,
 					map[string]string{"task_id": task.ID})
-				t.metricsCollector.RecordDuration("ppo_kl_divergence", klDiv,
+				t.metricsCollector.ObserveDuration("ppo_kl_divergence", klDiv,
 					map[string]string{"task_id": task.ID})
-				t.metricsCollector.RecordDuration("ppo_mean_reward", mean(rewards),
+				t.metricsCollector.ObserveDuration("ppo_mean_reward", mean(rewards),
 					map[string]string{"task_id": task.ID})
 			}
 
@@ -718,7 +718,7 @@ func (t *rlhfTrainer) updateTaskProgress(ctx context.Context, task *training.Tra
 
  t.logger.WithContext(ctx).Debug("Task progress updated", logging.Any("task_id", task.ID), logging.Any("progress", task.Progress))
 
-	t.metricsCollector.RecordDuration("rlhf_training_progress",
+	t.metricsCollector.ObserveDuration("rlhf_training_progress",
 		task.Progress,
 		map[string]string{"task_id": task.ID})
 }
@@ -855,7 +855,7 @@ func (b *deepspeedBackend) Train(ctx context.Context, config *TrainingConfig) er
 
 		// 记录指标
 		loss := 2.0 - float64(epoch)*0.1
-		b.metricsCollector.RecordDuration("deepspeed_training_loss",
+		b.metricsCollector.ObserveDuration("deepspeed_training_loss",
 			loss,
 			map[string]string{"epoch": fmt.Sprintf("%d", epoch)})
 
@@ -971,7 +971,7 @@ func (b *megatronBackend) Train(ctx context.Context, config *TrainingConfig) err
 		time.Sleep(100 * time.Millisecond)
 
 		loss := 2.0 - float64(epoch)*0.1
-		b.metricsCollector.RecordDuration("megatron_training_loss",
+		b.metricsCollector.ObserveDuration("megatron_training_loss",
 			loss,
 			map[string]string{"epoch": fmt.Sprintf("%d", epoch)})
 	}

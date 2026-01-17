@@ -502,13 +502,13 @@ func (c *VLLMClient) recordMetrics(operation, status string, latency time.Durati
 		return
 	}
 
-	c.metricsCollector.IncrementCounter("vllm_requests_total", 1,
+	c.metricsCollector.IncrementCounter("vllm_requests_total",
 		map[string]string{
 			"operation": operation,
 			"status":    status,
 		})
 
-	c.metricsCollector.RecordDuration("vllm_request_latency_ms", float64(latency.Milliseconds()),
+	c.metricsCollector.ObserveDuration("vllm_request_latency_ms", float64(latency.Milliseconds()),
 		map[string]string{
 			"operation": operation,
 		})

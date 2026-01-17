@@ -243,7 +243,7 @@ func (p *pdp) Evaluate(ctx context.Context, request *AccessRequest) (*Decision, 
 	startTime := time.Now()
 	defer func() {
 		if p.config.EnableMetrics {
-			p.metricsCollector.RecordDuration("pdp_evaluation_duration_ms",
+			p.metricsCollector.ObserveDuration("pdp_evaluation_duration_ms",
 				float64(time.Since(startTime).Milliseconds()),
 				map[string]string{"resource_type": request.Resource.Type})
 		}

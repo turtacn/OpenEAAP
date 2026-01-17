@@ -196,7 +196,7 @@ func (o *optimizer) Analyze(ctx context.Context, modelID string) (*OptimizationP
 
 	startTime := time.Now()
 	defer func() {
-		o.metricsCollector.RecordDuration("optimizer_analyze_duration_ms",
+		o.metricsCollector.ObserveDuration("optimizer_analyze_duration_ms",
 			float64(time.Since(startTime).Milliseconds()),
 			map[string]string{"model_id": modelID})
 	}()
@@ -365,7 +365,7 @@ func (o *optimizer) PrepareTrainingData(ctx context.Context, modelID string) (*T
 		},
 	}
 
-	o.metricsCollector.RecordDuration("optimizer_training_samples",
+	o.metricsCollector.ObserveDuration("optimizer_training_samples",
 		float64(len(samples)),
 		map[string]string{"model_id": modelID})
 

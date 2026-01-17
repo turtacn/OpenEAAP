@@ -246,7 +246,7 @@ func (g *Gateway) Infer(ctx context.Context, req *InferenceRequest) (*InferenceR
 
 	// Record metrics
 	g.recordMetrics("infer", "success", resp.Latency)
-	g.metricsCollector.RecordDuration("inference_latency_ms", float64(resp.Latency.Milliseconds()),
+	g.metricsCollector.ObserveDuration("inference_latency_ms", float64(resp.Latency.Milliseconds()),
 		map[string]string{
 			"model":  req.Model,
 			"cached": fmt.Sprintf("%v", resp.Cached),
@@ -359,7 +359,7 @@ func (g *Gateway) InferStream(ctx context.Context, req *InferenceRequest) (<-cha
 		totalLatency := time.Since(startTime)
 
 		g.recordMetrics("infer_stream", "completed", totalLatency)
-		g.metricsCollector.RecordDuration("inference_stream_latency_ms", float64(totalLatency.Milliseconds()),
+		g.metricsCollector.ObserveDuration("inference_stream_latency_ms", float64(totalLatency.Milliseconds()),
 			map[string]string{
 				"model":  req.Model,
 				"engine": engine.Name(),
@@ -409,13 +409,13 @@ func (g *Gateway) recordMetrics(operation, status string, latency time.Duration)
 		return
 	}
 
-	g.metricsCollector.IncrementCounter("gateway_requests_total", 1,
+	g.metricsCollector.IncrementCounter("gateway_requests_total",
 		map[string]string{
 			"operation": operation,
 			"status":    status,
 		})
 
-	g.metricsCollector.RecordDuration("gateway_operation_latency_ms", float64(latency.Milliseconds()),
+	g.metricsCollector.ObserveDuration("gateway_operation_latency_ms", float64(latency.Milliseconds()),
 		map[string]string{
 			"operation": operation,
 			"status":    status,

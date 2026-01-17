@@ -591,7 +591,7 @@ func (p *pep) recordError() {
 }
 
 func (p *pep) recordMetrics(request *AccessRequest, decision *Decision, duration time.Duration) {
-	p.metricsCollector.RecordDuration("pep_enforcement_duration_ms",
+	p.metricsCollector.ObserveDuration("pep_enforcement_duration_ms",
 		float64(duration.Milliseconds()),
 		map[string]string{
 			"resource_type": request.Resource.Type,

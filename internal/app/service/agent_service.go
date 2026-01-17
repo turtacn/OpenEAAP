@@ -305,7 +305,7 @@ func (s *agentService) CreateAgent(ctx context.Context, req *CreateAgentRequest)
 
 	startTime := time.Now()
 	defer func() {
-		s.metricsCollector.RecordDuration("agent_create_duration_ms",
+		s.metricsCollector.ObserveDuration("agent_create_duration_ms",
 			float64(time.Since(startTime).Milliseconds()),
 			map[string]string{"type": string(req.Type)})
 	}()
@@ -561,7 +561,7 @@ func (s *agentService) DeployAgent(ctx context.Context, agentID string, req *Dep
 
 	startTime := time.Now()
 	defer func() {
-		s.metricsCollector.RecordDuration("agent_deploy_duration_ms",
+		s.metricsCollector.ObserveDuration("agent_deploy_duration_ms",
 			float64(time.Since(startTime).Milliseconds()),
 			map[string]string{"environment": req.Environment})
 	}()
@@ -803,7 +803,7 @@ func (s *agentService) ExecuteAgent(ctx context.Context, agentID string, req *Ex
 	s.metricsCollector.IncrementCounter("agent_executions_success_total",
 		map[string]string{"agent_id": agentID})
 
-	s.metricsCollector.RecordDuration("agent_execution_duration_ms",
+	s.metricsCollector.ObserveDuration("agent_execution_duration_ms",
 		float64(duration.Milliseconds()),
 		map[string]string{"agent_id": agentID})
 

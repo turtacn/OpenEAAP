@@ -751,13 +751,13 @@ func (r *Router) recordRoutingMetrics(strategy, engine string, latency time.Dura
 		return
 	}
 
-	r.metricsCollector.IncrementCounter("router_route_total", 1,
+	r.metricsCollector.IncrementCounter("router_route_total",
 		map[string]string{
 			"strategy": strategy,
 			"engine":   engine,
 		})
 
-	r.metricsCollector.RecordDuration("router_route_latency_ms", float64(latency.Milliseconds()),
+	r.metricsCollector.ObserveDuration("router_route_latency_ms", float64(latency.Milliseconds()),
 		map[string]string{
 			"strategy": strategy,
 		})

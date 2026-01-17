@@ -491,14 +491,14 @@ func (g *PrivacyGateway) recordMetrics(direction string, action PrivacyAction, h
 		return
 	}
 
-	g.metricsCollector.IncrementCounter("privacy_gateway_requests_total", 1,
-		map[string]string{
+	g.metricsCollector.IncrementCounter("privacy_gateway_requests_total",
+		prometheus.Labels{
 			"direction": direction,
 			"action":    string(action),
 			"has_pii":   fmt.Sprintf("%t", hasPII),
 		})
 
-	g.metricsCollector.RecordDuration("privacy_gateway_latency_ms", float64(latency.Milliseconds()),
+	g.metricsCollector.ObserveDuration("privacy_gateway_latency_ms", float64(latency.Milliseconds()),
 		map[string]string{
 			"direction": direction,
 		})

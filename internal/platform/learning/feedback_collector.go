@@ -199,7 +199,7 @@ func (c *feedbackCollector) Collect(ctx context.Context, feedback *Feedback) err
 
 	startTime := time.Now()
 	defer func() {
-		c.metricsCollector.RecordDuration("feedback_collect_duration_ms",
+		c.metricsCollector.ObserveDuration("feedback_collect_duration_ms",
 			float64(time.Since(startTime).Milliseconds()),
 			map[string]string{"model_id": feedback.ModelID})
 	}()
@@ -272,7 +272,7 @@ func (c *feedbackCollector) CollectBatch(ctx context.Context, feedbacks []*Feedb
 
 	startTime := time.Now()
 	defer func() {
-		c.metricsCollector.RecordDuration("feedback_collect_batch_duration_ms",
+		c.metricsCollector.ObserveDuration("feedback_collect_batch_duration_ms",
 			float64(time.Since(startTime).Milliseconds()),
 			map[string]string{"batch_size": fmt.Sprintf("%d", len(feedbacks))})
 	}()
@@ -544,7 +544,7 @@ func (e *autoEvaluator) Evaluate(ctx context.Context, input, output string) (*Au
 	totalScore := (relevanceScore + completenessScore + accuracyScore + fluencyScore + metrics["safety"]) / 5.0
 	confidence := e.calculateConfidence(metrics)
 
-	e.metricsCollector.RecordDuration("auto_evaluation_score", totalScore, nil)
+	e.metricsCollector.ObserveDuration("auto_evaluation_score", totalScore, nil)
 
 	return &AutoEvaluation{
 		Score:       totalScore,
