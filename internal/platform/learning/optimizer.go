@@ -196,7 +196,7 @@ func (o *optimizer) Analyze(ctx context.Context, modelID string) (*OptimizationP
 
 	startTime := time.Now()
 	defer func() {
-		o.metricsCollector.Histogram("optimizer_analyze_duration_ms",
+		o.metricsCollector.ObserveDuration("optimizer_analyze_duration_ms",
 			float64(time.Since(startTime).Milliseconds()),
 			map[string]string{"model_id": modelID})
 	}()
@@ -206,7 +206,7 @@ func (o *optimizer) Analyze(ctx context.Context, modelID string) (*OptimizationP
 	// 获取反馈统计
 	stats, err := o.feedbackCollector.GetStats(ctx, modelID)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to get feedback stats")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to get feedback stats")
 	}
 
 	if stats.TotalCount < int64(o.config.MinFeedbackCount) {
@@ -222,7 +222,7 @@ func (o *optimizer) Analyze(ctx context.Context, modelID string) (*OptimizationP
 		Limit:     10000,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to query feedbacks")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to query feedbacks")
 	}
 
 	recommendations := []*Recommendation{}
@@ -276,7 +276,7 @@ func (o *optimizer) Analyze(ctx context.Context, modelID string) (*OptimizationP
 		},
 	}
 
-	o.metricsCollector.Increment("optimizer_plan_generated",
+	o.metricsCollector.IncrementCounter("optimizer_plan_generated",
 		map[string]string{"model_id": modelID, "type": string(plan.Type)})
 
  o.logger.WithContext(ctx).Info("Optimization plan generated", logging.Any("plan_id", plan.ID), logging.Any("recommendations", len(recommendations))
@@ -299,7 +299,7 @@ func (o *optimizer) PrepareTrainingData(ctx context.Context, modelID string) (*T
 		Limit:        5000,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to query positive feedbacks")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to query positive feedbacks")
 	}
 
 	// 查询负面反馈
@@ -310,7 +310,7 @@ func (o *optimizer) PrepareTrainingData(ctx context.Context, modelID string) (*T
 		Limit:        5000,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to query negative feedbacks")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to query negative feedbacks")
 	}
 
 	samples := []*TrainingSample{}
@@ -365,7 +365,7 @@ func (o *optimizer) PrepareTrainingData(ctx context.Context, modelID string) (*T
 		},
 	}
 
-	o.metricsCollector.Histogram("optimizer_training_samples",
+	o.metricsCollector.ObserveDuration("optimizer_training_samples",
 		float64(len(samples)),
 		map[string]string{"model_id": modelID})
 
@@ -389,7 +389,7 @@ func (o *optimizer) GeneratePromptSuggestions(ctx context.Context, modelID strin
 
 	currentPrompt := o.extractPrompt(mdl)
 	if currentPrompt == "" {
-		return nil, errors.New(errors.CodeInvalidArgument, "no prompt found in model config")
+		return nil, errors.ValidationError( "no prompt found in model config")
 	}
 
 	// 分析问题模式
@@ -399,7 +399,7 @@ func (o *optimizer) GeneratePromptSuggestions(ctx context.Context, modelID strin
 		Limit:        1000,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to query feedbacks")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to query feedbacks")
 	}
 
 	issues := o.identifyCommonIssues(feedbacks)
@@ -439,7 +439,7 @@ func (o *optimizer) GeneratePromptSuggestions(ctx context.Context, modelID strin
 		return suggestions[i].TestResults.Improvement > suggestions[j].TestResults.Improvement
 	})
 
-	o.metricsCollector.Increment("optimizer_prompt_suggestions_generated",
+	o.metricsCollector.IncrementCounter("optimizer_prompt_suggestions_generated",
 		map[string]string{"model_id": modelID, "count": fmt.Sprintf("%d", len(suggestions))})
 
  o.logger.WithContext(ctx).Info("Prompt suggestions generated", logging.Any("model_id", modelID), logging.Any("count", len(suggestions))
@@ -515,7 +515,7 @@ func (o *optimizer) OptimizeStrategy(ctx context.Context, agentID string) (*Stra
 		RollbackData: rollbackData,
 	}
 
-	o.metricsCollector.Increment("optimizer_strategy_updated",
+	o.metricsCollector.IncrementCounter("optimizer_strategy_updated",
 		map[string]string{"agent_id": agentID})
 
  o.logger.WithContext(ctx).Info("Strategy optimization completed", logging.Any("agent_id", agentID), logging.Any("updates", len(updates))
@@ -531,7 +531,7 @@ func (o *optimizer) ApplyOptimization(ctx context.Context, plan *OptimizationPla
 	o.logger.WithContext(ctx).Info("Applying optimization plan", logging.Any("plan_id", plan.ID))
 
 	if plan.Status != "pending" && plan.Status != "approved" {
-		return errors.New(errors.CodeInvalidArgument,
+		return errors.ValidationError(
 			fmt.Sprintf("cannot apply plan with status: %s", plan.Status))
 	}
 
@@ -548,7 +548,7 @@ func (o *optimizer) ApplyOptimization(ctx context.Context, plan *OptimizationPla
 	plan.AppliedAt = &now
 	plan.Status = "applied"
 
-	o.metricsCollector.Increment("optimizer_plan_applied",
+	o.metricsCollector.IncrementCounter("optimizer_plan_applied",
 		map[string]string{"model_id": plan.ModelID, "type": string(plan.Type)})
 
 	o.logger.WithContext(ctx).Info("Optimization plan applied successfully", logging.Any("plan_id", plan.ID))
@@ -566,7 +566,7 @@ func (o *optimizer) RollbackOptimization(ctx context.Context, planID string) err
 	// 实现回滚逻辑
 	// 这里简化实现，实际需要从存储中恢复原始配置
 
-	o.metricsCollector.Increment("optimizer_plan_rolled_back",
+	o.metricsCollector.IncrementCounter("optimizer_plan_rolled_back",
 		map[string]string{"plan_id": planID})
 
 	o.logger.WithContext(ctx).Info("Optimization rolled back successfully", logging.Any("plan_id", planID))
@@ -1026,7 +1026,7 @@ func (o *optimizer) applyRecommendation(ctx context.Context, modelID string, rec
 	case "strategy_optimization":
 		return o.applyStrategyOptimization(ctx, modelID, rec)
 	default:
-		return errors.New(errors.CodeInvalidArgument,
+		return errors.ValidationError(
 			fmt.Sprintf("unknown recommendation type: %s", rec.Type))
 	}
 }

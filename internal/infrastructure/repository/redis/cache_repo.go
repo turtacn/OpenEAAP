@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/openeeap/openeeap/pkg/errors"
-	"github.com/openeeap/openeeap/pkg/types"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -135,7 +134,7 @@ func (r *cacheRepo) Set(ctx context.Context, key string, value interface{}, expi
 	// 序列化值
 	data, err := r.serialize(value)
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to serialize value")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to serialize value")
 	}
 
 	// 设置默认过期时间
@@ -183,7 +182,7 @@ func (r *cacheRepo) Get(ctx context.Context, key string, dest interface{}) error
 
 		// 反序列化
 		if err := r.deserialize(data, dest); err != nil {
-			return errors.WrapInternalError(err, errors.CodeInternalError, "failed to deserialize value")
+			return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to deserialize value")
 		}
 		return nil
 	}
@@ -391,7 +390,7 @@ type CacheStats struct {
 
 // GetStats 获取缓存统计信息
 func (r *cacheRepo) GetStats(ctx context.Context) (*CacheStats, error) {
-	info, err := r.client.Info(ctx, "memory", "stats").Result()
+	_, err := r.client.Info(ctx, "memory", "stats").Result()
 	if err != nil {
 		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get redis info")
 	}

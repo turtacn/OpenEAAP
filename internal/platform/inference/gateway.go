@@ -80,7 +80,7 @@ type InferenceEngine interface {
 type Gateway struct {
 	logger          logging.Logger
 	tracer          trace.Tracer
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	cacheManager    *cache.CacheManager
 	privacyGateway  *privacy.PrivacyGateway
 	router          *Router
@@ -181,7 +181,7 @@ func (g *Gateway) Infer(ctx context.Context, req *InferenceRequest) (*InferenceR
 		if err != nil {
 			g.logger.WithContext(ctx).Error("privacy filtering failed", logging.Error(err))
 			g.recordMetrics("infer", "privacy_failed", time.Since(startTime))
-			return nil, errors.Wrap(err, errors.CodeInternalError, "privacy filtering failed")
+			return nil, errors.Wrap(err, "ERR_INTERNAL", "privacy filtering failed")
 		}
 		req = filteredReq
 	}
@@ -211,7 +211,7 @@ func (g *Gateway) Infer(ctx context.Context, req *InferenceRequest) (*InferenceR
 	engine, err := g.router.Route(ctx, req)
 	if err != nil {
 		g.recordMetrics("infer", "routing_failed", time.Since(startTime))
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to route request")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to route request")
 	}
 
 	span.SetAttribute("engine", engine.Name())
@@ -221,7 +221,7 @@ func (g *Gateway) Infer(ctx context.Context, req *InferenceRequest) (*InferenceR
 	if err != nil {
 		g.logger.WithContext(ctx).Error("inference failed", logging.Error(err), logging.Any("engine", engine.Name())
 		g.recordMetrics("infer", "inference_failed", time.Since(startTime))
-		return nil, errors.Wrap(err, errors.CodeInternalError, "inference failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "inference failed")
 	}
 
 	// Store in cache
@@ -246,7 +246,7 @@ func (g *Gateway) Infer(ctx context.Context, req *InferenceRequest) (*InferenceR
 
 	// Record metrics
 	g.recordMetrics("infer", "success", resp.Latency)
-	g.metricsCollector.RecordHistogram("inference_latency_ms", float64(resp.Latency.Milliseconds()),
+	g.metricsCollector.ObserveHistogram("inference_latency_ms", float64(resp.Latency.Milliseconds()),
 		map[string]string{
 			"model":  req.Model,
 			"cached": fmt.Sprintf("%v", resp.Cached),
@@ -302,7 +302,7 @@ func (g *Gateway) InferStream(ctx context.Context, req *InferenceRequest) (<-cha
 		if err != nil {
 			g.logger.WithContext(ctx).Error("privacy filtering failed", logging.Error(err))
 			g.recordMetrics("infer_stream", "privacy_failed", time.Since(startTime))
-			return nil, errors.Wrap(err, errors.CodeInternalError, "privacy filtering failed")
+			return nil, errors.Wrap(err, "ERR_INTERNAL", "privacy filtering failed")
 		}
 		req = filteredReq
 	}
@@ -311,7 +311,7 @@ func (g *Gateway) InferStream(ctx context.Context, req *InferenceRequest) (<-cha
 	engine, err := g.router.Route(ctx, req)
 	if err != nil {
 		g.recordMetrics("infer_stream", "routing_failed", time.Since(startTime))
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to route request")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to route request")
 	}
 
 	span.SetAttribute("engine", engine.Name())
@@ -321,7 +321,7 @@ func (g *Gateway) InferStream(ctx context.Context, req *InferenceRequest) (<-cha
 	if err != nil {
 		g.logger.WithContext(ctx).Error("streaming inference failed", logging.Error(err), logging.Any("engine", engine.Name())
 		g.recordMetrics("infer_stream", "inference_failed", time.Since(startTime))
-		return nil, errors.Wrap(err, errors.CodeInternalError, "streaming inference failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "streaming inference failed")
 	}
 
 	// Wrap channel to add metrics and privacy restoration
@@ -359,7 +359,7 @@ func (g *Gateway) InferStream(ctx context.Context, req *InferenceRequest) (<-cha
 		totalLatency := time.Since(startTime)
 
 		g.recordMetrics("infer_stream", "completed", totalLatency)
-		g.metricsCollector.RecordHistogram("inference_stream_latency_ms", float64(totalLatency.Milliseconds()),
+		g.metricsCollector.ObserveHistogram("inference_stream_latency_ms", float64(totalLatency.Milliseconds()),
 			map[string]string{
 				"model":  req.Model,
 				"engine": engine.Name(),
@@ -409,13 +409,13 @@ func (g *Gateway) recordMetrics(operation, status string, latency time.Duration)
 		return
 	}
 
-	g.metricsCollector.IncrementCounter("gateway_requests_total", 1,
+	g.metricsCollector.IncrementCounter("gateway_requests_total",
 		map[string]string{
 			"operation": operation,
 			"status":    status,
 		})
 
-	g.metricsCollector.RecordHistogram("gateway_operation_latency_ms", float64(latency.Milliseconds()),
+	g.metricsCollector.ObserveHistogram("gateway_operation_latency_ms", float64(latency.Milliseconds()),
 		map[string]string{
 			"operation": operation,
 			"status":    status,
@@ -429,7 +429,7 @@ func (g *Gateway) HealthCheck(ctx context.Context) error {
 	for _, engine := range engines {
 		if err := engine.HealthCheck(ctx); err != nil {
 			g.logger.WithContext(ctx).Error("engine health check failed", logging.Any("engine", engine.Name()), logging.Error(err))
-			return errors.Wrap(err, errors.CodeInternalError, fmt.Sprintf("engine %s is unhealthy", engine.Name()))
+			return errors.Wrap(err, "ERR_INTERNAL", fmt.Sprintf("engine %s is unhealthy", engine.Name()))
 		}
 	}
 

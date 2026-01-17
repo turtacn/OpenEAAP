@@ -265,7 +265,7 @@ func NewExecutor(
 // Execute 执行任务
 func (e *executor) Execute(ctx context.Context, req *ExecuteRequest) (*ExecuteResponse, error) {
 	if e.closed {
-		return nil, errors.New(errors.CodeInternalError, "executor is closed")
+		return nil, errors.InternalError("executor is closed")
 	}
 	if req == nil || req.Task == nil {
 		return nil, errors.New(errors.CodeInvalidParameter, "execute request or task cannot be nil")
@@ -634,7 +634,7 @@ func (e *executor) executeNative(ctx context.Context, req *ExecuteRequest, execS
 
 	// 调用LLM客户端
 	if e.llmClient == nil {
-		return "", 0, 0, errors.New(errors.CodeInternalError, "llm client not configured")
+		return "", 0, 0, errors.InternalError("llm client not configured")
 	}
 
 	llmReq := &llm.CompletionRequest{
@@ -655,7 +655,7 @@ func (e *executor) executeNative(ctx context.Context, req *ExecuteRequest, execS
 	resp, err := e.llmClient.Complete(ctx, llmReq)
 	if err != nil {
 		e.recordTraceStep(execState, "execute_native", "execution", req.Task.Request.Input, nil, err)
-		return "", 0, 0, errors.Wrap(err, errors.CodeInternalError, "llm completion failed")
+		return "", 0, 0, errors.Wrap(err, "ERR_INTERNAL", "llm completion failed")
 	}
 
 	output := ""
@@ -678,7 +678,7 @@ func (e *executor) executeLangChain(ctx context.Context, req *ExecuteRequest, ex
 
 	// 调用LangChain运行时
 	if e.runtimeManager == nil {
-		return "", 0, 0, errors.New(errors.CodeInternalError, "runtime manager not configured")
+		return "", 0, 0, errors.InternalError("runtime manager not configured")
 	}
 
 	runtimeReq := &runtime.ExecuteRequest{
@@ -690,7 +690,7 @@ func (e *executor) executeLangChain(ctx context.Context, req *ExecuteRequest, ex
 	runtimeResp, err := e.runtimeManager.Execute(ctx, req.Task.Route.Runtime.ID, runtimeReq)
 	if err != nil {
 		e.recordTraceStep(execState, "execute_langchain", "execution", req.Task.Request.Input, nil, err)
-		return "", 0, 0, errors.Wrap(err, errors.CodeInternalError, "langchain execution failed")
+		return "", 0, 0, errors.Wrap(err, "ERR_INTERNAL", "langchain execution failed")
 	}
 
 	tokensUsed := runtimeResp.TokensUsed
@@ -706,7 +706,7 @@ func (e *executor) executeAutoGPT(ctx context.Context, req *ExecuteRequest, exec
 
 	// 调用AutoGPT运行时
 	if e.runtimeManager == nil {
-		return "", 0, 0, errors.New(errors.CodeInternalError, "runtime manager not configured")
+		return "", 0, 0, errors.InternalError("runtime manager not configured")
 	}
 
 	runtimeReq := &runtime.ExecuteRequest{
@@ -718,7 +718,7 @@ func (e *executor) executeAutoGPT(ctx context.Context, req *ExecuteRequest, exec
 	runtimeResp, err := e.runtimeManager.Execute(ctx, req.Task.Route.Runtime.ID, runtimeReq)
 	if err != nil {
 		e.recordTraceStep(execState, "execute_autogpt", "execution", req.Task.Request.Input, nil, err)
-		return "", 0, 0, errors.Wrap(err, errors.CodeInternalError, "autogpt execution failed")
+		return "", 0, 0, errors.Wrap(err, "ERR_INTERNAL", "autogpt execution failed")
 	}
 
 	tokensUsed := runtimeResp.TokensUsed

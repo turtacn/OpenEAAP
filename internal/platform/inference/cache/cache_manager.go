@@ -105,7 +105,7 @@ type Cache interface {
 // CacheManager manages the three-tier cache hierarchy
 type CacheManager struct {
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	config           *CacheConfig
 
 	l1Cache          Cache
@@ -118,7 +118,7 @@ type CacheManager struct {
 // NewCacheManager creates a new cache manager
 func NewCacheManager(
 	logger logging.Logger,
-	metricsCollector *metrics.MetricsCollector,
+	metricsCollector metrics.MetricsCollector,
 	config *CacheConfig,
 	l1Cache Cache,
 	l2Cache Cache,
@@ -142,7 +142,7 @@ func (cm *CacheManager) Get(ctx context.Context, req interface{}) (interface{}, 
 	// Generate cache key
 	key, err := cm.generateCacheKey(req)
 	if err != nil {
-		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to generate cache key")
+		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to generate cache key")
 	}
 
 	// Try L1 cache first (fastest, < 1ms)
@@ -232,7 +232,7 @@ func (cm *CacheManager) Set(ctx context.Context, req interface{}, resp interface
 	// Generate cache key
 	key, err := cm.generateCacheKey(req)
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to generate cache key")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to generate cache key")
 	}
 
 	now := time.Now()
@@ -309,7 +309,7 @@ func (cm *CacheManager) Set(ctx context.Context, req interface{}, resp interface
 func (cm *CacheManager) Invalidate(ctx context.Context, req interface{}) error {
 	key, err := cm.generateCacheKey(req)
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to generate cache key")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to generate cache key")
 	}
 
 	var errs []error
@@ -333,7 +333,7 @@ func (cm *CacheManager) Invalidate(ctx context.Context, req interface{}) error {
 	}
 
 	if len(errs) > 0 {
-  cm.logger.WithContext(ctx).Warn("cache invalidation had errors", logging.Any("key", key), logging.Any("error_count", len(errs))
+  cm.logger.WithContext(ctx).Warn("cache invalidation had errors", logging.Any("key", key), logging.Any("error_count", len(errs)))
 	}
 
 	cm.logger.WithContext(ctx).Info("cache invalidated", logging.Any("key", key))
@@ -373,7 +373,7 @@ func (cm *CacheManager) ClearAll(ctx context.Context) error {
 	}
 
 	if len(errs) > 0 {
-		return errors.New(errors.CodeInternalError, fmt.Sprintf("failed to clear %d cache levels", len(errs)))
+		return errors.InternalError(fmt.Sprintf("failed to clear %d cache levels", len(errs)))
 	}
 
 	cm.logger.WithContext(ctx).Info("all caches cleared")
@@ -408,7 +408,7 @@ func (cm *CacheManager) generateCacheKey(req interface{}) (string, error) {
 	// Serialize request to JSON
 	data, err := json.Marshal(req)
 	if err != nil {
-		return "", errors.WrapInternalError(err, errors.CodeInternalError, "failed to marshal request")
+		return "", errors.WrapInternalError(err, "ERR_INTERNAL", "failed to marshal request")
 	}
 
 	// Generate SHA-256 hash
@@ -508,12 +508,12 @@ func (cm *CacheManager) recordCacheHit(level CacheLevel, latency time.Duration) 
 	}
 
 	if cm.metricsCollector != nil {
-		cm.metricsCollector.IncrementCounter("cache_hits_total", 1,
+		cm.metricsCollector.IncrementCounter("cache_hits_total",
 			map[string]string{
 				"level": string(level),
 			})
 
-		cm.metricsCollector.RecordHistogram("cache_latency_ms", float64(latency.Milliseconds()),
+		cm.metricsCollector.ObserveHistogram("cache_latency_ms", float64(latency.Milliseconds()),
 			map[string]string{
 				"level":  string(level),
 				"result": "hit",
@@ -528,9 +528,9 @@ func (cm *CacheManager) recordCacheMiss(latency time.Duration) {
 	cm.stats.L3Misses++
 
 	if cm.metricsCollector != nil {
-		cm.metricsCollector.IncrementCounter("cache_misses_total", 1, nil)
+		cm.metricsCollector.IncrementCounter("cache_misses_total", nil)
 
-		cm.metricsCollector.RecordHistogram("cache_latency_ms", float64(latency.Milliseconds()),
+		cm.metricsCollector.ObserveHistogram("cache_latency_ms", float64(latency.Milliseconds()),
 			map[string]string{
 				"result": "miss",
 			})
@@ -540,9 +540,9 @@ func (cm *CacheManager) recordCacheMiss(latency time.Duration) {
 // recordCacheSet records a cache set operation metric
 func (cm *CacheManager) recordCacheSet(latency time.Duration) {
 	if cm.metricsCollector != nil {
-		cm.metricsCollector.IncrementCounter("cache_sets_total", 1, nil)
+		cm.metricsCollector.IncrementCounter("cache_sets_total", nil)
 
-		cm.metricsCollector.RecordHistogram("cache_set_latency_ms", float64(latency.Milliseconds()), nil)
+		cm.metricsCollector.ObserveHistogram("cache_set_latency_ms", float64(latency.Milliseconds()), nil)
 	}
 }
 

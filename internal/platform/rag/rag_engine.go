@@ -9,6 +9,7 @@ import (
 	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/internal/observability/trace"
 	"github.com/openeeap/openeeap/pkg/errors"
+	"go.opentelemetry.io/otel/codes"
 )
 
 // RAGEngine 定义 RAG 引擎接口
@@ -156,10 +157,10 @@ func (r *ragEngineImpl) Query(ctx context.Context, req *RAGRequest) (*RAGRespons
 	startTime := time.Now()
 
 	// 创建 Span
-	span := r.tracer.StartSpan(ctx, "RAGEngine.Query")
+	ctx, span := r.tracer.Start(ctx, "RAGEngine.Query")
 	defer span.End()
-	span.AddTag("query", req.Query)
-	span.AddTag("collection", req.CollectionName)
+	// span.AddTag("query", req.Query)
+	// span.AddTag("collection", req.CollectionName)
 
 	// 应用默认值
 	r.applyDefaults(req)
@@ -180,12 +181,13 @@ func (r *ragEngineImpl) Query(ctx context.Context, req *RAGRequest) (*RAGRespons
 	retrievalStart := time.Now()
 	retrievedChunks, err := r.retrieveChunks(ctx, processedQuery, req)
 	if err != nil {
-		span.SetStatus(trace.StatusError, err.Error())
-		return nil, errors.Wrap(err, errors.CodeInternal, "retrieval failed")
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "retrieval failed")
 	}
 	latency.Retrieval = time.Since(retrievalStart)
 
- r.logger.WithContext(ctx).Info("retrieval completed", logging.Any("query", req.Query), logging.Any("chunks_count", len(retrievedChunks))
+	r.logger.WithContext(ctx).Info("retrieval completed", logging.Any("query", req.Query), logging.Any("chunks_count", len(retrievedChunks)))
 
 	// 3. 重排序阶段（可选）
 	if req.RerankEnabled && r.reranker != nil {
@@ -206,8 +208,9 @@ func (r *ragEngineImpl) Query(ctx context.Context, req *RAGRequest) (*RAGRespons
 	generationStart := time.Now()
 	answer, sources, err := r.generateAnswer(ctx, req.Query, ragContext, req)
 	if err != nil {
-		span.SetStatus(trace.StatusError, err.Error())
-		return nil, errors.Wrap(err, errors.CodeInternal, "generation failed")
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "generation failed")
 	}
 	latency.Generation = time.Since(generationStart)
 
@@ -242,10 +245,10 @@ func (r *ragEngineImpl) Query(ctx context.Context, req *RAGRequest) (*RAGRespons
 		VerifyResult:    verifyResult,
 	}
 
- r.logger.WithContext(ctx).Info("RAG query completed", logging.Any("query", req.Query), logging.Any("answer_length", len(answer))
+ r.logger.WithContext(ctx).Info("RAG query completed", logging.Any("query", req.Query), logging.Any("answer_length", len(answer)))
 
-	span.AddTag("confidence", fmt.Sprintf("%.2f", confidence))
-	span.AddTag("verified", verified)
+	// span.AddTag("confidence", fmt.Sprintf("%.2f", confidence))
+	// span.AddTag("verified", verified)
 
 	return response, nil
 }
@@ -336,12 +339,12 @@ func (r *ragEngineImpl) QueryStream(ctx context.Context, req *RAGRequest) (<-cha
 func (r *ragEngineImpl) HealthCheck(ctx context.Context) error {
 	// 检查 Retriever
 	if err := r.retriever.HealthCheck(ctx); err != nil {
-		return errors.Wrap(err, errors.CodeUnavailable, "retriever unhealthy")
+		return errors.Wrap(err, "ERR_UNAVAIL", "retriever unhealthy")
 	}
 
 	// 检查 Generator
 	if err := r.generator.HealthCheck(ctx); err != nil {
-		return errors.Wrap(err, errors.CodeUnavailable, "generator unhealthy")
+		return errors.Wrap(err, "ERR_UNAVAIL", "generator unhealthy")
 	}
 
 	return nil
@@ -470,7 +473,10 @@ func (r *ragEngineImpl) calculateConfidence(chunks []*RetrievedChunk, verified b
 		confidence *= 0.7
 	}
 
-	return min(confidence, 1.0)
+	if confidence > 1.0 {
+		return 1.0
+	}
+	return confidence
 }
 
 // applyDefaults 应用默认配置

@@ -11,6 +11,7 @@ import (
 	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/internal/observability/trace"
 	"github.com/openeeap/openeeap/pkg/errors"
+	"go.opentelemetry.io/otel/codes"
 )
 
 // Reranker 定义重排序器接口
@@ -110,11 +111,11 @@ func (r *rerankerImpl) Rerank(ctx context.Context, req *RerankRequest) ([]*Retri
 	startTime := time.Now()
 
 	// 创建 Span
-	span := r.tracer.StartSpan(ctx, "Reranker.Rerank")
+	ctx, span := r.tracer.Start(ctx, "Reranker.Rerank")
 	defer span.End()
-	span.AddTag("query", req.Query)
-	span.AddTag("chunks_count", len(req.Chunks))
-	span.AddTag("method", string(req.Method))
+	// span.AddTag("query", req.Query)
+	// span.AddTag("chunks_count", len(req.Chunks))
+	// span.AddTag("method", string(req.Method))
 
 	// 验证请求
 	if err := r.validateRequest(req); err != nil {
@@ -145,12 +146,13 @@ func (r *rerankerImpl) Rerank(ctx context.Context, req *RerankRequest) ([]*Retri
 	case RerankMethodHybrid:
 		rerankedChunks, err = r.rerankByHybrid(ctx, req.Query, req.Chunks)
 	default:
-		return nil, errors.New(errors.CodeInvalidArgument,
+		return nil, errors.ValidationError(
 			fmt.Sprintf("unsupported rerank method: %s", req.Method))
 	}
 
 	if err != nil {
-		span.SetStatus(trace.StatusError, err.Error())
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -160,7 +162,7 @@ func (r *rerankerImpl) Rerank(ctx context.Context, req *RerankRequest) ([]*Retri
 	}
 
 	latency := time.Since(startTime)
- r.logger.WithContext(ctx).Info("reranking completed", logging.Any("method", req.Method), logging.Any("input_count", len(req.Chunks))
+	r.logger.WithContext(ctx).Info("reranking completed", logging.Any("method", req.Method), logging.Any("input_count", len(req.Chunks)), logging.Any("latency_ms", latency.Milliseconds()))
 
 	return rerankedChunks, nil
 }
@@ -328,7 +330,7 @@ func (r *rerankerImpl) calculateSimilarity(text1, text2 string) float32 {
 // rerankByModel 使用ML模型重排序
 func (r *rerankerImpl) rerankByModel(ctx context.Context, query string, chunks []*RetrievedChunk) ([]*RetrievedChunk, error) {
 	if r.modelClient == nil {
-		return nil, errors.New(errors.CodeUnimplemented, "rerank model client not configured")
+		return nil, errors.InternalError("rerank model client not configured")
 	}
 
 	r.logger.WithContext(ctx).Debug("reranking by model")
@@ -336,7 +338,7 @@ func (r *rerankerImpl) rerankByModel(ctx context.Context, query string, chunks [
 	// 调用模型进行重排序
 	scoredChunks, err := r.modelClient.Rerank(ctx, query, chunks)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternal, "model reranking failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "model reranking failed")
 	}
 
 	// 按模型分数降序排序

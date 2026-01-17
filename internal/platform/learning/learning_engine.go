@@ -184,10 +184,10 @@ func (e *learningEngine) Start(ctx context.Context) error {
 
 	// 订阅反馈消息队列
 	if err := e.subscribeFeedbackQueue(ctx); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to subscribe feedback queue")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to subscribe feedback queue")
 	}
 
-	e.metricsCollector.Increment("learning_engine_started", nil)
+	e.metricsCollector.IncrementCounter("learning_engine_started", nil)
 	e.logger.WithContext(ctx).Info("Online learning engine started successfully")
 
 	return nil
@@ -203,7 +203,7 @@ func (e *learningEngine) Stop(ctx context.Context) error {
 	e.cancel()
 	e.wg.Wait()
 
-	e.metricsCollector.Increment("learning_engine_stopped", nil)
+	e.metricsCollector.IncrementCounter("learning_engine_stopped", nil)
 	e.logger.WithContext(ctx).Info("Online learning engine stopped successfully")
 
 	return nil
@@ -216,7 +216,7 @@ func (e *learningEngine) ProcessFeedback(ctx context.Context, feedback *Feedback
 
 	startTime := time.Now()
 	defer func() {
-		e.metricsCollector.Histogram("learning_process_feedback_duration_ms",
+		e.metricsCollector.ObserveDuration("learning_process_feedback_duration_ms",
 			float64(time.Since(startTime).Milliseconds()),
 			map[string]string{"model_id": feedback.ModelID})
 	}()
@@ -224,7 +224,7 @@ func (e *learningEngine) ProcessFeedback(ctx context.Context, feedback *Feedback
 	// 验证反馈数据
 	if err := e.validateFeedback(feedback); err != nil {
 		e.logger.WithContext(ctx).Warn("Invalid feedback", logging.Error(err), logging.Any("feedback_id", feedback.ID))
-		e.metricsCollector.Increment("learning_invalid_feedback",
+		e.metricsCollector.IncrementCounter("learning_invalid_feedback",
 			map[string]string{"model_id": feedback.ModelID})
 		return errors.Wrap(err, errors.CodeInvalidArgument, "invalid feedback")
 	}
@@ -232,14 +232,14 @@ func (e *learningEngine) ProcessFeedback(ctx context.Context, feedback *Feedback
 	// 收集反馈
 	if err := e.feedbackCollector.Collect(ctx, feedback); err != nil {
 		e.logger.WithContext(ctx).Error("Failed to collect feedback", logging.Error(err), logging.Any("feedback_id", feedback.ID))
-		e.metricsCollector.Increment("learning_collect_feedback_failed",
+		e.metricsCollector.IncrementCounter("learning_collect_feedback_failed",
 			map[string]string{"model_id": feedback.ModelID})
-		return errors.Wrap(err, errors.CodeInternalError, "failed to collect feedback")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to collect feedback")
 	}
 
 	feedback.ProcessedAt = &startTime
 
-	e.metricsCollector.Increment("learning_feedback_processed",
+	e.metricsCollector.IncrementCounter("learning_feedback_processed",
 		map[string]string{
 			"model_id": feedback.ModelID,
 			"type":     string(feedback.FeedbackType),
@@ -275,7 +275,7 @@ func (e *learningEngine) TriggerOptimization(ctx context.Context, req *Optimizat
 	// 检查反馈数量是否足够
 	stats, err := e.GetLearningStats(ctx, req.ModelID)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to get learning stats")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to get learning stats")
 	}
 
 	if stats.PendingFeedbackCount < int64(e.config.MinFeedbackForOptimize) && !req.ForceTrigger {
@@ -287,7 +287,7 @@ func (e *learningEngine) TriggerOptimization(ctx context.Context, req *Optimizat
 	// 准备训练数据
 	trainingData, err := e.optimizer.PrepareTrainingData(ctx, req.ModelID)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to prepare training data")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to prepare training data")
 	}
 
 	// 创建训练任务
@@ -301,12 +301,12 @@ func (e *learningEngine) TriggerOptimization(ctx context.Context, req *Optimizat
 
 	task, err := e.trainingService.CreateTask(ctx, trainingReq)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to create training task")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to create training task")
 	}
 
 	// 启动训练
 	if err := e.trainingService.StartTask(ctx, task.ID); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to start training task")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to start training task")
 	}
 
 	result := &OptimizationResult{
@@ -321,7 +321,7 @@ func (e *learningEngine) TriggerOptimization(ctx context.Context, req *Optimizat
 
 	e.runningTasks.Store(req.ModelID, result)
 
-	e.metricsCollector.Increment("learning_optimization_triggered",
+	e.metricsCollector.IncrementCounter("learning_optimization_triggered",
 		map[string]string{
 			"model_id": req.ModelID,
 			"type":     string(req.OptimizationType),
@@ -340,7 +340,7 @@ func (e *learningEngine) GetLearningStats(ctx context.Context, modelID string) (
 
 	stats, err := e.feedbackCollector.GetStats(ctx, modelID)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to get feedback stats")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to get feedback stats")
 	}
 
 	// 获取性能趋势
@@ -373,11 +373,11 @@ func (e *learningEngine) processFeedbackLoop() {
 	for {
 		select {
 		case <-e.ctx.Done():
-			e.logger.Info(context.Background(), "Feedback processing loop stopped")
+			e.logger.Info("Feedback processing loop stopped")
 			return
 		case <-ticker.C:
 			if err := e.flushFeedbacks(context.Background()); err != nil {
-				e.logger.Error(context.Background(), "Failed to flush feedbacks", "error", err)
+				e.logger.Error("Failed to flush feedbacks", "error", err)
 			}
 		}
 	}
@@ -393,11 +393,11 @@ func (e *learningEngine) autoOptimizationLoop() {
 	for {
 		select {
 		case <-e.ctx.Done():
-			e.logger.Info(context.Background(), "Auto optimization loop stopped")
+			e.logger.Info("Auto optimization loop stopped")
 			return
 		case <-ticker.C:
 			if err := e.checkAllModelsForOptimization(context.Background()); err != nil {
-				e.logger.Error(context.Background(), "Failed to check models for optimization", "error", err)
+				e.logger.Error("Failed to check models for optimization", "error", err)
 			}
 		}
 	}
@@ -413,11 +413,11 @@ func (e *learningEngine) performanceMonitorLoop() {
 	for {
 		select {
 		case <-e.ctx.Done():
-			e.logger.Info(context.Background(), "Performance monitor loop stopped")
+			e.logger.Info("Performance monitor loop stopped")
 			return
 		case <-ticker.C:
 			if err := e.monitorPerformanceDegradation(context.Background()); err != nil {
-				e.logger.Error(context.Background(), "Failed to monitor performance", "error", err)
+				e.logger.Error("Failed to monitor performance", "error", err)
 			}
 		}
 	}
@@ -438,13 +438,13 @@ func (e *learningEngine) subscribeFeedbackQueue(ctx context.Context) error {
 // validateFeedback 验证反馈数据
 func (e *learningEngine) validateFeedback(feedback *Feedback) error {
 	if feedback.ModelID == "" {
-		return errors.New(errors.CodeInvalidArgument, "model_id is required")
+		return errors.ValidationError( "model_id is required")
 	}
 	if feedback.Input == "" {
-		return errors.New(errors.CodeInvalidArgument, "input is required")
+		return errors.ValidationError( "input is required")
 	}
 	if feedback.Rating < 1 || feedback.Rating > 5 {
-		return errors.New(errors.CodeInvalidArgument, "rating must be between 1 and 5")
+		return errors.ValidationError( "rating must be between 1 and 5")
 	}
 	return nil
 }
@@ -514,7 +514,7 @@ func (e *learningEngine) monitorPerformanceDegradation(ctx context.Context) erro
 				if degradation > e.config.PerformanceDegradation {
      e.logger.WithContext(ctx).Warn("Performance degradation detected", logging.Any("model_id", mdl.ID), logging.Any("metric", metric), logging.Any("degradation", degradation))
 
-					e.metricsCollector.Increment("learning_performance_degradation_detected",
+					e.metricsCollector.IncrementCounter("learning_performance_degradation_detected",
 						map[string]string{"model_id": mdl.ID, "metric": metric})
 				}
 			}
@@ -552,7 +552,7 @@ func (e *learningEngine) monitorTrainingTask(ctx context.Context, modelID, taskI
 
 				e.runningTasks.Delete(modelID)
 
-				e.metricsCollector.Increment("learning_optimization_completed",
+				e.metricsCollector.IncrementCounter("learning_optimization_completed",
 					map[string]string{"model_id": modelID})
 
     e.logger.WithContext(ctx).Info("Optimization completed", logging.Any("model_id", modelID), logging.Any("task_id", taskID))
@@ -562,7 +562,7 @@ func (e *learningEngine) monitorTrainingTask(ctx context.Context, modelID, taskI
 			if task.Status == "failed" {
 				e.runningTasks.Delete(modelID)
 
-				e.metricsCollector.Increment("learning_optimization_failed",
+				e.metricsCollector.IncrementCounter("learning_optimization_failed",
 					map[string]string{"model_id": modelID})
 
     e.logger.WithContext(ctx).Error("Optimization failed", logging.Any("model_id", modelID), logging.Any("task_id", taskID))

@@ -46,20 +46,22 @@ type VectorConfig struct {
 
 // vectorCacheEntry represents a cache entry stored in Milvus
 type vectorCacheEntry struct {
-	ID        int64     `json:"id"`
-	Key       string    `json:"key"`
-	Embedding []float32 `json:"embedding"`
-	Request   string    `json:"request"`
-	Response  string    `json:"response"`
-	CreatedAt int64     `json:"created_at"`
-	ExpiresAt int64     `json:"expires_at"`
-	Metadata  string    `json:"metadata"`
+	ID         int64     `json:"id"`
+	Key        string    `json:"key"`
+	Embedding  []float32 `json:"embedding"`
+	Request    string    `json:"request"`
+	Response   string    `json:"response"`
+	Score      float64   `json:"score"`       // Similarity score from vector search
+	Similarity float64   `json:"similarity"`  // Alias for Score
+	CreatedAt  int64     `json:"created_at"`
+	ExpiresAt  int64     `json:"expires_at"`
+	Metadata   string    `json:"metadata"`
 }
 
 // NewL3VectorCache creates a new L3 vector cache instance
 func NewL3VectorCache(logger logging.Logger, config *VectorConfig) (*L3VectorCache, error) {
 	if config == nil {
-		return nil, errors.New(errors.CodeInvalidArgument, "vector config cannot be nil")
+		return nil, errors.ValidationError( "vector config cannot be nil")
 	}
 
 	// Connect to Milvus
@@ -68,13 +70,13 @@ func NewL3VectorCache(logger logging.Logger, config *VectorConfig) (*L3VectorCac
 
 	milvusClient, err := client.NewGrpcClient(ctx, config.Address)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to connect to Milvus")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to connect to Milvus")
 	}
 
 	// Authenticate if credentials provided
 	if config.Username != "" && config.Password != "" {
 		// Milvus authentication would be implemented here
-		logger.Info(ctx, "Milvus authentication enabled")
+		logger.WithContext(ctx).Info("Milvus authentication enabled")
 	}
 
 	cache := &L3VectorCache{
@@ -89,17 +91,16 @@ func NewL3VectorCache(logger logging.Logger, config *VectorConfig) (*L3VectorCac
 
 	// Initialize collection
 	if err := cache.initializeCollection(ctx, config); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to initialize collection")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to initialize collection")
 	}
 
 	// Start background cleanup
 	go cache.cleanupExpired()
 
-	logger.Info(ctx, "L3 vector cache initialized",
-		"collection", config.CollectionName,
-		"embedding_dim", config.EmbeddingDim,
-		"similarity_threshold", config.SimilarityThreshold,
-	)
+	logger.WithContext(ctx).Info("L3 vector cache initialized",
+		logging.String("collection", config.CollectionName),
+		logging.Int("embedding_dim", config.EmbeddingDim),
+		logging.Float64("similarity_threshold", config.SimilarityThreshold))
 
 	return cache, nil
 }
@@ -133,9 +134,9 @@ func (c *L3VectorCache) Get(ctx context.Context, key string) (*CacheEntry, error
 	topResult := searchResult[0]
 
 	// Check similarity threshold
-	if topResult.Similarity < c.similarityThreshold {
+	if topResult.Score < c.similarityThreshold {
 		c.missCount++
-  c.logger.WithContext(ctx).Debug("similarity below threshold", logging.Any("similarity", topResult.Similarity), logging.Any("threshold", c.similarityThreshold))
+  c.logger.WithContext(ctx).Debug("similarity below threshold", logging.Any("similarity", topResult.Score), logging.Any("threshold", c.similarityThreshold))
 		return nil, nil
 	}
 
@@ -166,7 +167,7 @@ func (c *L3VectorCache) Get(ctx context.Context, key string) (*CacheEntry, error
 		Request:    request,
 		Response:   response,
 		Level:      LevelL3,
-		Similarity: topResult.Similarity,
+		Similarity: topResult.Score,
 		CreatedAt:  time.Unix(topResult.CreatedAt, 0),
 		ExpiresAt:  time.Unix(topResult.ExpiresAt, 0),
 	}
@@ -174,10 +175,10 @@ func (c *L3VectorCache) Get(ctx context.Context, key string) (*CacheEntry, error
 	c.hitCount++
 
 	latency := time.Since(startTime)
- c.logger.WithContext(ctx).Debug("L3 cache hit", logging.Any("key", key), logging.Any("similarity", topResult.Similarity), logging.Any("latency_ms", latency.Milliseconds())
+ c.logger.WithContext(ctx).Debug("L3 cache hit", logging.Any("key", key), logging.Any("similarity", topResult.Score), logging.Any("latency_ms", latency.Milliseconds()))
 
 	if latency > 50*time.Millisecond {
-  c.logger.WithContext(ctx).Warn("L3 cache GET latency exceeded 50ms", logging.Any("latency_ms", latency.Milliseconds())
+  c.logger.WithContext(ctx).Warn("L3 cache GET latency exceeded 50ms", logging.Any("latency_ms", latency.Milliseconds()))
 	}
 
 	return entry, nil
@@ -186,7 +187,7 @@ func (c *L3VectorCache) Get(ctx context.Context, key string) (*CacheEntry, error
 // Set stores an entry in L3 vector cache
 func (c *L3VectorCache) Set(ctx context.Context, entry *CacheEntry) error {
 	if entry == nil {
-		return errors.New(errors.CodeInvalidArgument, "cache entry cannot be nil")
+		return errors.ValidationError( "cache entry cannot be nil")
 	}
 
 	startTime := time.Now()
@@ -194,18 +195,18 @@ func (c *L3VectorCache) Set(ctx context.Context, entry *CacheEntry) error {
 	// Generate embedding
 	requestJSON, err := json.Marshal(entry.Request)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to marshal request")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to marshal request")
 	}
 
 	embedding, err := c.generateEmbedding(ctx, string(requestJSON))
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to generate embedding")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to generate embedding")
 	}
 
 	// Serialize response
 	responseJSON, err := json.Marshal(entry.Response)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to marshal response")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to marshal response")
 	}
 
 	// Calculate expiration
@@ -235,14 +236,14 @@ func (c *L3VectorCache) Set(ctx context.Context, entry *CacheEntry) error {
 	}
 
 	if err := c.insertVector(ctx, vectorEntry); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to insert vector")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to insert vector")
 	}
 
 	c.setCount++
 
 	latency := time.Since(startTime)
 	if latency > 50*time.Millisecond {
-  c.logger.WithContext(ctx).Warn("L3 cache SET latency exceeded 50ms", logging.Any("latency_ms", latency.Milliseconds())
+  c.logger.WithContext(ctx).Warn("L3 cache SET latency exceeded 50ms", logging.Any("latency_ms", latency.Milliseconds()))
 	}
 
 	return nil
@@ -254,7 +255,7 @@ func (c *L3VectorCache) Delete(ctx context.Context, key string) error {
 	expr := fmt.Sprintf("key == \"%s\"", key)
 
 	if err := c.client.Delete(ctx, c.collectionName, "", expr); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to delete from Milvus")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to delete from Milvus")
 	}
 
 	return nil
@@ -264,7 +265,7 @@ func (c *L3VectorCache) Delete(ctx context.Context, key string) error {
 func (c *L3VectorCache) Clear(ctx context.Context) error {
 	// Drop and recreate collection
 	if err := c.client.DropCollection(ctx, c.collectionName); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to drop collection")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to drop collection")
 	}
 
 	// Reinitialize with default config
@@ -277,7 +278,7 @@ func (c *L3VectorCache) Clear(ctx context.Context) error {
 	}
 
 	if err := c.initializeCollection(ctx, config); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to reinitialize collection")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to reinitialize collection")
 	}
 
 	c.logger.WithContext(ctx).Info("L3 cache cleared")
@@ -473,7 +474,9 @@ func (c *L3VectorCache) searchSimilar(ctx context.Context, embedding []float32) 
 		entries := c.parseSearchResult(result)
 		for i, entry := range entries {
 			if i < len(searchResult[0].Scores) {
-				entry.Similarity = float64(searchResult[0].Scores[i])
+				score := float64(searchResult[0].Scores[i])
+				entry.Similarity = score
+				entry.Score = score
 			}
 			results = append(results, entry)
 		}
@@ -588,11 +591,11 @@ func (c *L3VectorCache) GetMetrics(ctx context.Context) (map[string]interface{},
 func (c *L3VectorCache) HealthCheck(ctx context.Context) error {
 	hasCollection, err := c.client.HasCollection(ctx, c.collectionName)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "Milvus health check failed")
+		return errors.Wrap(err, "ERR_INTERNAL", "Milvus health check failed")
 	}
 
 	if !hasCollection {
-		return errors.New(errors.CodeInternalError, "collection does not exist")
+		return errors.InternalError("collection does not exist")
 	}
 
 	return nil

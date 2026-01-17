@@ -104,7 +104,7 @@ type ABTestConfig struct {
 // Router handles model routing and engine selection
 type Router struct {
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 
 	engines          map[string]*EngineConfig
 	enginesMu        sync.RWMutex
@@ -161,11 +161,11 @@ func NewRouter(
 // RegisterEngine registers an inference engine
 func (r *Router) RegisterEngine(config *EngineConfig) error {
 	if config.Name == "" {
-		return errors.New(errors.CodeInvalidArgument, "engine name is required")
+		return errors.ValidationError( "engine name is required")
 	}
 
 	if config.Engine == nil {
-		return errors.New(errors.CodeInvalidArgument, "engine instance is required")
+		return errors.ValidationError( "engine instance is required")
 	}
 
 	r.enginesMu.Lock()
@@ -180,7 +180,7 @@ func (r *Router) RegisterEngine(config *EngineConfig) error {
 	}
 	r.metricsMu.Unlock()
 
-	r.logger.Info(context.Background(), "engine registered",
+	r.logger.Info("engine registered",
 		"name", config.Name,
 		"weight", config.Weight,
 		"priority", config.Priority,
@@ -204,7 +204,7 @@ func (r *Router) UnregisterEngine(name string) error {
 	delete(r.metrics, name)
 	r.metricsMu.Unlock()
 
-	r.logger.Info(context.Background(), "engine unregistered", "name", name)
+	r.logger.Info("engine unregistered", "name", name)
 
 	return nil
 }
@@ -212,7 +212,7 @@ func (r *Router) UnregisterEngine(name string) error {
 // AddRoutingRule adds a routing rule
 func (r *Router) AddRoutingRule(rule *RoutingRule) error {
 	if rule.Name == "" {
-		return errors.New(errors.CodeInvalidArgument, "rule name is required")
+		return errors.ValidationError( "rule name is required")
 	}
 
 	r.rulesMu.Lock()
@@ -223,7 +223,7 @@ func (r *Router) AddRoutingRule(rule *RoutingRule) error {
 	// Sort rules by priority (higher priority first)
 	r.sortRules()
 
-	r.logger.Info(context.Background(), "routing rule added",
+	r.logger.Info("routing rule added",
 		"name", rule.Name,
 		"priority", rule.Priority,
 		"target", rule.TargetEngine,
@@ -277,7 +277,7 @@ func (r *Router) Route(ctx context.Context, req *InferenceRequest) (InferenceEng
 		engine, err = r.routeLatencyOptimized(ctx, req)
 
 	default:
-		err = errors.New(errors.CodeInternalError, fmt.Sprintf("unknown routing strategy: %s", r.strategy))
+		err = errors.InternalError(fmt.Sprintf("unknown routing strategy: %s", r.strategy))
 	}
 
 	if err != nil {
@@ -385,7 +385,7 @@ func (r *Router) ruleMatches(ctx context.Context, rule *RoutingRule, req *Infere
 func (r *Router) routeRoundRobin(ctx context.Context) (InferenceEngine, error) {
 	engines := r.getAvailableEngines()
 	if len(engines) == 0 {
-		return nil, errors.New(errors.CodeInternalError, "no available engines")
+		return nil, errors.InternalError("no available engines")
 	}
 
 	r.roundRobinMu.Lock()
@@ -401,7 +401,7 @@ func (r *Router) routeRoundRobin(ctx context.Context) (InferenceEngine, error) {
 func (r *Router) routeWeightedRandom(ctx context.Context) (InferenceEngine, error) {
 	engines := r.getAvailableEngines()
 	if len(engines) == 0 {
-		return nil, errors.New(errors.CodeInternalError, "no available engines")
+		return nil, errors.InternalError("no available engines")
 	}
 
 	// Calculate total weight
@@ -439,7 +439,7 @@ func (r *Router) routeWeightedRandom(ctx context.Context) (InferenceEngine, erro
 func (r *Router) routeLeastLatency(ctx context.Context) (InferenceEngine, error) {
 	engines := r.getAvailableEngines()
 	if len(engines) == 0 {
-		return nil, errors.New(errors.CodeInternalError, "no available engines")
+		return nil, errors.InternalError("no available engines")
 	}
 
 	r.metricsMu.RLock()
@@ -473,7 +473,7 @@ func (r *Router) routeLeastLatency(ctx context.Context) (InferenceEngine, error)
 func (r *Router) routeLeastLoad(ctx context.Context) (InferenceEngine, error) {
 	engines := r.getAvailableEngines()
 	if len(engines) == 0 {
-		return nil, errors.New(errors.CodeInternalError, "no available engines")
+		return nil, errors.InternalError("no available engines")
 	}
 
 	r.metricsMu.RLock()
@@ -567,7 +567,7 @@ func (r *Router) routeABTest(ctx context.Context, req *InferenceRequest) (Infere
 func (r *Router) routeCostOptimized(ctx context.Context, req *InferenceRequest) (InferenceEngine, error) {
 	engines := r.getAvailableEngines()
 	if len(engines) == 0 {
-		return nil, errors.New(errors.CodeInternalError, "no available engines")
+		return nil, errors.InternalError("no available engines")
 	}
 
 	var bestEngine *EngineConfig
@@ -591,7 +591,7 @@ func (r *Router) routeCostOptimized(ctx context.Context, req *InferenceRequest) 
 func (r *Router) routeLatencyOptimized(ctx context.Context, req *InferenceRequest) (InferenceEngine, error) {
 	engines := r.getAvailableEngines()
 	if len(engines) == 0 {
-		return nil, errors.New(errors.CodeInternalError, "no available engines")
+		return nil, errors.InternalError("no available engines")
 	}
 
 	// Get latency requirement from context
@@ -645,7 +645,7 @@ func (r *Router) getEngine(name string) (InferenceEngine, error) {
 	}
 
 	if !cfg.Enabled {
-		return nil, errors.New(errors.CodeInternalError, fmt.Sprintf("engine %s is disabled", name))
+		return nil, errors.InternalError(fmt.Sprintf("engine %s is disabled", name))
 	}
 
 	return cfg.Engine, nil
@@ -751,13 +751,13 @@ func (r *Router) recordRoutingMetrics(strategy, engine string, latency time.Dura
 		return
 	}
 
-	r.metricsCollector.IncrementCounter("router_route_total", 1,
+	r.metricsCollector.IncrementCounter("router_route_total",
 		map[string]string{
 			"strategy": strategy,
 			"engine":   engine,
 		})
 
-	r.metricsCollector.RecordHistogram("router_route_latency_ms", float64(latency.Milliseconds()),
+	r.metricsCollector.ObserveHistogram("router_route_latency_ms", float64(latency.Milliseconds()),
 		map[string]string{
 			"strategy": strategy,
 		})

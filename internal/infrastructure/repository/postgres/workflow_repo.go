@@ -144,7 +144,7 @@ func (r *workflowRepo) Create(ctx context.Context, wf *workflow.Workflow) error 
 	// 转换为数据库模型
 	model, err := r.toModel(wf)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to convert workflow to model")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to convert workflow to model")
 	}
 
 	// 使用事务创建 Workflow 及其步骤
@@ -152,7 +152,7 @@ func (r *workflowRepo) Create(ctx context.Context, wf *workflow.Workflow) error 
 		// 创建 Workflow
 		if err := tx.Create(model).Error; err != nil {
 			if isDuplicateKeyError(err) {
-				return errors.Wrap(err, errors.CodeAlreadyExists, "workflow already exists")
+				return errors.Wrap(err, errors.ConflictError, "workflow already exists")
 			}
 			return errors.Wrap(err, errors.CodeDatabaseError, "failed to create workflow")
 		}
@@ -209,7 +209,7 @@ func (r *workflowRepo) Update(ctx context.Context, wf *workflow.Workflow) error 
 	// 转换为数据库模型
 	model, err := r.toModel(wf)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to convert workflow to model")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to convert workflow to model")
 	}
 
 	// 使用事务更新 Workflow 及其步骤
@@ -354,7 +354,7 @@ func (r *workflowRepo) List(ctx context.Context, filter *workflow.WorkflowFilter
 	for i := range models {
 		wf, err := r.toEntity(&models[i])
 		if err != nil {
-			return nil, 0, errors.Wrap(err, errors.CodeInternalError, "failed to convert model to entity")
+			return nil, 0, errors.Wrap(err, "ERR_INTERNAL", "failed to convert model to entity")
 		}
 		workflows = append(workflows, wf)
 	}
@@ -399,7 +399,7 @@ func (r *workflowRepo) CreateExecution(ctx context.Context, exec *workflow.Workf
 	// 转换为数据库模型
 	model, err := r.executionToModel(exec)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to convert execution to model")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to convert execution to model")
 	}
 
 	// 使用事务创建执行记录及步骤执行记录
@@ -449,7 +449,7 @@ func (r *workflowRepo) UpdateExecution(ctx context.Context, exec *workflow.Workf
 
 	model, err := r.executionToModel(exec)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to convert execution to model")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to convert execution to model")
 	}
 
 	// 使用事务更新
@@ -540,7 +540,7 @@ func (r *workflowRepo) ListExecutions(ctx context.Context, workflowID string, fi
 	for i := range models {
 		exec, err := r.executionToEntity(&models[i])
 		if err != nil {
-			return nil, 0, errors.Wrap(err, errors.CodeInternalError, "failed to convert execution to entity")
+			return nil, 0, errors.Wrap(err, "ERR_INTERNAL", "failed to convert execution to entity")
 		}
 		executions = append(executions, exec)
 	}
@@ -919,7 +919,7 @@ func (r *workflowRepo) GetWorkflowsByAgentID(ctx context.Context, agentID string
 	for i := range models {
 		wf, err := r.toEntity(&models[i])
 		if err != nil {
-			return nil, errors.Wrap(err, errors.CodeInternalError, "failed to convert model to entity")
+			return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to convert model to entity")
 		}
 		workflows = append(workflows, wf)
 	}
@@ -971,7 +971,7 @@ func (r *workflowRepo) GetRecentExecutions(ctx context.Context, workflowID strin
 	for i := range models {
 		exec, err := r.executionToEntity(&models[i])
 		if err != nil {
-			return nil, errors.Wrap(err, errors.CodeInternalError, "failed to convert execution to entity")
+			return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to convert execution to entity")
 		}
 		executions = append(executions, exec)
 	}

@@ -2,6 +2,7 @@
 package policy
 
 import (
+"github.com/prometheus/client_golang/prometheus"
 	"context"
 	"fmt"
 	"sync"
@@ -197,7 +198,7 @@ type PolicyRepository interface {
 type pdp struct {
 	policyRepo       PolicyRepository
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config          *PDPConfig
@@ -222,7 +223,7 @@ type PDPConfig struct {
 func NewPolicyDecisionPoint(
 	policyRepo PolicyRepository,
 	logger logging.Logger,
-	metricsCollector *metrics.MetricsCollector,
+	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,
 	config *PDPConfig,
 ) PolicyDecisionPoint {
@@ -243,9 +244,9 @@ func (p *pdp) Evaluate(ctx context.Context, request *AccessRequest) (*Decision, 
 	startTime := time.Now()
 	defer func() {
 		if p.config.EnableMetrics {
-			p.metricsCollector.Histogram("pdp_evaluation_duration_ms",
-				float64(time.Since(startTime).Milliseconds()),
-				map[string]string{"resource_type": request.Resource.Type})
+			p.metricsCollector.ObserveDuration("pdp_evaluation_duration_ms",
+				startTime,
+				prometheus.Labels{"resource_type": request.Resource.Type})
 		}
 	}()
 
@@ -262,7 +263,7 @@ func (p *pdp) Evaluate(ctx context.Context, request *AccessRequest) (*Decision, 
 	// 获取适用的策略
 	policies, err := p.policyRepo.GetApplicablePolicies(ctx, request)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to get applicable policies")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to get applicable policies")
 	}
 
 	if len(policies) == 0 {
@@ -276,7 +277,7 @@ func (p *pdp) Evaluate(ctx context.Context, request *AccessRequest) (*Decision, 
 	// 评估策略
 	decision, err := p.evaluatePolicies(ctx, request, policies)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to evaluate policies")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to evaluate policies")
 	}
 
 	// 缓存结果
@@ -291,14 +292,14 @@ func (p *pdp) Evaluate(ctx context.Context, request *AccessRequest) (*Decision, 
 
 	// 记录指标
 	if p.config.EnableMetrics {
-		p.metricsCollector.Increment("pdp_decisions_total",
+		p.metricsCollector.IncrementCounter("pdp_decisions_total",
 			map[string]string{
 				"effect":        string(decision.Effect),
 				"resource_type": request.Resource.Type,
 			})
 	}
 
- p.logger.WithContext(ctx).Info("Access request evaluated", logging.Any("request_id", request.RequestID), logging.Any("effect", decision.Effect), logging.Duration("duration_ms", time.Since(startTime))
+ p.logger.WithContext(ctx).Info("Access request evaluated", logging.Any("request_id", request.RequestID), logging.Any("effect", decision.Effect), logging.Duration("duration_ms", time.Since(startTime)))
 
 	return decision, nil
 }
@@ -308,7 +309,7 @@ func (p *pdp) EvaluateBatch(ctx context.Context, requests []*AccessRequest) ([]*
 	ctx, span := p.tracer.Start(ctx, "PDP.EvaluateBatch")
 	defer span.End()
 
-	p.logger.WithContext(ctx).Debug("Evaluating batch requests", logging.Any("count", len(requests))
+	p.logger.WithContext(ctx).Debug("Evaluating batch requests", logging.Any("count", len(requests)))
 
 	decisions := make([]*Decision, len(requests))
 
@@ -377,7 +378,7 @@ func (p *pdp) AddPolicy(ctx context.Context, policy *Policy) error {
 
 	// 保存到仓储
 	if err := p.policyRepo.Create(ctx, policy); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to create policy")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to create policy")
 	}
 
 	// 更新缓存
@@ -401,7 +402,7 @@ func (p *pdp) RemovePolicy(ctx context.Context, policyID string) error {
 	p.logger.WithContext(ctx).Info("Removing policy", logging.Any("policy_id", policyID))
 
 	if err := p.policyRepo.Delete(ctx, policyID); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to delete policy")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to delete policy")
 	}
 
 	// 从缓存移除
@@ -432,7 +433,7 @@ func (p *pdp) UpdatePolicy(ctx context.Context, policy *Policy) error {
 	policy.UpdatedAt = time.Now()
 
 	if err := p.policyRepo.Update(ctx, policy); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to update policy")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to update policy")
 	}
 
 	// 更新缓存
@@ -476,7 +477,7 @@ func (p *pdp) ListPolicies(ctx context.Context, filter *PolicyFilter) ([]*Policy
 
 	policies, err := p.policyRepo.List(ctx, filter)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to list policies")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to list policies")
 	}
 
 	return policies, nil
@@ -810,13 +811,13 @@ func (p *pdp) createDecision(request *AccessRequest, effect Effect, reason strin
 
 func (p *pdp) validatePolicy(policy *Policy) error {
 	if policy.ID == "" {
-		return errors.New(errors.CodeInvalidArgument, "policy ID is required")
+		return errors.NewInternalError(errors.CodeInvalidArgument, "policy ID is required")
 	}
 	if policy.Name == "" {
-		return errors.New(errors.CodeInvalidArgument, "policy name is required")
+		return errors.NewInternalError(errors.CodeInvalidArgument, "policy name is required")
 	}
 	if policy.Effect != EffectPermit && policy.Effect != EffectDeny {
-		return errors.New(errors.CodeInvalidArgument, "invalid policy effect")
+		return errors.NewInternalError(errors.CodeInvalidArgument, "invalid policy effect")
 	}
 	return nil
 }
@@ -849,7 +850,7 @@ func (p *pdp) getCacheKey(request *AccessRequest) string {
 
 func (p *pdp) clearEvaluationCache() {
 	p.evaluationCache = sync.Map{}
-	p.logger.Debug(context.Background(), "Evaluation cache cleared")
+	p.logger.Debug("Evaluation cache cleared")
 }
 
 func (p *pdp) auditDecision(ctx context.Context, request *AccessRequest, decision *Decision) {
@@ -898,7 +899,7 @@ func NewInMemoryPolicyRepository() PolicyRepository {
 
 func (r *InMemoryPolicyRepository) Create(ctx context.Context, policy *Policy) error {
 	if _, exists := r.policies.Load(policy.ID); exists {
-		return errors.New(errors.CodeAlreadyExists, "policy already exists")
+		return errors.ConflictError("policy already exists")
 	}
 
 	r.policies.Store(policy.ID, policy)
@@ -909,12 +910,12 @@ func (r *InMemoryPolicyRepository) GetByID(ctx context.Context, id string) (*Pol
 	if policy, ok := r.policies.Load(id); ok {
 		return policy.(*Policy), nil
 	}
-	return nil, errors.New(errors.CodeNotFound, "policy not found")
+	return nil, errors.NewInternalError(errors.CodeNotFound, "policy not found")
 }
 
 func (r *InMemoryPolicyRepository) Update(ctx context.Context, policy *Policy) error {
 	if _, exists := r.policies.Load(policy.ID); !exists {
-		return errors.New(errors.CodeNotFound, "policy not found")
+		return errors.NewInternalError(errors.CodeNotFound, "policy not found")
 	}
 
 	r.policies.Store(policy.ID, policy)
@@ -923,7 +924,7 @@ func (r *InMemoryPolicyRepository) Update(ctx context.Context, policy *Policy) e
 
 func (r *InMemoryPolicyRepository) Delete(ctx context.Context, id string) error {
 	if _, exists := r.policies.Load(id); !exists {
-		return errors.New(errors.CodeNotFound, "policy not found")
+		return errors.NewInternalError(errors.CodeNotFound, "policy not found")
 	}
 
 	r.policies.Delete(id)

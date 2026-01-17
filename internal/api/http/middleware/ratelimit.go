@@ -367,7 +367,7 @@ func (m *AdaptiveRateLimitMiddleware) AdjustLimit(newLimit int) {
 
 	m.baseConfig.RequestsLimit = newLimit
 	m.middleware = NewRateLimitMiddleware(m.baseConfig)
-	m.logger.Info(context.Background(), "Rate limit adjusted", "new_limit", newLimit)
+	m.logger.Info("Rate limit adjusted", "new_limit", newLimit)
 }
 
 //Personal.AI order the ending

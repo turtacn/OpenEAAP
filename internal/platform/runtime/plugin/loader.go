@@ -190,7 +190,7 @@ func (pl *PluginLoader) LoadPlugin(ctx context.Context, pluginPath string) (*Loa
 	// 执行加载前钩子
 	if pl.hooks.BeforeLoad != nil {
 		if err := pl.hooks.BeforeLoad(ctx, pluginPath); err != nil {
-			return nil, errors.Wrap(err, errors.CodeInternalError, "before load hook failed")
+			return nil, errors.Wrap(err, "ERR_INTERNAL", "before load hook failed")
 		}
 	}
 
@@ -201,25 +201,25 @@ func (pl *PluginLoader) LoadPlugin(ctx context.Context, pluginPath string) (*Loa
 	// 加载Go插件
 	goPlugin, err := plugin.Open(pluginPath)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to load plugin file")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to load plugin file")
 	}
 
 	// 查找插件符号
 	symbol, err := goPlugin.Lookup("Plugin")
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "plugin symbol not found")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "plugin symbol not found")
 	}
 
 	// 转换为插件实例
 	instance, ok := symbol.(PluginInstance)
 	if !ok {
-		return nil, errors.New(errors.CodeInternalError, "invalid plugin instance type")
+		return nil, errors.InternalError("invalid plugin instance type")
 	}
 
 	// 获取插件元数据
 	metadata := instance.GetMetadata()
 	if metadata == nil {
-		return nil, errors.New(errors.CodeInternalError, "plugin metadata is nil")
+		return nil, errors.InternalError("plugin metadata is nil")
 	}
 
 	// 创建加载的插件对象
@@ -264,7 +264,7 @@ func (pl *PluginLoader) LoadPlugin(ctx context.Context, pluginPath string) (*Loa
 
 	// 初始化插件
 	if err := pl.initializePlugin(loadCtx, loadedPlugin); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "plugin initialization failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "plugin initialization failed")
 	}
 
 	// 保存插件
@@ -427,7 +427,7 @@ func (pl *PluginLoader) ExecutePlugin(ctx context.Context, pluginID string, inpu
 	// 执行前钩子
 	if pl.hooks.BeforeExecute != nil {
 		if err := pl.hooks.BeforeExecute(ctx, loadedPlugin, input); err != nil {
-			return nil, errors.Wrap(err, errors.CodeInternalError, "before execute hook failed")
+			return nil, errors.Wrap(err, "ERR_INTERNAL", "before execute hook failed")
 		}
 	}
 
@@ -467,13 +467,13 @@ func (pl *PluginLoader) ReloadPlugin(ctx context.Context, pluginID string) error
 
 	// 卸载旧插件
 	if err := pl.UnloadPlugin(ctx, pluginID); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to unload plugin")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to unload plugin")
 	}
 
 	// 加载新插件
 	_, err = pl.LoadPlugin(ctx, pluginPath)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to reload plugin")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to reload plugin")
 	}
 
 	pl.logger.Info("plugin reloaded", "plugin_id", pluginID)
@@ -553,7 +553,7 @@ func (pl *PluginLoader) Shutdown(ctx context.Context) error {
 	select {
 	case <-done:
 	case <-ctx.Done():
-		return errors.New(errors.CodeDeadlineExceeded, "shutdown timeout")
+		return errors.New(errors.DeadlineError, "shutdown timeout")
 	}
 
 	// 卸载所有插件

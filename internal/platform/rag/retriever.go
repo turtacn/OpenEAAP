@@ -12,6 +12,7 @@ import (
 	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/internal/observability/trace"
 	"github.com/openeeap/openeeap/pkg/errors"
+	"go.opentelemetry.io/otel/codes"
 )
 
 // Retriever 定义检索器接口
@@ -127,11 +128,11 @@ func (r *retrieverImpl) Retrieve(ctx context.Context, req *RetrieveRequest) ([]*
 	startTime := time.Now()
 
 	// 创建 Span
-	span := r.tracer.StartSpan(ctx, "Retriever.Retrieve")
+	ctx, span := r.tracer.Start(ctx, "Retriever.Retrieve")
 	defer span.End()
-	span.AddTag("query", req.Query)
-	span.AddTag("mode", string(req.Mode))
-	span.AddTag("topK", req.TopK)
+	// span.AddTag("query", req.Query)
+	// span.AddTag("mode", string(req.Mode))
+	// span.AddTag("topK", req.TopK)
 
 	// 验证请求
 	if err := r.validateRequest(req); err != nil {
@@ -157,12 +158,13 @@ func (r *retrieverImpl) Retrieve(ctx context.Context, req *RetrieveRequest) ([]*
 	case RetrievalModeHybrid:
 		chunks, err = r.hybridRetrieval(ctx, req)
 	default:
-		return nil, errors.New(errors.CodeInvalidArgument,
+		return nil, errors.ValidationError(
 			fmt.Sprintf("unsupported retrieval mode: %s", req.Mode))
 	}
 
 	if err != nil {
-		span.SetStatus(trace.StatusError, err.Error())
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -175,9 +177,9 @@ func (r *retrieverImpl) Retrieve(ctx context.Context, req *RetrieveRequest) ([]*
 	}
 
 	latency := time.Since(startTime)
- r.logger.WithContext(ctx).Info("retrieval completed", logging.Any("query", req.Query), logging.Any("mode", req.Mode), logging.Any("chunks_count", len(chunks))
+	r.logger.WithContext(ctx).Info("retrieval completed", logging.Any("query", req.Query), logging.Any("mode", req.Mode), logging.Any("chunks_count", len(chunks)), logging.Any("latency_ms", latency.Milliseconds()))
 
-	span.AddTag("chunks_count", len(chunks))
+	// span.AddTag("chunks_count", len(chunks))
 
 	return chunks, nil
 }
@@ -187,30 +189,67 @@ func (r *retrieverImpl) vectorRetrieval(ctx context.Context, req *RetrieveReques
 	r.logger.WithContext(ctx).Debug("performing vector retrieval", logging.Any("query", req.Query))
 
 	// 构建向量搜索请求
+	// TODO: Convert query text to vector embedding
+	queryVectors := [][]float32{{}} // Placeholder - needs actual embedding
 	searchReq := &vector.SearchRequest{
-		CollectionName: req.CollectionName,
-		QueryText:      req.Query,
-		TopK:           req.TopK * 2, // 检索更多候选，后续过滤
-		MetricType:     "COSINE",
-		Filters:        r.buildVectorFilters(req),
+		Collection:   req.CollectionName,
+		Vectors:      queryVectors,
+		VectorField:  "embedding", // Default vector field name
+		TopK:         req.TopK * 2, // 检索更多候选，后续过滤
+		MetricType:   vector.MetricTypeCosine,
+		Filter:       "", // TODO: Convert r.buildVectorFilters(req) result to string
 	}
 
 	// 执行向量搜索
-	results, err := r.vectorStore.Search(ctx, searchReq)
+	searchResp, err := r.vectorStore.Search(ctx, searchReq)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternal, "vector search failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "vector search failed")
 	}
 
 	// 转换为 RetrievedChunk
-	chunks := make([]*RetrievedChunk, 0, len(results))
-	for _, result := range results {
+	chunks := make([]*RetrievedChunk, 0, len(searchResp.Results))
+	for _, result := range searchResp.Results {
+		content := ""
+		if contentVal, ok := result.Fields["content"]; ok {
+			if contentStr, ok := contentVal.(string); ok {
+				content = contentStr
+			}
+		}
+		
+		chunkID := ""
+		if idStr, ok := result.ID.(string); ok {
+			chunkID = idStr
+		}
+		
+		documentID := ""
+		if docID, ok := result.Metadata["document_id"]; ok {
+			if docIDStr, ok := docID.(string); ok {
+				documentID = docIDStr
+			}
+		}
+		
+		source := ""
+		if src, ok := result.Metadata["source"]; ok {
+			if srcStr, ok := src.(string); ok {
+				source = srcStr
+			}
+		}
+		
+		// Convert metadata map[string]interface{} to map[string]string
+		metadata := make(map[string]string)
+		for k, v := range result.Metadata {
+			if vStr, ok := v.(string); ok {
+				metadata[k] = vStr
+			}
+		}
+		
 		chunk := &RetrievedChunk{
-			ChunkID:    result.ID,
-			DocumentID: result.Metadata["document_id"],
-			Content:    result.Content,
+			ChunkID:    chunkID,
+			DocumentID: documentID,
+			Content:    content,
 			Score:      result.Score,
-			Metadata:   result.Metadata,
-			Source:     result.Metadata["source"],
+			Metadata:   metadata,
+			Source:     source,
 		}
 		chunks = append(chunks, chunk)
 	}
@@ -221,7 +260,7 @@ func (r *retrieverImpl) vectorRetrieval(ctx context.Context, req *RetrieveReques
 // keywordRetrieval 关键词检索
 func (r *retrieverImpl) keywordRetrieval(ctx context.Context, req *RetrieveRequest) ([]*RetrievedChunk, error) {
 	if r.searchEngine == nil {
-		return nil, errors.New(errors.CodeUnimplemented, "search engine not configured")
+		return nil, errors.InternalError( "search engine not configured")
 	}
 
 	r.logger.WithContext(ctx).Debug("performing keyword retrieval", logging.Any("query", req.Query))
@@ -229,7 +268,7 @@ func (r *retrieverImpl) keywordRetrieval(ctx context.Context, req *RetrieveReque
 	// 执行关键词搜索
 	results, err := r.searchEngine.Search(ctx, req.Query, req.TopK*2, req.Metadata)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternal, "keyword search failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "keyword search failed")
 	}
 
 	// 转换为 RetrievedChunk
@@ -252,7 +291,7 @@ func (r *retrieverImpl) keywordRetrieval(ctx context.Context, req *RetrieveReque
 // graphRetrieval 知识图谱检索
 func (r *retrieverImpl) graphRetrieval(ctx context.Context, req *RetrieveRequest) ([]*RetrievedChunk, error) {
 	if r.knowledgeGraph == nil {
-		return nil, errors.New(errors.CodeUnimplemented, "knowledge graph not configured")
+		return nil, errors.InternalError( "knowledge graph not configured")
 	}
 
 	r.logger.WithContext(ctx).Debug("performing graph retrieval", logging.Any("query", req.Query))
@@ -260,7 +299,7 @@ func (r *retrieverImpl) graphRetrieval(ctx context.Context, req *RetrieveRequest
 	// 执行图查询
 	results, err := r.knowledgeGraph.Query(ctx, req.Query, 2) // 最大深度为2
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternal, "graph query failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "graph query failed")
 	}
 
 	// 转换为 RetrievedChunk
@@ -338,7 +377,7 @@ func (r *retrieverImpl) hybridRetrieval(ctx context.Context, req *RetrieveReques
 	}
 
 	if len(allChunks) == 0 {
-		return nil, errors.New(errors.CodeInternal, "all retrieval strategies failed")
+		return nil, errors.InternalError("all retrieval strategies failed")
 	}
 
 	// 融合分数（RRF - Reciprocal Rank Fusion）
@@ -453,7 +492,7 @@ func (r *retrieverImpl) validateRequest(req *RetrieveRequest) error {
 func (r *retrieverImpl) HealthCheck(ctx context.Context) error {
 	// 检查向量数据库
 	if err := r.vectorStore.HealthCheck(ctx); err != nil {
-		return errors.Wrap(err, errors.CodeUnavailable, "vector store unhealthy")
+		return errors.Wrap(err, "ERR_UNAVAIL", "vector store unhealthy")
 	}
 
 	// 检查搜索引擎（可选）

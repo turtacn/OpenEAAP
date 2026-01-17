@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/openeeap/openeeap/internal/domain/agent"
@@ -68,7 +69,7 @@ func (r *agentRepo) Create(ctx context.Context, agt *agent.Agent) error {
 	// 转换为数据库模型
 	model, err := r.toModel(agt)
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to convert agent to model")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert agent to model")
 	}
 
 	// 执行创建
@@ -103,6 +104,123 @@ func (r *agentRepo) GetByID(ctx context.Context, id string) (*agent.Agent, error
 	return r.toEntity(&model)
 }
 
+// GetByName retrieves an agent by name
+func (r *agentRepo) GetByName(ctx context.Context, name string) (*agent.Agent, error) {
+	if name == "" {
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "agent name cannot be empty")
+	}
+
+	var model AgentModel
+	if err := r.db.WithContext(ctx).First(&model, "name = ?", name).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.NewNotFoundError(errors.CodeNotFound, "agent not found")
+		}
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get agent")
+	}
+
+	return r.toEntity(&model)
+}
+
+// GetByStatus retrieves agents by status
+func (r *agentRepo) GetByStatus(ctx context.Context, status agent.AgentStatus, filter agent.AgentFilter) ([]*agent.Agent, error) {
+	query := r.db.WithContext(ctx).Where("status = ?", status)
+	
+	// Apply filters
+	if len(filter.RuntimeType) > 0 {
+		query = query.Where("runtime_type IN ?", filter.RuntimeType)
+	}
+	if filter.OwnerID != "" {
+		query = query.Where("owner_id = ?", filter.OwnerID)
+	}
+	
+	var models []AgentModel
+	if err := query.Find(&models).Error; err != nil {
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get agents by status")
+	}
+	
+	agents := make([]*agent.Agent, 0, len(models))
+	for _, model := range models {
+		agt, err := r.toEntity(&model)
+		if err != nil {
+			continue // Skip invalid agents
+		}
+		agents = append(agents, agt)
+	}
+	
+	return agents, nil
+}
+
+// GetByRuntimeType retrieves agents by runtime type
+func (r *agentRepo) GetByRuntimeType(ctx context.Context, runtimeType agent.RuntimeType, filter agent.AgentFilter) ([]*agent.Agent, error) {
+	query := r.db.WithContext(ctx).Where("runtime_type = ?", runtimeType)
+	
+	// Apply filters
+	if len(filter.Status) > 0 {
+		query = query.Where("status IN ?", filter.Status)
+	}
+	if filter.OwnerID != "" {
+		query = query.Where("owner_id = ?", filter.OwnerID)
+	}
+	
+	var models []AgentModel
+	if err := query.Find(&models).Error; err != nil {
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get agents by runtime type")
+	}
+	
+	agents := make([]*agent.Agent, 0, len(models))
+	for _, model := range models {
+		agt, err := r.toEntity(&model)
+		if err != nil {
+			continue // Skip invalid agents
+		}
+		agents = append(agents, agt)
+	}
+	
+	return agents, nil
+}
+
+// GetByTags retrieves agents by tags
+func (r *agentRepo) GetByTags(ctx context.Context, tags []string, filter agent.AgentFilter) ([]*agent.Agent, error) {
+	if len(tags) == 0 {
+		return []*agent.Agent{}, nil
+	}
+	
+	var models []AgentModel
+	query := r.db.WithContext(ctx)
+	
+	// Search for agents that have all the tags (depending on TagMode in filter)
+	// For simplicity, we'll do a JSON contains check
+	for _, tag := range tags {
+		query = query.Where("tags LIKE ?", "%\""+tag+"\"%")
+	}
+	
+	// Apply additional filters
+	if len(filter.Status) > 0 {
+		query = query.Where("status IN ?", filter.Status)
+	}
+	if len(filter.RuntimeType) > 0 {
+		query = query.Where("runtime_type IN ?", filter.RuntimeType)
+	}
+	if filter.OwnerID != "" {
+		query = query.Where("owner_id = ?", filter.OwnerID)
+	}
+	
+	if err := query.Find(&models).Error; err != nil {
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get agents by tags")
+	}
+	
+	agents := make([]*agent.Agent, 0, len(models))
+	for _, model := range models {
+		agt, err := r.toEntity(&model)
+		if err != nil {
+			continue // Skip invalid agents
+		}
+		agents = append(agents, agt)
+	}
+	
+	return agents, nil
+}
+
 // Update 更新 Agent
 func (r *agentRepo) Update(ctx context.Context, agt *agent.Agent) error {
 	if agt == nil {
@@ -120,7 +238,7 @@ func (r *agentRepo) Update(ctx context.Context, agt *agent.Agent) error {
 	// 转换为数据库模型
 	model, err := r.toModel(agt)
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to convert agent to model")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert agent to model")
 	}
 
 	// 使用乐观锁更新
@@ -209,13 +327,11 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 	query := r.db.WithContext(ctx).Model(&AgentModel{})
 
 	// 应用过滤条件
-	}
 	if len(filter.RuntimeType) > 0 {
 		query = query.Where("runtime_type = ?", filter.RuntimeType)
 	}
 	if len(filter.Status) > 0 {
 		query = query.Where("status = ?", filter.Status)
-	}
 	}
 	if !filter.CreatedAfter.IsZero() {
 		query = query.Where("created_at >= ?", filter.CreatedAfter)
@@ -232,6 +348,9 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 
 	// 应用排序
 	orderBy := "created_at DESC"
+	if filter.SortBy != "" {
+		orderBy = filter.SortBy
+		if filter.SortOrder == agent.SortOrderDesc {
 			orderBy += " DESC"
 		} else {
 			orderBy += " ASC"
@@ -253,7 +372,7 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 	for i := range models {
 		agt, err := r.toEntity(&models[i])
 		if err != nil {
-			return nil, 0, errors.WrapInternalError(err, errors.CodeInternalError, "failed to convert model to entity")
+			return nil, 0, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert model to entity")
 		}
 		agents = append(agents, agt)
 	}
@@ -264,17 +383,17 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 // UpdateStatus 更新 Agent 状态
 func (r *agentRepo) UpdateStatus(ctx context.Context, id string, status agent.AgentStatus) error {
 	if id == "" {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "agent ID cannot be empty")
+		return errors.ValidationError("agent ID cannot be empty")
 	}
-	if !status.Valid() {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "invalid agent status")
+	if status == "" {
+		return errors.ValidationError("invalid agent status")
 	}
 
 	result := r.db.WithContext(ctx).
 		Model(&AgentModel{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
-			"status":     status.String(),
+			"status":     string(status),
 			"updated_at": time.Now(),
 		})
 
@@ -311,7 +430,7 @@ func (r *agentRepo) BatchCreate(ctx context.Context, agents []*agent.Agent) erro
 
 		model, err := r.toModel(agt)
 		if err != nil {
-			return errors.WrapInternalError(err, errors.CodeInternalError, "failed to convert agent to model")
+			return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert agent to model")
 		}
 		models = append(models, *model)
 	}
@@ -334,16 +453,24 @@ func (r *agentRepo) toModel(agt *agent.Agent) (*AgentModel, error) {
 		return nil, fmt.Errorf("failed to marshal config: %w", err)
 	}
 
+	// Convert version string to int if possible
+	version := 1
+	if agt.Version != "" {
+		if v, err := strconv.Atoi(agt.Version); err == nil {
+			version = v
+		}
+	}
+	
 	return &AgentModel{
 		ID:          agt.ID,
 		Name:        agt.Name,
 		Description: agt.Description,
-		RuntimeType: agt.RuntimeType.String(),
+		RuntimeType: string(agt.RuntimeType),
 		Config:      string(configJSON),
-		Status:      agt.Status.String(),
-		Version:     agt.Version,
-		CreatedBy:   agt.CreatedBy,
-		UpdatedBy:   agt.UpdatedBy,
+		Status:      string(agt.Status),
+		Version:     version,
+		CreatedBy:   agt.OwnerID, // Use OwnerID as CreatedBy
+		UpdatedBy:   agt.OwnerID, // Use OwnerID as UpdatedBy
 		CreatedAt:   agt.CreatedAt,
 		UpdatedAt:   agt.UpdatedAt,
 	}, nil
@@ -357,17 +484,11 @@ func (r *agentRepo) toEntity(model *AgentModel) (*agent.Agent, error) {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	// 解析运行时类型
-	runtimeType, err := agent.RuntimeTypeFromString(model.RuntimeType)
-	if err != nil {
-		return nil, fmt.Errorf("invalid runtime type: %w", err)
-	}
+	// 解析运行时类型 - RuntimeType is just a string type, so cast it
+	runtimeType := agent.RuntimeType(model.RuntimeType)
 
-	// 解析状态
-	status, err := agent.AgentStatusFromString(model.Status)
-	if err != nil {
-		return nil, fmt.Errorf("invalid agent status: %w", err)
-	}
+	// 解析状态 - AgentStatus is just a string type, so cast it
+	status := agent.AgentStatus(model.Status)
 
 	return &agent.Agent{
 		ID:          model.ID,
@@ -376,9 +497,8 @@ func (r *agentRepo) toEntity(model *AgentModel) (*agent.Agent, error) {
 		RuntimeType: runtimeType,
 		Config:      config,
 		Status:      status,
-		Version:     model.Version,
-		CreatedBy:   model.CreatedBy,
-		UpdatedBy:   model.UpdatedBy,
+		Version:     strconv.Itoa(model.Version), // Convert int to string
+		OwnerID:     model.CreatedBy,             // Map CreatedBy to OwnerID
 		CreatedAt:   model.CreatedAt,
 		UpdatedAt:   model.UpdatedAt,
 	}, nil
@@ -401,7 +521,7 @@ func (r *agentRepo) GetStatistics(ctx context.Context) (*agent.AgentStatistics, 
 	// 总数
 	if err := r.db.WithContext(ctx).
 		Model(&AgentModel{}).
-		Count(&stats.Total).Error; err != nil {
+		Count(&stats.TotalCount).Error; err != nil {
 		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get total count")
 	}
 
@@ -467,7 +587,8 @@ func (r *agentRepo) Archive(ctx context.Context, id string) error {
 // GetArchived retrieves archived agents
 func (r *agentRepo) GetArchived(ctx context.Context, filter agent.AgentFilter) ([]*agent.Agent, error) {
 	filter.IncludeArchived = true
-	return r.List(ctx, filter)
+	agents, _, err := r.List(ctx, &filter)
+	return agents, err
 }
 
 // BatchUpdate updates multiple agents
@@ -504,12 +625,130 @@ func (r *agentRepo) BatchDelete(ctx context.Context, ids []string) error {
 
 //Personal.AI order the ending
 
+// Exists checks if an agent exists
+func (r *agentRepo) Exists(ctx context.Context, id string) (bool, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&AgentModel{}).Where("id = ?", id).Count(&count).Error; err != nil {
+		return false, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to check agent existence")
+	}
+	return count > 0, nil
+}
+
+// ExistsByName checks if an agent with the given name exists
+func (r *agentRepo) ExistsByName(ctx context.Context, name string) (bool, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&AgentModel{}).Where("name = ?", name).Count(&count).Error; err != nil {
+		return false, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to check agent existence by name")
+	}
+	return count > 0, nil
+}
+
+// GetByOwner retrieves agents by owner ID
+func (r *agentRepo) GetByOwner(ctx context.Context, ownerID string, filter agent.AgentFilter) ([]*agent.Agent, error) {
+	var models []*AgentModel
+	query := r.db.WithContext(ctx).Where("owner_id = ?", ownerID)
+	
+	// Apply filter
+	if len(filter.Status) > 0 {
+		query = query.Where("status IN ?", filter.Status)
+	}
+	if len(filter.RuntimeType) > 0 {
+		query = query.Where("runtime_type IN ?", filter.RuntimeType)
+	}
+	
+	if err := query.Find(&models).Error; err != nil {
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get agents by owner")
+	}
+	
+	agents := make([]*agent.Agent, 0, len(models))
+	for _, model := range models {
+		agt, err := r.toEntity(model)
+		if err != nil {
+			return nil, err
+		}
+		agents = append(agents, agt)
+	}
+	
+	return agents, nil
+}
+
+// GetActive retrieves all active agents
+func (r *agentRepo) GetActive(ctx context.Context) ([]*agent.Agent, error) {
+	var models []*AgentModel
+	if err := r.db.WithContext(ctx).Where("status = ?", agent.AgentStatusActive).Find(&models).Error; err != nil {
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get active agents")
+	}
+	
+	agents := make([]*agent.Agent, 0, len(models))
+	for _, model := range models {
+		agt, err := r.toEntity(model)
+		if err != nil {
+			return nil, err
+		}
+		agents = append(agents, agt)
+	}
+	
+	return agents, nil
+}
+
 // Count returns the total count of agents matching the filter
 func (r *agentRepo) Count(ctx context.Context, filter agent.AgentFilter) (int64, error) {
-var count int64
-query := r.db.WithContext(ctx).Model(&AgentModel{})
-if err := query.Count(&count).Error; err != nil {
-return 0, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to count agents")
+	var count int64
+	query := r.db.WithContext(ctx).Model(&AgentModel{})
+	if err := query.Count(&count).Error; err != nil {
+		return 0, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to count agents")
+	}
+	return count, nil
 }
-return count, nil
+
+// GetPopular retrieves popular agents by execution count
+func (r *agentRepo) GetPopular(ctx context.Context, limit int) ([]*agent.Agent, error) {
+	var agentModels []AgentModel
+	
+	// TODO: This currently orders by updated_at as a proxy for popularity
+	// In production, this should join with an execution statistics table
+	// or use a denormalized execution_count field
+	query := r.db.WithContext(ctx).
+		Where("status = ?", agent.AgentStatusActive).
+		Order("updated_at DESC").
+		Limit(limit)
+	
+	if err := query.Find(&agentModels).Error; err != nil {
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get popular agents")
+	}
+	
+	agents := make([]*agent.Agent, 0, len(agentModels))
+	for _, model := range agentModels {
+		agt, err := r.toEntity(&model)
+		if err != nil {
+			return nil, errors.Wrap(err, "ERR_CONVERSION", "failed to convert agent model to entity")
+		}
+		agents = append(agents, agt)
+	}
+	
+	return agents, nil
+}
+
+// GetRecent retrieves recently created agents
+func (r *agentRepo) GetRecent(ctx context.Context, limit int) ([]*agent.Agent, error) {
+	var agentModels []AgentModel
+	
+	query := r.db.WithContext(ctx).
+		Order("created_at DESC").
+		Limit(limit)
+	
+	if err := query.Find(&agentModels).Error; err != nil {
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get recent agents")
+	}
+	
+	agents := make([]*agent.Agent, 0, len(agentModels))
+	for _, model := range agentModels {
+		agt, err := r.toEntity(&model)
+		if err != nil {
+			return nil, errors.Wrap(err, "ERR_CONVERSION", "failed to convert agent model to entity")
+		}
+		agents = append(agents, agt)
+	}
+	
+	return agents, nil
 }

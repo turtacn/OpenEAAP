@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/internal/observability/metrics"
 	"github.com/openeeap/openeeap/pkg/errors"
@@ -44,7 +45,7 @@ type PrivacyPolicy struct {
 // PrivacyGateway provides PII detection and redaction for inference
 type PrivacyGateway struct {
 	logger           logging.Logger
-	metricsCollector *metrics.MetricsCollector
+	metricsCollector metrics.MetricsCollector
 	detector         *PIIDetector
 	policy           *PrivacyPolicy
 	auditLogger      AuditLogger
@@ -107,7 +108,7 @@ type RestoreRequest struct {
 // NewPrivacyGateway creates a new privacy gateway
 func NewPrivacyGateway(
 	logger logging.Logger,
-	metricsCollector *metrics.MetricsCollector,
+	metricsCollector metrics.MetricsCollector,
 	detector *PIIDetector,
 	policy *PrivacyPolicy,
 	auditLogger AuditLogger,
@@ -142,7 +143,7 @@ func (g *PrivacyGateway) ProcessInbound(ctx context.Context, req *ProcessRequest
 	// Detect PII in the text
 	detectionResult, err := g.detector.Detect(ctx, req.Text)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "PII detection failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "PII detection failed")
 	}
 
 	// Determine action based on policy and detection result
@@ -176,7 +177,7 @@ func (g *PrivacyGateway) ProcessInbound(ctx context.Context, req *ProcessRequest
 			}
 		}
 
-  g.logger.WithContext(ctx).Info("PII redacted from request", logging.Any("request_id", req.RequestID), logging.Any("entity_count", len(detectionResult.Entities))
+  g.logger.WithContext(ctx).Info("PII redacted from request", logging.Any("request_id", req.RequestID), logging.Any("entity_count", len(detectionResult.Entities)))
 
 	case ActionEncrypt:
 		if g.encryptor == nil {
@@ -261,7 +262,7 @@ func (g *PrivacyGateway) ProcessOutbound(ctx context.Context, text string, resto
 // Restore restores original PII in text using restore token
 func (g *PrivacyGateway) Restore(ctx context.Context, req *RestoreRequest) (string, error) {
 	if !g.policy.EnableRestore {
-		return "", errors.New(errors.CodeInvalidArgument, "restore is not enabled")
+		return "", errors.NewInternalError("PRIV_ERR", "restore is not enabled")
 	}
 
 	if req.RestoreToken == "" {
@@ -288,7 +289,7 @@ func (g *PrivacyGateway) Restore(ctx context.Context, req *RestoreRequest) (stri
 		}
 	}
 
- g.logger.WithContext(ctx).Info("PII restored", logging.Any("request_id", req.RequestID), logging.Any("mapping_count", len(mappings))
+ g.logger.WithContext(ctx).Info("PII restored", logging.Any("request_id", req.RequestID), logging.Any("mapping_count", len(mappings)))
 
 	return restoredText, nil
 }
@@ -491,14 +492,14 @@ func (g *PrivacyGateway) recordMetrics(direction string, action PrivacyAction, h
 		return
 	}
 
-	g.metricsCollector.IncrementCounter("privacy_gateway_requests_total", 1,
-		map[string]string{
+	g.metricsCollector.IncrementCounter("privacy_gateway_requests_total",
+		prometheus.Labels{
 			"direction": direction,
 			"action":    string(action),
 			"has_pii":   fmt.Sprintf("%t", hasPII),
 		})
 
-	g.metricsCollector.RecordHistogram("privacy_gateway_latency_ms", float64(latency.Milliseconds()),
+	g.metricsCollector.ObserveHistogram("privacy_gateway_latency_ms", float64(latency.Milliseconds()),
 		map[string]string{
 			"direction": direction,
 		})
@@ -522,11 +523,11 @@ func defaultPolicy() *PrivacyPolicy {
 // ValidatePolicy validates a privacy policy configuration
 func ValidatePolicy(policy *PrivacyPolicy) error {
 	if policy == nil {
-		return errors.New(errors.CodeInvalidArgument, "policy cannot be nil")
+		return errors.NewInternalError("PRIV_ERR", "policy cannot be nil")
 	}
 
 	if policy.MinRiskThreshold < 0 || policy.MinRiskThreshold > 1 {
-		return errors.New(errors.CodeInvalidArgument, "min_risk_threshold must be between 0 and 1")
+		return errors.NewInternalError("PRIV_ERR", "min_risk_threshold must be between 0 and 1")
 	}
 
 	validActions := map[PrivacyAction]bool{
@@ -537,7 +538,7 @@ func ValidatePolicy(policy *PrivacyPolicy) error {
 	}
 
 	if !validActions[policy.Action] {
-		return errors.New(errors.CodeInvalidArgument, "invalid privacy action")
+		return errors.NewInternalError("PRIV_ERR", "invalid privacy action")
 	}
 
 	return nil
