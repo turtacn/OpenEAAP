@@ -283,13 +283,13 @@ func NewLangChainAdapter(
 	client LangChainClient,
 ) (*LangChainAdapter, error) {
 	if config == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "config cannot be nil")
+		return nil, errors.NewInternalError(errors.CodeInvalidParameter, "config cannot be nil")
 	}
 	if logger == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "logger cannot be nil")
+		return nil, errors.NewInternalError(errors.CodeInvalidParameter, "logger cannot be nil")
 	}
 	if client == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "client cannot be nil")
+		return nil, errors.NewInternalError(errors.CodeInvalidParameter, "client cannot be nil")
 	}
 
 	adapter := &LangChainAdapter{
@@ -363,7 +363,7 @@ func (lca *LangChainAdapter) Initialize(ctx context.Context, config *runtime.Run
 	defer lca.mu.Unlock()
 
 	if lca.status == runtime.RuntimeStatusReady {
-		return errors.New(errors.CodeInternalError, "runtime already initialized")
+		return errors.New("ERR_INTERNAL", "runtime already initialized")
 	}
 
 	// 验证配置
@@ -379,7 +379,7 @@ func (lca *LangChainAdapter) Initialize(ctx context.Context, config *runtime.Run
 	// 初始化LangChain客户端
 	lcConfig := lca.buildLangChainConfig()
 	if err := lca.client.Initialize(lcConfig); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to initialize langchain client")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to initialize langchain client")
 	}
 
 	// 加载插件
@@ -411,7 +411,7 @@ func (lca *LangChainAdapter) Initialize(ctx context.Context, config *runtime.Run
 // Execute 执行任务
 func (lca *LangChainAdapter) Execute(ctx context.Context, req *runtime.ExecuteRequest) (*runtime.ExecuteResponse, error) {
 	if !lca.IsReady() {
-		return nil, errors.New(errors.CodeInternalError, "runtime not ready")
+		return nil, errors.New("ERR_INTERNAL", "runtime not ready")
 	}
 
 	// 更新指标
@@ -449,7 +449,7 @@ func (lca *LangChainAdapter) Execute(ctx context.Context, req *runtime.ExecuteRe
 	lca.metrics.mu.Unlock()
 
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "langchain execution failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "langchain execution failed")
 	}
 
 	// 转换响应格式
@@ -469,7 +469,7 @@ func (lca *LangChainAdapter) ExecuteStream(ctx context.Context, req *runtime.Exe
 	errChan := make(chan error, 1)
 
 	if !lca.config.EnableStreaming {
-		errChan <- errors.New(errors.CodeInvalidParameter, "streaming not enabled")
+		errChan <- errors.NewInternalError(errors.CodeInvalidParameter, "streaming not enabled")
 		close(chunkChan)
 		close(errChan)
 		return chunkChan, errChan
@@ -517,7 +517,7 @@ func (lca *LangChainAdapter) ExecuteStream(ctx context.Context, req *runtime.Exe
 
 			case err := <-streamErrChan:
 				if err != nil {
-					errChan <- errors.Wrap(err, errors.CodeInternalError, "langchain stream failed")
+					errChan <- errors.Wrap(err, "ERR_INTERNAL", "langchain stream failed")
 				}
 				return
 
@@ -609,7 +609,7 @@ func (lca *LangChainAdapter) Shutdown(ctx context.Context) error {
 	case <-done:
 		lca.logger.Info("langchain adapter shutdown completed", "runtime_id", lca.id)
 	case <-ctx.Done():
-		return errors.New(errors.CodeDeadlineExceeded, "shutdown timeout")
+		return errors.NewInternalError(errors.CodeDeadlineExceeded, "shutdown timeout")
 	}
 
 	// 关闭客户端
@@ -654,7 +654,7 @@ func (lca *LangChainAdapter) UpdateConfig(ctx context.Context, config *runtime.R
 // LoadPlugin 加载插件
 func (lca *LangChainAdapter) LoadPlugin(ctx context.Context, plugin *runtime.Plugin) error {
 	if plugin == nil {
-		return errors.New(errors.CodeInvalidParameter, "plugin cannot be nil")
+		return errors.NewInternalError(errors.CodeInvalidParameter, "plugin cannot be nil")
 	}
 
 	lca.pluginsMu.Lock()
@@ -662,7 +662,7 @@ func (lca *LangChainAdapter) LoadPlugin(ctx context.Context, plugin *runtime.Plu
 
 	// 检查插件是否已加载
 	if _, exists := lca.plugins[plugin.ID]; exists {
-		return errors.New(errors.CodeAlreadyExists, "plugin already loaded")
+		return errors.NewInternalError(errors.CodeAlreadyExists, "plugin already loaded")
 	}
 
 	// 验证插件
@@ -687,7 +687,7 @@ func (lca *LangChainAdapter) LoadPlugin(ctx context.Context, plugin *runtime.Plu
 // UnloadPlugin 卸载插件
 func (lca *LangChainAdapter) UnloadPlugin(ctx context.Context, pluginID string) error {
 	if pluginID == "" {
-		return errors.New(errors.CodeInvalidParameter, "plugin id cannot be empty")
+		return errors.NewInternalError(errors.CodeInvalidParameter, "plugin id cannot be empty")
 	}
 
 	lca.pluginsMu.Lock()
@@ -695,7 +695,7 @@ func (lca *LangChainAdapter) UnloadPlugin(ctx context.Context, pluginID string) 
 
 	plugin, exists := lca.plugins[pluginID]
 	if !exists {
-		return errors.New(errors.CodeNotFound, "plugin not found")
+		return errors.NewInternalError(errors.CodeNotFound, "plugin not found")
 	}
 
 	// 卸载插件（实际实现需要调用LangChain SDK）
@@ -724,7 +724,7 @@ func (lca *LangChainAdapter) ListPlugins() ([]*runtime.Plugin, error) {
 // GetPlugin 获取插件
 func (lca *LangChainAdapter) GetPlugin(pluginID string) (*runtime.Plugin, error) {
 	if pluginID == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "plugin id cannot be empty")
+		return nil, errors.NewInternalError(errors.CodeInvalidParameter, "plugin id cannot be empty")
 	}
 
 	lca.pluginsMu.RLock()
@@ -732,7 +732,7 @@ func (lca *LangChainAdapter) GetPlugin(pluginID string) (*runtime.Plugin, error)
 
 	plugin, exists := lca.plugins[pluginID]
 	if !exists {
-		return nil, errors.New(errors.CodeNotFound, "plugin not found")
+		return nil, errors.NewInternalError(errors.CodeNotFound, "plugin not found")
 	}
 
 	return plugin, nil
@@ -746,7 +746,7 @@ func (lca *LangChainAdapter) ExecutePlugin(ctx context.Context, pluginID string,
 	}
 
 	if plugin.Status != runtime.PluginStatusLoaded && plugin.Status != runtime.PluginStatusActive {
-		return nil, errors.New(errors.CodeInvalidParameter, "plugin not active")
+		return nil, errors.NewInternalError(errors.CodeInvalidParameter, "plugin not active")
 	}
 
 	startTime := time.Now()
@@ -776,19 +776,19 @@ func (lca *LangChainAdapter) ExecutePlugin(ctx context.Context, pluginID string,
 // ValidatePlugin 验证插件
 func (lca *LangChainAdapter) ValidatePlugin(ctx context.Context, plugin *runtime.Plugin) error {
 	if plugin == nil {
-		return errors.New(errors.CodeInvalidParameter, "plugin cannot be nil")
+		return errors.NewInternalError(errors.CodeInvalidParameter, "plugin cannot be nil")
 	}
 
 	if plugin.ID == "" {
-		return errors.New(errors.CodeInvalidParameter, "plugin id cannot be empty")
+		return errors.NewInternalError(errors.CodeInvalidParameter, "plugin id cannot be empty")
 	}
 
 	if plugin.Name == "" {
-		return errors.New(errors.CodeInvalidParameter, "plugin name cannot be empty")
+		return errors.NewInternalError(errors.CodeInvalidParameter, "plugin name cannot be empty")
 	}
 
 	if plugin.Type == "" {
-		return errors.New(errors.CodeInvalidParameter, "plugin type cannot be empty")
+		return errors.NewInternalError(errors.CodeInvalidParameter, "plugin type cannot be empty")
 	}
 
 	// 验证插件类型是否支持
@@ -820,15 +820,15 @@ func (lca *LangChainAdapter) ValidatePlugin(ctx context.Context, plugin *runtime
 // validateConfig 验证配置
 func (lca *LangChainAdapter) validateConfig(config *runtime.RuntimeConfig) error {
 	if config == nil {
-		return errors.New(errors.CodeInvalidParameter, "config cannot be nil")
+		return errors.NewInternalError(errors.CodeInvalidParameter, "config cannot be nil")
 	}
 
 	if config.ID == "" {
-		return errors.New(errors.CodeInvalidParameter, "runtime id cannot be empty")
+		return errors.NewInternalError(errors.CodeInvalidParameter, "runtime id cannot be empty")
 	}
 
 	if config.Type != runtime.RuntimeTypeLangChain {
-		return errors.New(errors.CodeInvalidParameter, "invalid runtime type")
+		return errors.NewInternalError(errors.CodeInvalidParameter, "invalid runtime type")
 	}
 
 	return nil
@@ -1011,13 +1011,13 @@ func ConvertMemoryToLangChain(memory interface{}) *MemoryConfig {
 // BuildChainFromConfig 从配置构建链
 func (lca *LangChainAdapter) BuildChainFromConfig(config *ChainConfig) (Chain, error) {
 	if config == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "chain config cannot be nil")
+		return nil, errors.NewInternalError(errors.CodeInvalidParameter, "chain config cannot be nil")
 	}
 
 	// 调用LangChain客户端创建链
 	chain, err := lca.client.CreateChain(config)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to create chain")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to create chain")
 	}
 
 	lca.logger.Info("chain created",
@@ -1030,13 +1030,13 @@ func (lca *LangChainAdapter) BuildChainFromConfig(config *ChainConfig) (Chain, e
 // BuildAgentFromConfig 从配置构建代理
 func (lca *LangChainAdapter) BuildAgentFromConfig(config *AgentConfig) (Agent, error) {
 	if config == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "agent config cannot be nil")
+		return nil, errors.NewInternalError(errors.CodeInvalidParameter, "agent config cannot be nil")
 	}
 
 	// 调用LangChain客户端创建代理
 	agent, err := lca.client.CreateAgent(config)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to create agent")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to create agent")
 	}
 
 	lca.logger.Info("agent created",
@@ -1049,7 +1049,7 @@ func (lca *LangChainAdapter) BuildAgentFromConfig(config *AgentConfig) (Agent, e
 // SerializeChainConfig 序列化链配置
 func SerializeChainConfig(config *ChainConfig) ([]byte, error) {
 	if config == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "config cannot be nil")
+		return nil, errors.NewInternalError(errors.CodeInvalidParameter, "config cannot be nil")
 	}
 	return json.Marshal(config)
 }
@@ -1057,12 +1057,12 @@ func SerializeChainConfig(config *ChainConfig) ([]byte, error) {
 // DeserializeChainConfig 反序列化链配置
 func DeserializeChainConfig(data []byte) (*ChainConfig, error) {
 	if len(data) == 0 {
-		return nil, errors.New(errors.CodeInvalidParameter, "data cannot be empty")
+		return nil, errors.NewInternalError(errors.CodeInvalidParameter, "data cannot be empty")
 	}
 
 	var config ChainConfig
 	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to unmarshal config")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to unmarshal config")
 	}
 
 	return &config, nil
@@ -1071,7 +1071,7 @@ func DeserializeChainConfig(data []byte) (*ChainConfig, error) {
 // SerializeAgentConfig 序列化代理配置
 func SerializeAgentConfig(config *AgentConfig) ([]byte, error) {
 	if config == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "config cannot be nil")
+		return nil, errors.NewInternalError(errors.CodeInvalidParameter, "config cannot be nil")
 	}
 	return json.Marshal(config)
 }
@@ -1079,12 +1079,12 @@ func SerializeAgentConfig(config *AgentConfig) ([]byte, error) {
 // DeserializeAgentConfig 反序列化代理配置
 func DeserializeAgentConfig(data []byte) (*AgentConfig, error) {
 	if len(data) == 0 {
-		return nil, errors.New(errors.CodeInvalidParameter, "data cannot be empty")
+		return nil, errors.NewInternalError(errors.CodeInvalidParameter, "data cannot be empty")
 	}
 
 	var config AgentConfig
 	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to unmarshal config")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to unmarshal config")
 	}
 
 	return &config, nil
@@ -1155,11 +1155,11 @@ func (lca *LangChainAdapter) EnablePlugin(ctx context.Context, pluginID string) 
 
 	plugin, exists := lca.plugins[pluginID]
 	if !exists {
-		return errors.New(errors.CodeNotFound, "plugin not found")
+		return errors.NewInternalError(errors.CodeNotFound, "plugin not found")
 	}
 
 	if plugin.Status == runtime.PluginStatusActive {
-		return errors.New(errors.CodeInvalidParameter, "plugin already active")
+		return errors.NewInternalError(errors.CodeInvalidParameter, "plugin already active")
 	}
 
 	plugin.Status = runtime.PluginStatusActive
@@ -1177,11 +1177,11 @@ func (lca *LangChainAdapter) DisablePlugin(ctx context.Context, pluginID string)
 
 	plugin, exists := lca.plugins[pluginID]
 	if !exists {
-		return errors.New(errors.CodeNotFound, "plugin not found")
+		return errors.NewInternalError(errors.CodeNotFound, "plugin not found")
 	}
 
 	if plugin.Status == runtime.PluginStatusInactive {
-		return errors.New(errors.CodeInvalidParameter, "plugin already inactive")
+		return errors.NewInternalError(errors.CodeInvalidParameter, "plugin already inactive")
 	}
 
 	plugin.Status = runtime.PluginStatusInactive
@@ -1199,7 +1199,7 @@ func (lca *LangChainAdapter) UpdatePluginConfig(ctx context.Context, pluginID st
 
 	plugin, exists := lca.plugins[pluginID]
 	if !exists {
-		return errors.New(errors.CodeNotFound, "plugin not found")
+		return errors.NewInternalError(errors.CodeNotFound, "plugin not found")
 	}
 
 	if config != nil {

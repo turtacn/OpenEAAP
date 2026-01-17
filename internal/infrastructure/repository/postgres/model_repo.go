@@ -115,7 +115,7 @@ func (r *modelRepo) Create(ctx context.Context, mdl *model.Model) error {
 	// 转换为数据库模型
 	dbModel, err := r.toModel(mdl)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to convert model to db model")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to convert model to db model")
 	}
 
 	// 执行创建
@@ -184,7 +184,7 @@ func (r *modelRepo) Update(ctx context.Context, mdl *model.Model) error {
 	// 转换为数据库模型
 	dbModel, err := r.toModel(mdl)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to convert model to db model")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to convert model to db model")
 	}
 
 	// 更新
@@ -316,7 +316,7 @@ func (r *modelRepo) List(ctx context.Context, filter *model.ModelFilter) ([]*mod
 	for i := range dbModels {
 		mdl, err := r.toEntity(&dbModels[i])
 		if err != nil {
-			return nil, 0, errors.Wrap(err, errors.CodeInternalError, "failed to convert db model to entity")
+			return nil, 0, errors.Wrap(err, "ERR_INTERNAL", "failed to convert db model to entity")
 		}
 		models = append(models, mdl)
 	}
@@ -406,7 +406,7 @@ func (r *modelRepo) CreateVersion(ctx context.Context, version *model.ModelVersi
 
 	versionModel, err := r.versionToModel(version)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to convert version to model")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to convert version to model")
 	}
 
 	if err := r.db.WithContext(ctx).Create(versionModel).Error; err != nil {
@@ -440,7 +440,7 @@ func (r *modelRepo) GetVersionsByModelID(ctx context.Context, modelID string) ([
 	for i := range versionModels {
 		version, err := r.versionToEntity(&versionModels[i])
 		if err != nil {
-			return nil, errors.Wrap(err, errors.CodeInternalError, "failed to convert version to entity")
+			return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to convert version to entity")
 		}
 		versions = append(versions, version)
 	}

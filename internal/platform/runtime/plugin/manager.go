@@ -56,7 +56,7 @@ type PluginRegistry struct {
 	plugins   map[string]*RegistryEntry
 	index     map[runtime.PluginType][]string
 	mu        sync.RWMutex
-	logger    // logger.Logger
+	logger    logging.Logger
 }
 
 // RegistryEntry 注册表条目
@@ -105,7 +105,7 @@ type PluginHealthStatus struct {
 type VersionControl struct {
 	versions  map[string][]*VersionEntry
 	mu        sync.RWMutex
-	logger    // logger.Logger
+	logger    logging.Logger
 }
 
 // VersionEntry 版本条目
@@ -120,7 +120,7 @@ type VersionEntry struct {
 
 // HealthChecker 健康检查器
 type HealthChecker struct {
-	logger        // logger.Logger
+	logger        logging.Logger
 	checkInterval time.Duration
 	results       map[string]*PluginHealthStatus
 	mu            sync.RWMutex
@@ -174,10 +174,10 @@ func DefaultManagerConfig() *ManagerConfig {
 // NewPluginManager 创建插件管理器
 func NewPluginManager(logger // logger.Logger, loader *PluginLoader, config *ManagerConfig) (*PluginManager, error) {
 	if logger == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "logger cannot be nil")
+		return nil, errors.NewInternalError("ERR_InvalidParameter", "logger cannot be nil")
 	}
 	if loader == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "loader cannot be nil")
+		return nil, errors.NewInternalError("ERR_InvalidParameter", "loader cannot be nil")
 	}
 	if config == nil {
 		config = DefaultManagerConfig()
@@ -211,7 +211,7 @@ func NewPluginManager(logger // logger.Logger, loader *PluginLoader, config *Man
 		go manager.registryBackupLoop()
 	}
 
-	manager.// logger.Info("plugin manager initialized",
+	manager.logger.Info("plugin manager initialized",
 		"health_check_enabled", config.EnableHealthCheck,
 		"version_control_enabled", config.EnableVersionControl)
 
@@ -221,7 +221,7 @@ func NewPluginManager(logger // logger.Logger, loader *PluginLoader, config *Man
 // RegisterPlugin 注册插件
 func (pm *PluginManager) RegisterPlugin(ctx context.Context, plugin *runtime.Plugin) error {
 	if plugin == nil {
-		return errors.New(errors.CodeInvalidParameter, "plugin cannot be nil")
+		return errors.NewInternalError("ERR_InvalidParameter", "plugin cannot be nil")
 	}
 
 	pm.mu.Lock()
@@ -229,24 +229,24 @@ func (pm *PluginManager) RegisterPlugin(ctx context.Context, plugin *runtime.Plu
 
 	// 检查插件是否已注册
 	if pm.registry.Exists(plugin.ID) {
-		return errors.New(errors.CodeAlreadyExists, "plugin already registered")
+		return errors.NewInternalError("ERR_AlreadyExists", "plugin already registered")
 	}
 
 	// 检查并发限制
 	if pm.metrics.activePlugins >= int64(pm.config.MaxConcurrentPlugins) {
-		return errors.New(errors.CodeResourceExhausted, "max concurrent plugins limit reached")
+		return errors.NewInternalError("ERR_ResourceExhausted", "max concurrent plugins limit reached")
 	}
 
 	// 解析版本
 	version, err := ParseVersion(plugin.Version)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInvalidParameter, "invalid plugin version")
+		return errors.Wrap(err, "ERR_InvalidParameter", "invalid plugin version")
 	}
 
 	// 检查依赖
 	dependencies, err := pm.resolveDependencies(ctx, plugin)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInvalidParameter, "failed to resolve dependencies")
+		return errors.Wrap(err, "ERR_InvalidParameter", "failed to resolve dependencies")
 	}
 
 	// 创建注册表条目
@@ -310,7 +310,7 @@ func (pm *PluginManager) RegisterPlugin(ctx context.Context, plugin *runtime.Plu
 // UnregisterPlugin 注销插件
 func (pm *PluginManager) UnregisterPlugin(ctx context.Context, pluginID string) error {
 	if pluginID == "" {
-		return errors.New(errors.CodeInvalidParameter, "plugin id cannot be empty")
+		return errors.NewInternalError("ERR_InvalidParameter", "plugin id cannot be empty")
 	}
 
 	pm.mu.Lock()
@@ -325,7 +325,7 @@ func (pm *PluginManager) UnregisterPlugin(ctx context.Context, pluginID string) 
 	// 检查依赖插件
 	dependents := pm.findDependents(pluginID)
 	if len(dependents) > 0 {
-		return errors.New(errors.CodeInvalidParameter,
+		return errors.New("ERR_InvalidParameter",
 			fmt.Sprintf("plugin has %d dependent(s), cannot unregister", len(dependents)))
 	}
 
@@ -395,14 +395,14 @@ func (pm *PluginManager) ActivatePlugin(ctx context.Context, pluginID string) er
 	defer entry.mu.Unlock()
 
 	if entry.Plugin.Status == runtime.PluginStatusActive {
-		return errors.New(errors.CodeInvalidParameter, "plugin already active")
+		return errors.NewInternalError("ERR_InvalidParameter", "plugin already active")
 	}
 
 	// 如果插件未加载，先加载
 	if entry.LoadedPlugin == nil {
 		loadedPlugin, err := pm.loader.LoadPlugin(ctx, entry.Plugin.Path)
 		if err != nil {
-			return errors.Wrap(err, errors.CodeInternalError, "failed to load plugin")
+			return errors.Wrap(err, "ERR_INTERNAL", "failed to load plugin")
 		}
 		entry.LoadedPlugin = loadedPlugin
 	}
@@ -434,7 +434,7 @@ func (pm *PluginManager) DeactivatePlugin(ctx context.Context, pluginID string) 
 	defer entry.mu.Unlock()
 
 	if entry.Plugin.Status == runtime.PluginStatusInactive {
-		return errors.New(errors.CodeInvalidParameter, "plugin already inactive")
+		return errors.NewInternalError("ERR_InvalidParameter", "plugin already inactive")
 	}
 
 	entry.Plugin.Status = runtime.PluginStatusInactive
@@ -456,7 +456,7 @@ func (pm *PluginManager) DeactivatePlugin(ctx context.Context, pluginID string) 
 // UpdatePlugin 更新插件
 func (pm *PluginManager) UpdatePlugin(ctx context.Context, pluginID string, newPlugin *runtime.Plugin) error {
 	if newPlugin == nil {
-		return errors.New(errors.CodeInvalidParameter, "new plugin cannot be nil")
+		return errors.NewInternalError("ERR_InvalidParameter", "new plugin cannot be nil")
 	}
 
 	entry, err := pm.registry.Get(pluginID)
@@ -470,18 +470,18 @@ func (pm *PluginManager) UpdatePlugin(ctx context.Context, pluginID string, newP
 	// 解析新版本
 	newVersion, err := ParseVersion(newPlugin.Version)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInvalidParameter, "invalid plugin version")
+		return errors.Wrap(err, "ERR_InvalidParameter", "invalid plugin version")
 	}
 
 	// 检查版本
 	if !newVersion.GreaterThan(entry.Version) {
-		return errors.New(errors.CodeInvalidParameter, "new version must be greater than current version")
+		return errors.NewInternalError("ERR_InvalidParameter", "new version must be greater than current version")
 	}
 
 	// 卸载旧版本
 	if entry.LoadedPlugin != nil {
 		if err := pm.loader.UnloadPlugin(ctx, pluginID); err != nil {
-			return errors.Wrap(err, errors.CodeInternalError, "failed to unload old version")
+			return errors.Wrap(err, "ERR_INTERNAL", "failed to unload old version")
 		}
 	}
 
@@ -531,7 +531,7 @@ func (pm *PluginManager) ExecutePlugin(ctx context.Context, pluginID string, inp
 
 	// 检查插件状态
 	if entry.Plugin.Status != runtime.PluginStatusActive {
-		return nil, errors.New(errors.CodeInvalidParameter, "plugin not active")
+		return nil, errors.NewInternalError("ERR_InvalidParameter", "plugin not active")
 	}
 
 	// 更新指标
@@ -579,7 +579,7 @@ func (pm *PluginManager) ExecutePlugin(ctx context.Context, pluginID string, inp
 // GetPluginHealth 获取插件健康状态
 func (pm *PluginManager) GetPluginHealth(pluginID string) (*PluginHealthStatus, error) {
 	if pm.healthChecker == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "health checker not enabled")
+		return nil, errors.NewInternalError("ERR_InvalidParameter", "health checker not enabled")
 	}
 
 	entry, err := pm.registry.Get(pluginID)
@@ -596,7 +596,7 @@ func (pm *PluginManager) GetPluginHealth(pluginID string) (*PluginHealthStatus, 
 // GetPluginVersions 获取插件版本列表
 func (pm *PluginManager) GetPluginVersions(pluginName string) ([]*VersionEntry, error) {
 	if pm.versionControl == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "version control not enabled")
+		return nil, errors.NewInternalError("ERR_InvalidParameter", "version control not enabled")
 	}
 
 	return pm.versionControl.GetVersions(pluginName), nil
@@ -605,7 +605,7 @@ func (pm *PluginManager) GetPluginVersions(pluginName string) ([]*VersionEntry, 
 // RollbackPlugin 回滚插件版本
 func (pm *PluginManager) RollbackPlugin(ctx context.Context, pluginID string, targetVersion string) error {
 	if pm.versionControl == nil {
-		return errors.New(errors.CodeInvalidParameter, "version control not enabled")
+		return errors.NewInternalError("ERR_InvalidParameter", "version control not enabled")
 	}
 
 	entry, err := pm.registry.Get(pluginID)
@@ -624,13 +624,13 @@ func (pm *PluginManager) RollbackPlugin(ctx context.Context, pluginID string, ta
 	}
 
 	if targetVersionEntry == nil {
-		return errors.New(errors.CodeNotFound, "target version not found")
+		return errors.NewInternalError("ERR_NotFound", "target version not found")
 	}
 
 	// 加载目标版本
 	loadedPlugin, err := pm.loader.LoadPlugin(ctx, targetVersionEntry.Path)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to load target version")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to load target version")
 	}
 
 	entry.mu.Lock()
@@ -706,7 +706,7 @@ func (pm *PluginManager) Shutdown(ctx context.Context) error {
 	select {
 	case <-done:
 	case <-ctx.Done():
-		return errors.New(errors.CodeDeadlineExceeded, "shutdown timeout")
+		return errors.NewInternalError("ERR_DeadlineExceeded", "shutdown timeout")
 	}
 
 	// 关闭健康检查器
@@ -728,7 +728,7 @@ func (pm *PluginManager) resolveDependencies(ctx context.Context, plugin *runtim
 		// 查找依赖插件
 		depPlugin := pm.registry.FindByName(depName)
 		if depPlugin == nil {
-			return nil, errors.New(errors.CodeNotFound,
+			return nil, errors.New("ERR_NotFound",
 				fmt.Sprintf("dependency not found: %s", depName))
 		}
 
@@ -843,7 +843,7 @@ func (pr *PluginRegistry) Register(pluginID string, entry *RegistryEntry) error 
 	defer pr.mu.Unlock()
 
 	if _, exists := pr.plugins[pluginID]; exists {
-		return errors.New(errors.CodeAlreadyExists, "plugin already exists")
+		return errors.NewInternalError("ERR_AlreadyExists", "plugin already exists")
 	}
 
 	pr.plugins[pluginID] = entry
@@ -865,7 +865,7 @@ func (pr *PluginRegistry) Unregister(pluginID string) error {
 
 	entry, exists := pr.plugins[pluginID]
 	if !exists {
-		return errors.New(errors.CodeNotFound, "plugin not found")
+		return errors.NewInternalError("ERR_NotFound", "plugin not found")
 	}
 
 	// 从索引中移除
@@ -890,7 +890,7 @@ func (pr *PluginRegistry) Get(pluginID string) (*RegistryEntry, error) {
 
 	entry, exists := pr.plugins[pluginID]
 	if !exists {
-		return nil, errors.New(errors.CodeNotFound, "plugin not found")
+		return nil, errors.NewInternalError("ERR_NotFound", "plugin not found")
 	}
 
 	return entry, nil
@@ -1056,7 +1056,7 @@ func (vc *VersionControl) GetActiveVersion(pluginName string) *VersionEntry {
 // ParseVersion 解析版本字符串
 func ParseVersion(versionStr string) (*Version, error) {
 	if versionStr == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "version string cannot be empty")
+		return nil, errors.NewInternalError("ERR_InvalidParameter", "version string cannot be empty")
 	}
 
 	// 简化实现：实际应该支持完整的语义化版本解析
@@ -1241,27 +1241,27 @@ func (seh *SimpleEventHandler) HandleEvent(event *PluginEvent) error {
 // ValidatePluginConfig 验证插件配置
 func ValidatePluginConfig(plugin *runtime.Plugin) error {
 	if plugin == nil {
-		return errors.New(errors.CodeInvalidParameter, "plugin cannot be nil")
+		return errors.NewInternalError("ERR_InvalidParameter", "plugin cannot be nil")
 	}
 
 	if plugin.ID == "" {
-		return errors.New(errors.CodeInvalidParameter, "plugin id cannot be empty")
+		return errors.NewInternalError("ERR_InvalidParameter", "plugin id cannot be empty")
 	}
 
 	if plugin.Name == "" {
-		return errors.New(errors.CodeInvalidParameter, "plugin name cannot be empty")
+		return errors.NewInternalError("ERR_InvalidParameter", "plugin name cannot be empty")
 	}
 
 	if plugin.Version == "" {
-		return errors.New(errors.CodeInvalidParameter, "plugin version cannot be empty")
+		return errors.NewInternalError("ERR_InvalidParameter", "plugin version cannot be empty")
 	}
 
 	if plugin.Type == "" {
-		return errors.New(errors.CodeInvalidParameter, "plugin type cannot be empty")
+		return errors.NewInternalError("ERR_InvalidParameter", "plugin type cannot be empty")
 	}
 
 	if plugin.Path == "" {
-		return errors.New(errors.CodeInvalidParameter, "plugin path cannot be empty")
+		return errors.NewInternalError("ERR_InvalidParameter", "plugin path cannot be empty")
 	}
 
 	return nil
@@ -1288,13 +1288,13 @@ func (bpv *BasicPluginValidator) Validate(ctx context.Context, plugin *runtime.P
 
 	// 验证路径存在
 	if _, err := os.Stat(plugin.Path); err != nil {
-		return errors.Wrap(err, errors.CodeNotFound, "plugin file not found")
+		return errors.Wrap(err, "ERR_NotFound", "plugin file not found")
 	}
 
 	// 验证Schema
 	if plugin.Schema != nil {
 		if err := validatePluginSchema(plugin.Schema); err != nil {
-			return errors.Wrap(err, errors.CodeInvalidParameter, "invalid plugin schema")
+			return errors.Wrap(err, "ERR_InvalidParameter", "invalid plugin schema")
 		}
 	}
 
@@ -1309,11 +1309,11 @@ func validatePluginSchema(schema *runtime.PluginSchema) error {
 	}
 
 	if schema.Input == nil {
-		return errors.New(errors.CodeInvalidParameter, "input schema cannot be nil")
+		return errors.NewInternalError("ERR_InvalidParameter", "input schema cannot be nil")
 	}
 
 	if schema.Output == nil {
-		return errors.New(errors.CodeInvalidParameter, "output schema cannot be nil")
+		return errors.NewInternalError("ERR_InvalidParameter", "output schema cannot be nil")
 	}
 
 	return nil
@@ -1369,7 +1369,7 @@ func (pm *PluginManager) ExportPluginRegistry() ([]byte, error) {
 // ImportPluginRegistry 导入插件注册表
 func (pm *PluginManager) ImportPluginRegistry(ctx context.Context, data []byte) error {
 	if len(data) == 0 {
-		return errors.New(errors.CodeInvalidParameter, "data cannot be empty")
+		return errors.NewInternalError("ERR_InvalidParameter", "data cannot be empty")
 	}
 
 	pm.mu.Lock()

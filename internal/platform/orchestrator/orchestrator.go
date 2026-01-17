@@ -361,7 +361,7 @@ func NewOrchestrator(
 // Execute 执行请求
 func (o *orchestrator) Execute(ctx context.Context, req *ExecuteRequest) (*ExecuteResponse, error) {
 	if o.closed {
-		return nil, errors.New(errors.CodeInternalError, "orchestrator is closed")
+		return nil, errors.New("ERR_INTERNAL", "orchestrator is closed")
 	}
 	if req == nil {
 		return nil, errors.New(errors.CodeInvalidParameter, "request cannot be nil")
@@ -473,7 +473,7 @@ func (o *orchestrator) Execute(ctx context.Context, req *ExecuteRequest) (*Execu
 // ExecuteStream 流式执行请求
 func (o *orchestrator) ExecuteStream(ctx context.Context, req *ExecuteRequest, stream ResponseStream) error {
 	if o.closed {
-		return errors.New(errors.CodeInternalError, "orchestrator is closed")
+		return errors.New("ERR_INTERNAL", "orchestrator is closed")
 	}
 	if req == nil {
 		return errors.New(errors.CodeInvalidParameter, "request cannot be nil")
@@ -680,7 +680,7 @@ AFTER_PLUGINS:
 // ExecuteBatch 批量执行请求
 func (o *orchestrator) ExecuteBatch(ctx context.Context, requests []*ExecuteRequest) ([]*ExecuteResponse, error) {
 	if o.closed {
-		return nil, errors.New(errors.CodeInternalError, "orchestrator is closed")
+		return nil, errors.New("ERR_INTERNAL", "orchestrator is closed")
 	}
 	if len(requests) == 0 {
 		return nil, errors.New(errors.CodeInvalidParameter, "requests cannot be empty")
@@ -716,7 +716,7 @@ func (o *orchestrator) ExecuteBatch(ctx context.Context, requests []*ExecuteRequ
 // ExecuteAsync 异步执行请求
 func (o *orchestrator) ExecuteAsync(ctx context.Context, req *ExecuteRequest, callback ExecuteCallback) error {
 	if o.closed {
-		return errors.New(errors.CodeInternalError, "orchestrator is closed")
+		return errors.New("ERR_INTERNAL", "orchestrator is closed")
 	}
 	if req == nil {
 		return errors.New(errors.CodeInvalidParameter, "request cannot be nil")
@@ -891,7 +891,7 @@ func (o *orchestrator) executeCore(ctx context.Context, req *ExecuteRequest) (*E
 		Context: req.Context,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to parse request")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to parse request")
 	}
 
 	// 阶段2: 策略检查
@@ -921,13 +921,13 @@ func (o *orchestrator) executeCore(ctx context.Context, req *ExecuteRequest) (*E
 		Preferences: req.Options.ModelPreferences,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to route request")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to route request")
 	}
 
 	// 阶段5: 插件前置处理
 	if req.Options != nil && req.Options.EnablePlugins {
 		if err := o.executePluginsBefore(ctx, req, parsedReq); err != nil {
-			return nil, errors.Wrap(err, errors.CodeInternalError, "plugin before failed")
+			return nil, errors.Wrap(err, "ERR_INTERNAL", "plugin before failed")
 		}
 	}
 
@@ -938,7 +938,7 @@ func (o *orchestrator) executeCore(ctx context.Context, req *ExecuteRequest) (*E
 		Priority: req.Priority,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to schedule task")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to schedule task")
 	}
 
 	// 阶段7: 执行任务
@@ -948,7 +948,7 @@ func (o *orchestrator) executeCore(ctx context.Context, req *ExecuteRequest) (*E
 		Options: req.Options,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to execute task")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to execute task")
 	}
 
 	// 阶段8: 插件后置处理
@@ -987,7 +987,7 @@ func (o *orchestrator) checkPolicies(ctx context.Context, req *ExecuteRequest, p
 	// 获取用户策略
 	policies, err := o.policyRepo.FindByUserID(ctx, req.UserID)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to get policies")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to get policies")
 	}
 
 	// 检查每个策略
@@ -1078,7 +1078,7 @@ func (o *orchestrator) executePluginsBefore(ctx context.Context, req *ExecuteReq
 		o.updatePluginMetrics(pluginName, err == nil, duration)
 
 		if err != nil {
-			return errors.Wrap(err, errors.CodeInternalError, fmt.Sprintf("plugin %s before failed", pluginName))
+			return errors.Wrap(err, "ERR_INTERNAL", fmt.Sprintf("plugin %s before failed", pluginName))
 		}
 	}
 
@@ -1122,7 +1122,7 @@ func (o *orchestrator) executePluginsAfter(ctx context.Context, req *ExecuteRequ
 		o.updatePluginMetrics(pluginName, err == nil, duration)
 
 		if err != nil {
-			return errors.Wrap(err, errors.CodeInternalError, fmt.Sprintf("plugin %s after failed", pluginName))
+			return errors.Wrap(err, "ERR_INTERNAL", fmt.Sprintf("plugin %s after failed", pluginName))
 		}
 	}
 

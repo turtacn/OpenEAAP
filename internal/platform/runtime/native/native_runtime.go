@@ -243,7 +243,7 @@ func (nr *NativeRuntime) Initialize(ctx context.Context, config *runtime.Runtime
 	defer nr.mu.Unlock()
 
 	if nr.status == runtime.RuntimeStatusReady {
-		return errors.NewInternalError(errors.CodeInternalError, "runtime already initialized")
+		return errors.NewInternalError("ERR_INTERNAL", "runtime already initialized")
 	}
 
 	// 验证配置
@@ -258,7 +258,7 @@ func (nr *NativeRuntime) Initialize(ctx context.Context, config *runtime.Runtime
 
 	// 测试LLM连接
 	if err := nr.testLLMConnection(ctx); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to connect to LLM")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to connect to LLM")
 	}
 
 	// 启动健康检查
@@ -278,7 +278,7 @@ func (nr *NativeRuntime) Initialize(ctx context.Context, config *runtime.Runtime
 // Execute 执行任务
 func (nr *NativeRuntime) Execute(ctx context.Context, req *runtime.ExecuteRequest) (*runtime.ExecuteResponse, error) {
 	if !nr.IsReady() {
-		return nil, errors.NewInternalError(errors.CodeInternalError, "runtime not ready")
+		return nil, errors.NewInternalError("ERR_INTERNAL", "runtime not ready")
 	}
 
 	// 更新指标
@@ -527,7 +527,7 @@ func (nr *NativeRuntime) executeReAct(ctx context.Context, req *runtime.ExecuteR
 			Temperature: 0.7,
 		})
 		if err != nil {
-			return nil, errors.Wrap(err, errors.CodeInternalError, "llm call failed")
+			return nil, errors.Wrap(err, "ERR_INTERNAL", "llm call failed")
 		}
 
 		totalTokens += llmResp.Usage.TotalTokens
@@ -537,7 +537,7 @@ func (nr *NativeRuntime) executeReAct(ctx context.Context, req *runtime.ExecuteR
 		response := llmResp.Choices[0].Message.Content
 		reactStep, isFinal, err := nr.parseReActResponse(response)
 		if err != nil {
-			return nil, errors.Wrap(err, errors.CodeInternalError, "failed to parse response")
+			return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to parse response")
 		}
 
 		reactStep.StepNumber = step

@@ -328,7 +328,7 @@ func NewMinIOClient(config *MinIOConfig) (MinIOClient, error) {
 	// 创建客户端
 	client, err := minio.New(config.Endpoint, opts)
 	if err != nil {
-		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to create minio client")
+		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to create minio client")
 	}
 
 	mc := &minioClient{
@@ -362,7 +362,7 @@ func (mc *minioClient) CreateBucket(ctx context.Context, config *BucketConfig) e
 		return err
 	}
 	if exists {
-		return errors.New(errors.CodeAlreadyExists, "bucket already exists")
+		return errors.NewInternalError(errors.CodeAlreadyExists, "bucket already exists")
 	}
 
 	// 创建存储桶选项
@@ -374,7 +374,7 @@ func (mc *minioClient) CreateBucket(ctx context.Context, config *BucketConfig) e
 	// 创建存储桶
 	err = mc.client.MakeBucket(ctx, config.Name, opts)
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to create bucket")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to create bucket")
 	}
 
 	// 设置版本控制
@@ -384,7 +384,7 @@ func (mc *minioClient) CreateBucket(ctx context.Context, config *BucketConfig) e
 		}
 		err = mc.client.SetBucketVersioning(ctx, config.Name, versionConfig)
 		if err != nil {
-			return errors.WrapInternalError(err, errors.CodeInternalError, "failed to enable versioning")
+			return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to enable versioning")
 		}
 	}
 
@@ -392,11 +392,11 @@ func (mc *minioClient) CreateBucket(ctx context.Context, config *BucketConfig) e
 	if len(config.Tags) > 0 {
 		tags, err := minio.NewTags(config.Tags, false)
 		if err != nil {
-			return errors.WrapInternalError(err, errors.CodeInternalError, "failed to create tags")
+			return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to create tags")
 		}
 		err = mc.client.SetBucketTagging(ctx, config.Name, tags)
 		if err != nil {
-			return errors.WrapInternalError(err, errors.CodeInternalError, "failed to set bucket tags")
+			return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to set bucket tags")
 		}
 	}
 
@@ -411,7 +411,7 @@ func (mc *minioClient) DeleteBucket(ctx context.Context, bucketName string) erro
 
 	err := mc.client.RemoveBucket(ctx, bucketName)
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to delete bucket")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to delete bucket")
 	}
 
 	return nil
@@ -425,7 +425,7 @@ func (mc *minioClient) BucketExists(ctx context.Context, bucketName string) (boo
 
 	exists, err := mc.client.BucketExists(ctx, bucketName)
 	if err != nil {
-		return false, errors.WrapInternalError(err, errors.CodeInternalError, "failed to check bucket existence")
+		return false, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to check bucket existence")
 	}
 
 	return exists, nil
@@ -435,7 +435,7 @@ func (mc *minioClient) BucketExists(ctx context.Context, bucketName string) (boo
 func (mc *minioClient) ListBuckets(ctx context.Context) ([]BucketInfo, error) {
 	buckets, err := mc.client.ListBuckets(ctx)
 	if err != nil {
-		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to list buckets")
+		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to list buckets")
 	}
 
 	bucketInfos := make([]BucketInfo, 0, len(buckets))
@@ -458,13 +458,13 @@ func (mc *minioClient) GetBucketInfo(ctx context.Context, bucketName string) (*B
 	// 获取版本控制状态
 	versionConfig, err := mc.client.GetBucketVersioning(ctx, bucketName)
 	if err != nil {
-		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to get versioning config")
+		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to get versioning config")
 	}
 
 	// 获取策略
 	policy, err := mc.client.GetBucketPolicy(ctx, bucketName)
 	if err != nil && !strings.Contains(err.Error(), "does not have a bucket policy") {
-		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to get bucket policy")
+		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to get bucket policy")
 	}
 
 	return &BucketInfo{
@@ -482,7 +482,7 @@ func (mc *minioClient) SetBucketPolicy(ctx context.Context, bucketName string, p
 
 	err := mc.client.SetBucketPolicy(ctx, bucketName, policy)
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to set bucket policy")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to set bucket policy")
 	}
 
 	return nil
@@ -496,7 +496,7 @@ func (mc *minioClient) GetBucketPolicy(ctx context.Context, bucketName string) (
 
 	policy, err := mc.client.GetBucketPolicy(ctx, bucketName)
 	if err != nil {
-		return "", errors.WrapInternalError(err, errors.CodeInternalError, "failed to get bucket policy")
+		return "", errors.WrapInternalError(err, "ERR_INTERNAL", "failed to get bucket policy")
 	}
 
 	return policy, nil
@@ -524,7 +524,7 @@ func (mc *minioClient) PutObject(ctx context.Context, req *PutObjectRequest) (*P
 	// 上传对象
 	info, err := mc.client.PutObject(ctx, req.BucketName, req.ObjectName, req.Reader, req.Size, opts)
 	if err != nil {
-		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to put object")
+		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to put object")
 	}
 
 	return &PutObjectResponse{
@@ -559,14 +559,14 @@ func (mc *minioClient) GetObject(ctx context.Context, req *GetObjectRequest) (*G
 	// 获取对象
 	object, err := mc.client.GetObject(ctx, req.BucketName, req.ObjectName, opts)
 	if err != nil {
-		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to get object")
+		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to get object")
 	}
 
 	// 获取对象信息
 	stat, err := object.Stat()
 	if err != nil {
 		object.Close()
-		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to stat object")
+		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to stat object")
 	}
 
 	return &GetObjectResponse{
@@ -604,7 +604,7 @@ func (mc *minioClient) DeleteObject(ctx context.Context, req *DeleteObjectReques
 
 	err := mc.client.RemoveObject(ctx, req.BucketName, req.ObjectName, opts)
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to delete object")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to delete object")
 	}
 
 	return nil
@@ -688,7 +688,7 @@ func (mc *minioClient) CopyObject(ctx context.Context, req *CopyObjectRequest) e
 	// 复制对象
 	_, err := mc.client.CopyObject(ctx, dst, src)
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to copy object")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to copy object")
 	}
 
 	return nil
@@ -705,7 +705,7 @@ func (mc *minioClient) StatObject(ctx context.Context, bucketName, objectName st
 
 	info, err := mc.client.StatObject(ctx, bucketName, objectName, minio.StatObjectOptions{})
 	if err != nil {
-		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to stat object")
+		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to stat object")
 	}
 
 	return &ObjectInfo{
@@ -748,7 +748,7 @@ func (mc *minioClient) ListObjects(ctx context.Context, req *ListObjectsRequest)
 
 	for object := range mc.client.ListObjects(ctx, req.BucketName, opts) {
 		if object.Err != nil {
-			return nil, errors.WrapInternalError(object.Err, errors.CodeInternalError, "failed to list objects")
+			return nil, errors.WrapInternalError(object.Err, "ERR_INTERNAL", "failed to list objects")
 		}
 
 		if object.Key != "" {
@@ -787,7 +787,7 @@ func (mc *minioClient) PresignedGetObject(ctx context.Context, bucketName, objec
 
 	presignedURL, err := mc.client.PresignedGetObject(ctx, bucketName, objectName, expiry, nil)
 	if err != nil {
-		return "", errors.WrapInternalError(err, errors.CodeInternalError, "failed to generate presigned get url")
+		return "", errors.WrapInternalError(err, "ERR_INTERNAL", "failed to generate presigned get url")
 	}
 
 	return presignedURL.String(), nil
@@ -806,7 +806,7 @@ func (mc *minioClient) PresignedPutObject(ctx context.Context, bucketName, objec
 	}
 	presignedURL, err := mc.client.PresignedPutObject(ctx, bucketName, objectName, expiry)
 	if err != nil {
-		return "", errors.WrapInternalError(err, errors.CodeInternalError, "failed to generate presigned put url")
+		return "", errors.WrapInternalError(err, "ERR_INTERNAL", "failed to generate presigned put url")
 	}
 	return presignedURL.String(), nil
 }
@@ -843,7 +843,7 @@ func (mc *minioClient) PresignedPostPolicy(ctx context.Context, policy *PostPoli
 	// 生成预签名POST
 	presignedURL, formData, err := mc.client.PresignedPostPolicy(ctx, minioPolicy)
 	if err != nil {
-		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to generate presigned post policy")
+		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to generate presigned post policy")
 	}
 
 	return &PresignedPostPolicyResponse{
@@ -989,7 +989,7 @@ func (mc *minioClient) GetObjectMetadata(ctx context.Context, bucketName, object
 
 	info, err := mc.client.StatObject(ctx, bucketName, objectName, minio.StatObjectOptions{})
 	if err != nil {
-		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to get object metadata")
+		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to get object metadata")
 	}
 
 	return info.UserMetadata, nil
@@ -1019,7 +1019,7 @@ func (mc *minioClient) SetObjectMetadata(ctx context.Context, bucketName, object
 
 	_, err := mc.client.CopyObject(ctx, dst, src)
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to set object metadata")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to set object metadata")
 	}
 
 	return nil
@@ -1036,7 +1036,7 @@ func (mc *minioClient) GetObjectTags(ctx context.Context, bucketName, objectName
 
 	tags, err := mc.client.GetObjectTagging(ctx, bucketName, objectName, minio.GetObjectTaggingOptions{})
 	if err != nil {
-		return nil, errors.WrapInternalError(err, errors.CodeInternalError, "failed to get object tags")
+		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to get object tags")
 	}
 
 	return tags.ToMap(), nil
@@ -1053,12 +1053,12 @@ func (mc *minioClient) SetObjectTags(ctx context.Context, bucketName, objectName
 
 	objectTags, err := minio.NewTags(tags, false)
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to create tags")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to create tags")
 	}
 
 	err = mc.client.PutObjectTagging(ctx, bucketName, objectName, objectTags, minio.PutObjectTaggingOptions{})
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to set object tags")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to set object tags")
 	}
 
 	return nil
@@ -1075,7 +1075,7 @@ func (mc *minioClient) DeleteObjectTags(ctx context.Context, bucketName, objectN
 
 	err := mc.client.RemoveObjectTagging(ctx, bucketName, objectName, minio.RemoveObjectTaggingOptions{})
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to delete object tags")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to delete object tags")
 	}
 
 	return nil
@@ -1094,7 +1094,7 @@ func (mc *minioClient) GetBucketSize(ctx context.Context, bucketName string) (in
 
 	for object := range mc.client.ListObjects(ctx, bucketName, opts) {
 		if object.Err != nil {
-			return 0, errors.WrapInternalError(object.Err, errors.CodeInternalError, "failed to list objects")
+			return 0, errors.WrapInternalError(object.Err, "ERR_INTERNAL", "failed to list objects")
 		}
 		totalSize += object.Size
 	}
@@ -1116,7 +1116,7 @@ func (mc *minioClient) CountObjects(ctx context.Context, bucketName, prefix stri
 
 	for object := range mc.client.ListObjects(ctx, bucketName, opts) {
 		if object.Err != nil {
-			return 0, errors.WrapInternalError(object.Err, errors.CodeInternalError, "failed to list objects")
+			return 0, errors.WrapInternalError(object.Err, "ERR_INTERNAL", "failed to list objects")
 		}
 		count++
 	}

@@ -1492,7 +1492,7 @@ func (c *complianceChecker) logComplianceCheck(ctx context.Context, request *Com
 }
 
 func (c *complianceChecker) recordMetrics(result *ComplianceCheckResult) {
-	c.metricsCollector.Increment("compliance_checks_total",
+	c.metricsCollector.IncrementCounter("compliance_checks_total",
 		map[string]string{
 			"framework": string(result.Framework),
 			"status":    string(result.Status),

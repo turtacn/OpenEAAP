@@ -206,7 +206,7 @@ func (p *pep) Enforce(ctx context.Context, request *AccessRequest) (*Enforcement
 	if err != nil {
 		p.recordError()
 		p.logger.WithContext(ctx).Error("Policy evaluation failed", logging.Error(err))
-		return nil, errors.Wrap(err, errors.CodeInternalError, "policy evaluation failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "policy evaluation failed")
 	}
 
 	duration := time.Since(startTime)
@@ -261,7 +261,7 @@ func (p *pep) Enforce(ctx context.Context, request *AccessRequest) (*Enforcement
 		p.recordMetrics(request, decision, duration)
 	}
 
- p.logger.WithContext(ctx).Info("Access policy enforced", logging.Any("request_id", request.RequestID), logging.Any("allowed", result.Allowed), logging.Any("duration_ms", duration.Milliseconds())
+ p.logger.WithContext(ctx).Info("Access policy enforced", logging.Any("request_id", request.RequestID), logging.Any("allowed", result.Allowed), logging.Any("duration_ms", duration.Milliseconds()))
 
 	return result, nil
 }
@@ -298,7 +298,7 @@ func (p *pep) EnforceBatch(ctx context.Context, requests []*AccessRequest) ([]*E
 	ctx, span := p.tracer.Start(ctx, "PEP.EnforceBatch")
 	defer span.End()
 
-	p.logger.WithContext(ctx).Debug("Enforcing batch access policies", logging.Any("count", len(requests))
+	p.logger.WithContext(ctx).Debug("Enforcing batch access policies", logging.Any("count", len(requests)))
 
 	results := make([]*EnforcementResult, len(requests))
 
@@ -369,7 +369,7 @@ func (p *pep) PreAuthorize(ctx context.Context, subjectID, resourceID, action st
 
 	result, err := p.Enforce(ctx, request)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "pre-authorization failed")
+		return errors.Wrap(err, "ERR_INTERNAL", "pre-authorization failed")
 	}
 
 	if !result.Allowed {
@@ -390,7 +390,7 @@ func (p *pep) PostAuthorize(ctx context.Context, request *AccessRequest, result 
 
 	enforcementResult, err := p.Enforce(ctx, request)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "post-authorization failed")
+		return errors.Wrap(err, "ERR_INTERNAL", "post-authorization failed")
 	}
 
 	if !enforcementResult.Allowed {
@@ -479,7 +479,7 @@ func (p *pep) handleObligations(ctx context.Context, obligations []*Obligation) 
 		for _, handler := range handlers {
 			if handler.CanHandle(obligation) {
 				if err := handler.Handle(ctx, obligation); err != nil {
-					return errors.Wrap(err, errors.CodeInternalError,
+					return errors.Wrap(err, "ERR_INTERNAL",
 						fmt.Sprintf("failed to handle obligation: %s", obligation.ID))
 				}
 				handled = true
@@ -591,14 +591,14 @@ func (p *pep) recordError() {
 }
 
 func (p *pep) recordMetrics(request *AccessRequest, decision *Decision, duration time.Duration) {
-	p.metricsCollector.Histogram("pep_enforcement_duration_ms",
+	p.metricsCollector.RecordDuration("pep_enforcement_duration_ms",
 		float64(duration.Milliseconds()),
 		map[string]string{
 			"resource_type": request.Resource.Type,
 			"action":        request.Action,
 		})
 
-	p.metricsCollector.Increment("pep_enforcement_total",
+	p.metricsCollector.IncrementCounter("pep_enforcement_total",
 		map[string]string{
 			"effect":        string(decision.Effect),
 			"resource_type": request.Resource.Type,

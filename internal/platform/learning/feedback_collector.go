@@ -199,7 +199,7 @@ func (c *feedbackCollector) Collect(ctx context.Context, feedback *Feedback) err
 
 	startTime := time.Now()
 	defer func() {
-		c.metricsCollector.Histogram("feedback_collect_duration_ms",
+		c.metricsCollector.RecordDuration("feedback_collect_duration_ms",
 			float64(time.Since(startTime).Milliseconds()),
 			map[string]string{"model_id": feedback.ModelID})
 	}()
@@ -226,7 +226,7 @@ func (c *feedbackCollector) Collect(ctx context.Context, feedback *Feedback) err
 				}
 			}
 
-			c.metricsCollector.Increment("feedback_buffered",
+			c.metricsCollector.IncrementCounter("feedback_buffered",
 				map[string]string{"model_id": feedback.ModelID})
 			return nil
 		}
@@ -250,7 +250,7 @@ func (c *feedbackCollector) Collect(ctx context.Context, feedback *Feedback) err
 		// 不阻塞主流程
 	}
 
-	c.metricsCollector.Increment("feedback_collected",
+	c.metricsCollector.IncrementCounter("feedback_collected",
 		map[string]string{
 			"model_id": feedback.ModelID,
 			"type":     string(feedback.FeedbackType),
@@ -272,7 +272,7 @@ func (c *feedbackCollector) CollectBatch(ctx context.Context, feedbacks []*Feedb
 
 	startTime := time.Now()
 	defer func() {
-		c.metricsCollector.Histogram("feedback_collect_batch_duration_ms",
+		c.metricsCollector.RecordDuration("feedback_collect_batch_duration_ms",
 			float64(time.Since(startTime).Milliseconds()),
 			map[string]string{"batch_size": fmt.Sprintf("%d", len(feedbacks))})
 	}()
@@ -299,7 +299,7 @@ func (c *feedbackCollector) CollectBatch(ctx context.Context, feedbacks []*Feedb
 		}
 	}
 
-	c.metricsCollector.Increment("feedback_batch_collected",
+	c.metricsCollector.IncrementCounter("feedback_batch_collected",
 		map[string]string{"batch_size": fmt.Sprintf("%d", len(feedbacks))})
 
  c.logger.WithContext(ctx).Info("Batch feedback collected successfully", logging.Any("count", len(feedbacks))
@@ -334,7 +334,7 @@ func (c *feedbackCollector) Flush(ctx context.Context) error {
 		}
 	}
 
-	c.metricsCollector.Increment("feedback_buffer_flushed",
+	c.metricsCollector.IncrementCounter("feedback_buffer_flushed",
 		map[string]string{"count": fmt.Sprintf("%d", len(feedbacks))})
 
 	c.logger.WithContext(ctx).Info("Buffer flushed successfully", logging.Any("count", len(feedbacks))
@@ -349,7 +349,7 @@ func (c *feedbackCollector) GetStats(ctx context.Context, modelID string) (*Feed
 
 	stats, err := c.repo.GetStats(ctx, modelID)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to get feedback stats")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to get feedback stats")
 	}
 
 	return stats, nil
@@ -362,7 +362,7 @@ func (c *feedbackCollector) Query(ctx context.Context, filter *FeedbackFilter) (
 
 	feedbacks, err := c.repo.List(ctx, filter)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to query feedbacks")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to query feedbacks")
 	}
 
 	c.logger.WithContext(ctx).Debug("Feedbacks queried", logging.Any("count", len(feedbacks))
@@ -378,10 +378,10 @@ func (c *feedbackCollector) Archive(ctx context.Context, beforeTime time.Time) e
 	c.logger.WithContext(ctx).Info("Archiving old feedbacks", logging.Any("before_time", beforeTime))
 
 	if err := c.repo.Archive(ctx, beforeTime); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to archive feedbacks")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to archive feedbacks")
 	}
 
-	c.metricsCollector.Increment("feedback_archived", nil)
+	c.metricsCollector.IncrementCounter("feedback_archived", nil)
 
 	c.logger.WithContext(ctx).Info("Feedbacks archived successfully")
 
@@ -403,10 +403,10 @@ func (c *feedbackCollector) persistFeedback(ctx context.Context, feedback *Feedb
 		}
 	}
 
-	c.metricsCollector.Increment("feedback_persist_failed",
+	c.metricsCollector.IncrementCounter("feedback_persist_failed",
 		map[string]string{"model_id": feedback.ModelID})
 
-	return errors.Wrap(err, errors.CodeInternalError, "failed to persist feedback")
+	return errors.Wrap(err, "ERR_INTERNAL", "failed to persist feedback")
 }
 
 // persistBatch 批量持久化反馈
@@ -424,21 +424,21 @@ func (c *feedbackCollector) persistBatch(ctx context.Context, feedbacks []*Feedb
 		}
 	}
 
-	c.metricsCollector.Increment("feedback_batch_persist_failed",
+	c.metricsCollector.IncrementCounter("feedback_batch_persist_failed",
 		map[string]string{"count": fmt.Sprintf("%d", len(feedbacks))})
 
-	return errors.Wrap(err, errors.CodeInternalError, "failed to persist feedback batch")
+	return errors.Wrap(err, "ERR_INTERNAL", "failed to persist feedback batch")
 }
 
 // publishFeedback 发布反馈到消息队列
 func (c *feedbackCollector) publishFeedback(ctx context.Context, feedback *Feedback) error {
 	data, err := json.Marshal(feedback)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to marshal feedback")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to marshal feedback")
 	}
 
 	if err := c.messageQueue.Publish(ctx, c.config.QueueTopic, data); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to publish feedback")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to publish feedback")
 	}
 
 	return nil
@@ -544,7 +544,7 @@ func (e *autoEvaluator) Evaluate(ctx context.Context, input, output string) (*Au
 	totalScore := (relevanceScore + completenessScore + accuracyScore + fluencyScore + metrics["safety"]) / 5.0
 	confidence := e.calculateConfidence(metrics)
 
-	e.metricsCollector.Histogram("auto_evaluation_score", totalScore, nil)
+	e.metricsCollector.RecordDuration("auto_evaluation_score", totalScore, nil)
 
 	return &AutoEvaluation{
 		Score:       totalScore,

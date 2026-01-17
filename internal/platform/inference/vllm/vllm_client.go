@@ -178,12 +178,12 @@ func (c *VLLMClient) Complete(ctx context.Context, req *CompletionRequest) (*Com
 
 	if err != nil {
 		c.recordMetrics("complete", "error", time.Since(startTime))
-		return nil, errors.Wrap(err, errors.CodeInternalError, "vLLM completion failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "vLLM completion failed")
 	}
 
 	c.recordMetrics("complete", "success", time.Since(startTime))
 
- c.logger.WithContext(ctx).Info("vLLM completion completed", logging.Any("model", req.Model), logging.Any("tokens", resp.Usage.TotalTokens), logging.Duration("latency_ms", time.Since(startTime))
+	c.logger.WithContext(ctx).Info("vLLM completion completed", logging.Any("model", req.Model), logging.Any("tokens", resp.Usage.TotalTokens), logging.Duration("latency_ms", time.Since(startTime)))
 
 	return resp, nil
 }
@@ -196,18 +196,18 @@ func (c *VLLMClient) CompleteStream(ctx context.Context, req *CompletionRequest)
 
 	httpReq, err := c.buildRequest(ctx, endpoint, req)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to build request")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to build request")
 	}
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "HTTP request failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "HTTP request failed")
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return nil, errors.New(errors.CodeInternalError,
+		return nil, errors.New("ERR_INTERNAL",
 			fmt.Sprintf("vLLM returned status %d: %s", resp.StatusCode, string(body)))
 	}
 
@@ -278,27 +278,27 @@ func (c *VLLMClient) CompleteBatch(ctx context.Context, requests []CompletionReq
 
 	httpReq, err := c.buildRequest(ctx, endpoint, batchReq)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to build batch request")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to build batch request")
 	}
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
 		c.recordMetrics("batch", "error", time.Since(startTime))
-		return nil, errors.Wrap(err, errors.CodeInternalError, "HTTP request failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "HTTP request failed")
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		c.recordMetrics("batch", "error", time.Since(startTime))
-		return nil, errors.New(errors.CodeInternalError,
+		return nil, errors.New("ERR_INTERNAL",
 			fmt.Sprintf("vLLM returned status %d: %s", resp.StatusCode, string(body)))
 	}
 
 	var batchResp BatchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&batchResp); err != nil {
 		c.recordMetrics("batch", "error", time.Since(startTime))
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to decode response")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to decode response")
 	}
 
 	c.recordMetrics("batch", "success", time.Since(startTime))
@@ -319,18 +319,18 @@ func (c *VLLMClient) CreateKVCacheSession(ctx context.Context, sessionID string,
 
 	httpReq, err := c.buildRequest(ctx, endpoint, reqBody)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to build request")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to build request")
 	}
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "HTTP request failed")
+		return errors.Wrap(err, "ERR_INTERNAL", "HTTP request failed")
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
-		return errors.New(errors.CodeInternalError,
+		return errors.New("ERR_INTERNAL",
 			fmt.Sprintf("failed to create KV-Cache session: %s", string(body)))
 	}
 
@@ -345,7 +345,7 @@ func (c *VLLMClient) DeleteKVCacheSession(ctx context.Context, sessionID string)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, nil)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to create request")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to create request")
 	}
 
 	if c.apiKey != "" {
@@ -354,13 +354,13 @@ func (c *VLLMClient) DeleteKVCacheSession(ctx context.Context, sessionID string)
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "HTTP request failed")
+		return errors.Wrap(err, "ERR_INTERNAL", "HTTP request failed")
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
-		return errors.New(errors.CodeInternalError,
+		return errors.New("ERR_INTERNAL",
 			fmt.Sprintf("failed to delete KV-Cache session: %s", string(body)))
 	}
 
@@ -375,17 +375,17 @@ func (c *VLLMClient) HealthCheck(ctx context.Context) error {
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to create request")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to create request")
 	}
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "health check failed")
+		return errors.Wrap(err, "ERR_INTERNAL", "health check failed")
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.New(errors.CodeInternalError,
+		return errors.New("ERR_INTERNAL",
 			fmt.Sprintf("vLLM unhealthy: status %d", resp.StatusCode))
 	}
 
@@ -398,7 +398,7 @@ func (c *VLLMClient) GetModels(ctx context.Context) ([]string, error) {
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to create request")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to create request")
 	}
 
 	if c.apiKey != "" {
@@ -407,13 +407,13 @@ func (c *VLLMClient) GetModels(ctx context.Context) ([]string, error) {
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "HTTP request failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "HTTP request failed")
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, errors.New(errors.CodeInternalError,
+		return nil, errors.New("ERR_INTERNAL",
 			fmt.Sprintf("failed to get models: %s", string(body)))
 	}
 
@@ -424,7 +424,7 @@ func (c *VLLMClient) GetModels(ctx context.Context) ([]string, error) {
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to decode response")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to decode response")
 	}
 
 	models := make([]string, len(result.Data))
@@ -508,7 +508,7 @@ func (c *VLLMClient) recordMetrics(operation, status string, latency time.Durati
 			"status":    status,
 		})
 
-	c.metricsCollector.RecordHistogram("vllm_request_latency_ms", float64(latency.Milliseconds()),
+	c.metricsCollector.RecordDuration("vllm_request_latency_ms", float64(latency.Milliseconds()),
 		map[string]string{
 			"operation": operation,
 		})

@@ -12,6 +12,7 @@ import (
 	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/internal/observability/trace"
 	"github.com/openeeap/openeeap/pkg/errors"
+	"go.opentelemetry.io/otel/codes"
 )
 
 // Retriever 定义检索器接口
@@ -127,11 +128,11 @@ func (r *retrieverImpl) Retrieve(ctx context.Context, req *RetrieveRequest) ([]*
 	startTime := time.Now()
 
 	// 创建 Span
-	span := r.tracer.StartSpan(ctx, "Retriever.Retrieve")
+	ctx, span := r.tracer.Start(ctx, "Retriever.Retrieve")
 	defer span.End()
-	span.AddTag("query", req.Query)
-	span.AddTag("mode", string(req.Mode))
-	span.AddTag("topK", req.TopK)
+	// span.AddTag("query", req.Query)
+	// span.AddTag("mode", string(req.Mode))
+	// span.AddTag("topK", req.TopK)
 
 	// 验证请求
 	if err := r.validateRequest(req); err != nil {
@@ -162,7 +163,8 @@ func (r *retrieverImpl) Retrieve(ctx context.Context, req *RetrieveRequest) ([]*
 	}
 
 	if err != nil {
-		span.SetStatus(trace.StatusError, err.Error())
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -175,9 +177,9 @@ func (r *retrieverImpl) Retrieve(ctx context.Context, req *RetrieveRequest) ([]*
 	}
 
 	latency := time.Since(startTime)
- r.logger.WithContext(ctx).Info("retrieval completed", logging.Any("query", req.Query), logging.Any("mode", req.Mode), logging.Any("chunks_count", len(chunks))
+ r.logger.WithContext(ctx).Info("retrieval completed", logging.Any("query", req.Query), logging.Any("mode", req.Mode), logging.Any("chunks_count", len(chunks)))
 
-	span.AddTag("chunks_count", len(chunks))
+	// span.AddTag("chunks_count", len(chunks))
 
 	return chunks, nil
 }
@@ -198,7 +200,7 @@ func (r *retrieverImpl) vectorRetrieval(ctx context.Context, req *RetrieveReques
 	// 执行向量搜索
 	results, err := r.vectorStore.Search(ctx, searchReq)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternal, "vector search failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "vector search failed")
 	}
 
 	// 转换为 RetrievedChunk
@@ -229,7 +231,7 @@ func (r *retrieverImpl) keywordRetrieval(ctx context.Context, req *RetrieveReque
 	// 执行关键词搜索
 	results, err := r.searchEngine.Search(ctx, req.Query, req.TopK*2, req.Metadata)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternal, "keyword search failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "keyword search failed")
 	}
 
 	// 转换为 RetrievedChunk
@@ -260,7 +262,7 @@ func (r *retrieverImpl) graphRetrieval(ctx context.Context, req *RetrieveRequest
 	// 执行图查询
 	results, err := r.knowledgeGraph.Query(ctx, req.Query, 2) // 最大深度为2
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternal, "graph query failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "graph query failed")
 	}
 
 	// 转换为 RetrievedChunk
@@ -338,7 +340,7 @@ func (r *retrieverImpl) hybridRetrieval(ctx context.Context, req *RetrieveReques
 	}
 
 	if len(allChunks) == 0 {
-		return nil, errors.New(errors.CodeInternal, "all retrieval strategies failed")
+		return nil, errors.New("ERR_INTERNAL", "all retrieval strategies failed")
 	}
 
 	// 融合分数（RRF - Reciprocal Rank Fusion）
@@ -453,7 +455,7 @@ func (r *retrieverImpl) validateRequest(req *RetrieveRequest) error {
 func (r *retrieverImpl) HealthCheck(ctx context.Context) error {
 	// 检查向量数据库
 	if err := r.vectorStore.HealthCheck(ctx); err != nil {
-		return errors.Wrap(err, errors.CodeUnavailable, "vector store unhealthy")
+		return errors.Wrap(err, "ERR_UNAVAIL", "vector store unhealthy")
 	}
 
 	// 检查搜索引擎（可选）

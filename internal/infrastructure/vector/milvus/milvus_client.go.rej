@@ -1,0 +1,18 @@
+--- internal/infrastructure/vector/milvus/milvus_client.go
++++ internal/infrastructure/vector/milvus/milvus_client.go
+@@ -734,8 +734,14 @@ func (mc *milvusClient) GetCollectionStatistics(ctx context.Context, collectionName string) (*CollectionStats, error) {
+ return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get collection statistics")
+ }
+ 
++// Parse row count from stats map
++rowCount := int64(0)
++if rowCountStr, ok := stats["row_count"]; ok {
++fmt.Sscanf(rowCountStr, "%d", &rowCount)
++}
++
+ return &CollectionStats{
+-RowCount: stats.RowCount,
++RowCount: rowCount,
+ DataSize: 0, // Milvus SDK 可能不直接提供，需要额外计算
+ }, nil
+ }

@@ -305,7 +305,7 @@ func (s *agentService) CreateAgent(ctx context.Context, req *CreateAgentRequest)
 
 	startTime := time.Now()
 	defer func() {
-		s.metricsCollector.Histogram("agent_create_duration_ms",
+		s.metricsCollector.RecordDuration("agent_create_duration_ms",
 			float64(time.Since(startTime).Milliseconds()),
 			map[string]string{"type": string(req.Type)})
 	}()
@@ -347,12 +347,12 @@ func (s *agentService) CreateAgent(ctx context.Context, req *CreateAgentRequest)
 
 	// 使用领域服务初始化 Agent
 	if err := s.agentDomainSvc.Initialize(ctx, agentEntity); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to initialize agent")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to initialize agent")
 	}
 
 	// 保存到仓储
 	if err := s.agentRepo.Create(ctx, agentEntity); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to create agent")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to create agent")
 	}
 
 	// 缓存
@@ -370,7 +370,7 @@ func (s *agentService) CreateAgent(ctx context.Context, req *CreateAgentRequest)
 		}
 	}
 
-	s.metricsCollector.Increment("agents_created_total",
+	s.metricsCollector.IncrementCounter("agents_created_total",
 		map[string]string{"type": string(req.Type)})
 
  s.logger.WithContext(ctx).Info("Agent created successfully", logging.Any("agent_id", agentEntity.ID), logging.Any("name", agentEntity.Name))
@@ -450,7 +450,7 @@ func (s *agentService) UpdateAgent(ctx context.Context, agentID string, req *Upd
 
 	// 保存更新
 	if err := s.agentRepo.Update(ctx, agentEntity); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to update agent")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to update agent")
 	}
 
 	// 更新缓存
@@ -494,13 +494,13 @@ func (s *agentService) DeleteAgent(ctx context.Context, agentID string) error {
 
 	// 从仓储删除
 	if err := s.agentRepo.Delete(ctx, agentID); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to delete agent")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to delete agent")
 	}
 
 	// 从缓存删除
 	s.cache.Delete(agentID)
 
-	s.metricsCollector.Increment("agents_deleted_total",
+	s.metricsCollector.IncrementCounter("agents_deleted_total",
 		map[string]string{"type": string(agentEntity.Type)})
 
 	s.logger.WithContext(ctx).Info("Agent deleted successfully", logging.Any("agent_id", agentID))
@@ -534,7 +534,7 @@ func (s *agentService) ListAgents(ctx context.Context, req *ListAgentsRequest) (
 	// 从仓储查询
 	agents, total, err := s.agentRepo.List(ctx, filter)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to list agents")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to list agents")
 	}
 
 	// 转换为响应
@@ -561,7 +561,7 @@ func (s *agentService) DeployAgent(ctx context.Context, agentID string, req *Dep
 
 	startTime := time.Now()
 	defer func() {
-		s.metricsCollector.Histogram("agent_deploy_duration_ms",
+		s.metricsCollector.RecordDuration("agent_deploy_duration_ms",
 			float64(time.Since(startTime).Milliseconds()),
 			map[string]string{"environment": req.Environment})
 	}()
@@ -582,7 +582,7 @@ func (s *agentService) DeployAgent(ctx context.Context, agentID string, req *Dep
 
 	// 使用领域服务准备部署
 	if err := s.agentDomainSvc.PrepareDeployment(ctx, agentEntity); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to prepare deployment")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to prepare deployment")
 	}
 
 	// 设置默认值
@@ -605,7 +605,7 @@ func (s *agentService) DeployAgent(ctx context.Context, agentID string, req *Dep
 	// 执行部署
 	deployment, err := s.deploymentSvc.Deploy(ctx, deployConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "deployment failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "deployment failed")
 	}
 
 	// 更新 Agent 状态
@@ -621,7 +621,7 @@ func (s *agentService) DeployAgent(ctx context.Context, agentID string, req *Dep
 	// 更新缓存
 	s.cache.Store(agentID, agentEntity)
 
-	s.metricsCollector.Increment("agents_deployed_total",
+	s.metricsCollector.IncrementCounter("agents_deployed_total",
 		map[string]string{"environment": req.Environment})
 
  s.logger.WithContext(ctx).Info("Agent deployed successfully", logging.Any("agent_id", agentID), logging.Any("deployment_id", deployment.ID), logging.Any("endpoint", deployment.Endpoint))
@@ -671,7 +671,7 @@ func (s *agentService) TestAgent(ctx context.Context, agentID string, req *TestA
 	// 执行测试
 	testResults, err := s.testingSvc.RunTests(ctx, testConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "test execution failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "test execution failed")
 	}
 
 	// 统计结果
@@ -717,7 +717,7 @@ func (s *agentService) TestAgent(ctx context.Context, agentID string, req *TestA
   s.logger.WithContext(ctx).Warn("Failed to update agent test status", logging.Any("agent_id", agentID), logging.Error(err))
 	}
 
-	s.metricsCollector.Increment("agent_tests_total",
+	s.metricsCollector.IncrementCounter("agent_tests_total",
 		map[string]string{
 			"agent_id": agentID,
 			"status":   status,
@@ -777,7 +777,7 @@ func (s *agentService) ExecuteAgent(ctx context.Context, agentID string, req *Ex
 		result.Status = "failed"
 		result.Error = err.Error()
 
-		s.metricsCollector.Increment("agent_executions_failed_total",
+		s.metricsCollector.IncrementCounter("agent_executions_failed_total",
 			map[string]string{"agent_id": agentID})
 
   s.logger.WithContext(ctx).Error("Agent execution failed", logging.Any("agent_id", agentID), logging.Error(err))
@@ -800,10 +800,10 @@ func (s *agentService) ExecuteAgent(ctx context.Context, agentID string, req *Ex
   s.logger.WithContext(ctx).Warn("Failed to update agent statistics", logging.Any("agent_id", agentID), logging.Error(err))
 	}
 
-	s.metricsCollector.Increment("agent_executions_success_total",
+	s.metricsCollector.IncrementCounter("agent_executions_success_total",
 		map[string]string{"agent_id": agentID})
 
-	s.metricsCollector.Histogram("agent_execution_duration_ms",
+	s.metricsCollector.RecordDuration("agent_execution_duration_ms",
 		float64(duration.Milliseconds()),
 		map[string]string{"agent_id": agentID})
 
@@ -833,7 +833,7 @@ func (s *agentService) UpdateAgentConfig(ctx context.Context, agentID string, co
 	agentEntity.UpdatedAt = time.Now()
 
 	if err := s.agentRepo.Update(ctx, agentEntity); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to update config")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to update config")
 	}
 
 	// 更新缓存
@@ -939,18 +939,18 @@ func (s *agentService) CloneAgent(ctx context.Context, sourceAgentID string, req
 
 	// 使用领域服务初始化
 	if err := s.agentDomainSvc.Initialize(ctx, clonedAgent); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to initialize cloned agent")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to initialize cloned agent")
 	}
 
 	// 保存
 	if err := s.agentRepo.Create(ctx, clonedAgent); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to create cloned agent")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to create cloned agent")
 	}
 
 	// 缓存
 	s.cache.Store(clonedAgent.ID, clonedAgent)
 
-	s.metricsCollector.Increment("agents_cloned_total",
+	s.metricsCollector.IncrementCounter("agents_cloned_total",
 		map[string]string{"type": string(clonedAgent.Type)})
 
  s.logger.WithContext(ctx).Info("Agent cloned successfully", logging.Any("source_agent_id", sourceAgentID), logging.Any("cloned_agent_id", clonedAgent.ID))
@@ -1020,13 +1020,13 @@ func (s *agentService) ImportAgent(ctx context.Context, data *AgentExport) (*Age
 
 	// 保存
 	if err := s.agentRepo.Create(ctx, agentEntity); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to import agent")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to import agent")
 	}
 
 	// 缓存
 	s.cache.Store(agentEntity.ID, agentEntity)
 
-	s.metricsCollector.Increment("agents_imported_total",
+	s.metricsCollector.IncrementCounter("agents_imported_total",
 		map[string]string{"type": string(agentEntity.Type)})
 
  s.logger.WithContext(ctx).Info("Agent imported successfully", logging.Any("agent_id", agentEntity.ID), logging.Any("name", agentEntity.Name))

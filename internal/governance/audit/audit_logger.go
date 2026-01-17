@@ -404,7 +404,7 @@ func (a *auditLogger) LogBatch(ctx context.Context, entries []*AuditEntry) error
 	ctx, span := a.tracer.Start(ctx, "AuditLogger.LogBatch")
 	defer span.End()
 
-	a.logger.WithContext(ctx).Debug("Recording batch audit entries", logging.Any("count", len(entries))
+	a.logger.WithContext(ctx).Debug("Recording batch audit entries", logging.Any("count", len(entries)))
 
 	// 设置默认值
 	for _, entry := range entries {
@@ -419,7 +419,7 @@ func (a *auditLogger) LogBatch(ctx context.Context, entries []*AuditEntry) error
 	// 批量写入
 	if err := a.storage.WriteBatch(ctx, entries); err != nil {
 		a.logger.WithContext(ctx).Error("Failed to write batch audit entries", logging.Error(err))
-		return errors.Wrap(err, errors.CodeInternalError, "failed to write batch audit entries")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to write batch audit entries")
 	}
 
 	// 记录指标
@@ -427,7 +427,7 @@ func (a *auditLogger) LogBatch(ctx context.Context, entries []*AuditEntry) error
 		a.recordMetrics(entry)
 	}
 
-	a.logger.WithContext(ctx).Info("Batch audit entries recorded", logging.Any("count", len(entries))
+	a.logger.WithContext(ctx).Info("Batch audit entries recorded", logging.Any("count", len(entries)))
 
 	return nil
 }
@@ -441,10 +441,10 @@ func (a *auditLogger) Query(ctx context.Context, filter *AuditFilter) ([]*AuditE
 
 	entries, err := a.storage.Read(ctx, filter)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to query audit entries")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to query audit entries")
 	}
 
-	a.logger.WithContext(ctx).Info("Audit entries queried", logging.Any("count", len(entries))
+	a.logger.WithContext(ctx).Info("Audit entries queried", logging.Any("count", len(entries)))
 
 	return entries, nil
 }
@@ -495,7 +495,7 @@ func (a *auditLogger) Count(ctx context.Context, filter *AuditFilter) (int64, er
 
 	count, err := a.storage.Count(ctx, filter)
 	if err != nil {
-		return 0, errors.Wrap(err, errors.CodeInternalError, "failed to count audit entries")
+		return 0, errors.Wrap(err, "ERR_INTERNAL", "failed to count audit entries")
 	}
 
 	return count, nil
@@ -600,7 +600,7 @@ func (a *auditLogger) Delete(ctx context.Context, filter *AuditFilter) (int64, e
 
 	count, err := a.storage.Delete(ctx, filter)
 	if err != nil {
-		return 0, errors.Wrap(err, errors.CodeInternalError, "failed to delete audit entries")
+		return 0, errors.Wrap(err, "ERR_INTERNAL", "failed to delete audit entries")
 	}
 
 	a.logger.WithContext(ctx).Info("Audit entries deleted", logging.Any("count", count))
@@ -624,21 +624,21 @@ func (a *auditLogger) Archive(ctx context.Context, filter *AuditFilter, archiveP
 	// 序列化为 JSON
 	data, err := json.MarshalIndent(entries, "", "  ")
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to marshal audit entries")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to marshal audit entries")
 	}
 
 	// 写入文件（简化实现）
 	// 实际应该使用更健壮的文件写入和压缩
 	_ = data
 
- a.logger.WithContext(ctx).Info("Audit entries archived", logging.Any("count", len(entries))
+ a.logger.WithContext(ctx).Info("Audit entries archived", logging.Any("count", len(entries)))
 
 	return nil
 }
 
 // Close 关闭审计日志记录器
 func (a *auditLogger) Close() error {
-	a.logger.Info(context.Background(), "Closing audit logger")
+	a.logger.Info("Closing audit logger")
 
 	// 停止自动刷新
 	if a.flushTicker != nil {
@@ -651,15 +651,15 @@ func (a *auditLogger) Close() error {
 
 	// 最终刷新缓冲区
 	if err := a.flush(context.Background()); err != nil {
-		a.logger.Error(context.Background(), "Failed to flush buffer on close", "error", err)
+		a.logger.Error("Failed to flush buffer on close", logging.Error(err))
 	}
 
 	// 关闭存储
 	if err := a.storage.Close(); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to close storage")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to close storage")
 	}
 
-	a.logger.Info(context.Background(), "Audit logger closed")
+	a.logger.Info("Audit logger closed")
 
 	return nil
 }
@@ -677,7 +677,7 @@ func (a *auditLogger) startAutoFlush() {
 			select {
 			case <-a.flushTicker.C:
 				if err := a.flush(context.Background()); err != nil {
-					a.logger.Error(context.Background(), "Auto flush failed", "error", err)
+					a.logger.Error("Auto flush failed", logging.Error(err))
 				}
 			case <-a.stopChan:
 				return
@@ -698,7 +698,7 @@ func (a *auditLogger) flush(ctx context.Context) error {
 	a.buffer = a.buffer[:0]
 	a.bufferMutex.Unlock()
 
-	a.logger.WithContext(ctx).Debug("Flushing audit buffer", logging.Any("count", len(entries))
+	a.logger.WithContext(ctx).Debug("Flushing audit buffer", logging.Any("count", len(entries)))
 
 	if err := a.storage.WriteBatch(ctx, entries); err != nil {
 		a.logger.WithContext(ctx).Error("Failed to flush audit buffer", logging.Error(err))
@@ -725,7 +725,7 @@ func (a *auditLogger) writeWithRetry(ctx context.Context, entry *AuditEntry) err
 		}
 	}
 
-	return errors.Wrap(lastErr, errors.CodeInternalError, "failed to write audit entry after retries")
+	return errors.Wrap(lastErr, "ERR_INTERNAL", "failed to write audit entry after retries")
 }
 
 func (a *auditLogger) shouldExclude(entry *AuditEntry) bool {
@@ -740,7 +740,7 @@ func (a *auditLogger) shouldExclude(entry *AuditEntry) bool {
 }
 
 func (a *auditLogger) recordMetrics(entry *AuditEntry) {
-	a.metricsCollector.Increment("audit_entries_total",
+	a.metricsCollector.IncrementCounter("audit_entries_total",
 		map[string]string{
 			"event_type": string(entry.EventType),
 			"category":   string(entry.Category),
@@ -749,7 +749,7 @@ func (a *auditLogger) recordMetrics(entry *AuditEntry) {
 		})
 
 	if entry.Duration > 0 {
-		a.metricsCollector.Histogram("audit_operation_duration_ms",
+		a.metricsCollector.RecordDuration("audit_operation_duration_ms",
 			float64(entry.Duration.Milliseconds()),
 			map[string]string{
 				"event_type": string(entry.EventType),

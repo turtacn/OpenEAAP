@@ -163,7 +163,7 @@ func (s *dataService) UploadDocumentStream(ctx context.Context, reader io.Reader
 	content, err := io.ReadAll(reader)
 	if err != nil {
 		s.logger.ErrorCtx(ctx, "Failed to read document stream", "error", err)
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to read document stream")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to read document stream")
 	}
 
 	doc := &knowledge.Document{

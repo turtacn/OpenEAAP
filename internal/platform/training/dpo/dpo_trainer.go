@@ -177,7 +177,7 @@ func (t *dpoTrainer) Train(ctx context.Context, task *training.TrainingTask, dat
 	startTime := time.Now()
 	defer func() {
 		duration := time.Since(startTime)
-		t.metricsCollector.Histogram("dpo_training_duration_seconds",
+		t.metricsCollector.RecordDuration("dpo_training_duration_seconds",
 			duration.Seconds(),
 			map[string]string{"task_id": task.ID})
 	}()
@@ -196,7 +196,7 @@ func (t *dpoTrainer) Train(ctx context.Context, task *training.TrainingTask, dat
 		}
 
 		if err := t.backend.Initialize(ctx, distribConfig); err != nil {
-			return errors.Wrap(err, errors.CodeInternalError, "failed to initialize distributed backend")
+			return errors.Wrap(err, "ERR_INTERNAL", "failed to initialize distributed backend")
 		}
 		defer t.backend.Cleanup(ctx)
 	}
@@ -208,7 +208,7 @@ func (t *dpoTrainer) Train(ctx context.Context, task *training.TrainingTask, dat
 	t.logger.WithContext(ctx).Info("Preparing preference dataset", logging.Any("task_id", task.ID))
 	prefDataset, err := t.convertToPreferenceDataset(ctx, dataset)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to prepare preference dataset")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to prepare preference dataset")
 	}
 
 	task.Progress = 0.1
@@ -231,7 +231,7 @@ func (t *dpoTrainer) Train(ctx context.Context, task *training.TrainingTask, dat
 	// 执行 DPO 训练
 	t.logger.WithContext(ctx).Info("Starting DPO optimization", logging.Any("task_id", task.ID))
 	if err := t.TrainDPO(ctx, task, prefDataset); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "DPO training failed")
+		return errors.Wrap(err, "ERR_INTERNAL", "DPO training failed")
 	}
 
 	task.Progress = 0.9
@@ -254,7 +254,7 @@ func (t *dpoTrainer) Train(ctx context.Context, task *training.TrainingTask, dat
 	task.Progress = 1.0
 	t.updateTaskProgress(ctx, task)
 
-	t.metricsCollector.Increment("dpo_training_completed",
+	t.metricsCollector.IncrementCounter("dpo_training_completed",
 		map[string]string{"task_id": task.ID})
 
 	t.logger.WithContext(ctx).Info("DPO training completed successfully", logging.Any("task_id", task.ID))
@@ -323,7 +323,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 	if t.referenceModel == nil {
 		refModel, err := policyModel.Clone(ctx)
 		if err != nil {
-			return errors.Wrap(err, errors.CodeInternalError, "failed to clone reference model")
+			return errors.Wrap(err, "ERR_INTERNAL", "failed to clone reference model")
 		}
 		t.referenceModel = refModel
 	}
@@ -352,13 +352,13 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 			// 计算对数概率
 			chosenLogProbs, rejectedLogProbs, err := policyModel.ComputeLogProbsBatch(ctx, batchPairs)
 			if err != nil {
-				return errors.Wrap(err, errors.CodeInternalError, "failed to compute log probs")
+				return errors.Wrap(err, "ERR_INTERNAL", "failed to compute log probs")
 			}
 
 			// 计算参考模型对数概率
 			refChosenLogProbs, refRejectedLogProbs, err := t.referenceModel.ComputeLogProbsBatch(ctx, batchPairs)
 			if err != nil {
-				return errors.Wrap(err, errors.CodeInternalError, "failed to compute reference log probs")
+				return errors.Wrap(err, "ERR_INTERNAL", "failed to compute reference log probs")
 			}
 
 			batch := &PreferenceBatch{
@@ -372,7 +372,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 			// 计算 DPO 损失
 			loss, err := t.ComputeDPOLoss(ctx, batch)
 			if err != nil {
-				return errors.Wrap(err, errors.CodeInternalError, "failed to compute DPO loss")
+				return errors.Wrap(err, "ERR_INTERNAL", "failed to compute DPO loss")
 			}
 
 			epochLoss += loss
@@ -382,7 +382,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 			if batchCount%t.trainingConfig.LoggingSteps == 0 {
     t.logger.WithContext(ctx).Debug("Batch training", logging.Any("epoch", epoch+1), logging.Any("batch", batchCount), logging.Any("loss", loss))
 
-				t.metricsCollector.Histogram("dpo_batch_loss",
+				t.metricsCollector.RecordDuration("dpo_batch_loss",
 					loss,
 					map[string]string{
 						"task_id": task.ID,
@@ -397,7 +397,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 
   t.logger.WithContext(ctx).Info("Epoch completed", logging.Any("epoch", epoch+1), logging.Any("avg_loss", avgEpochLoss))
 
-		t.metricsCollector.Histogram("dpo_epoch_loss",
+		t.metricsCollector.RecordDuration("dpo_epoch_loss",
 			avgEpochLoss,
 			map[string]string{
 				"task_id": task.ID,
@@ -462,7 +462,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 	// 保存最终模型
 	finalModelPath := fmt.Sprintf("%s/final_model", t.trainingConfig.OutputPath)
 	if err := policyModel.Save(ctx, finalModelPath); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to save final model")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to save final model")
 	}
 
  t.logger.WithContext(ctx).Info("DPO training completed", logging.Any("task_id", task.ID), logging.Any("final_loss", task.CurrentLoss), logging.Any("best_loss", task.BestLoss))
@@ -547,7 +547,7 @@ func (t *dpoTrainer) EvaluatePreferences(ctx context.Context, dataset *Preferenc
 
 	policyModel := NewSimplePolicyModel(t.logger)
 	if err := policyModel.Load(ctx, fmt.Sprintf("%s/final_model", t.trainingConfig.OutputPath)); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to load final model")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to load final model")
 	}
 
 	correct := 0
@@ -865,7 +865,7 @@ func (t *dpoTrainer) updateTaskProgress(ctx context.Context, task *training.Trai
 
  t.logger.WithContext(ctx).Debug("Task progress updated", logging.Any("task_id", task.ID), logging.Any("progress", task.Progress))
 
-	t.metricsCollector.Histogram("dpo_training_progress",
+	t.metricsCollector.RecordDuration("dpo_training_progress",
 		task.Progress,
 		map[string]string{"task_id": task.ID})
 }

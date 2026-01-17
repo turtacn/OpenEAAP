@@ -314,9 +314,10 @@ func (s *trainingService) CreateTask(ctx context.Context, req *TrainingRequest) 
 
 	startTime := time.Now()
 	defer func() {
-		// s.metricsCollector.Histogram("training_create_task_duration_ms",
-			float64(time.Since(startTime).Milliseconds()),
-			map[string]string{"training_type": string(req.TrainingType)})
+		// s.metricsCollector.RecordDuration("training_create_task_duration_ms",
+		// 	float64(time.Since(startTime).Milliseconds()),
+		// 	map[string]string{"training_type": string(req.TrainingType)})
+		_ = startTime // Suppress unused variable warning
 	}()
 
  s.logger.WithContext(ctx).Info("Creating training task", logging.Any("model_id", req.ModelID), logging.Any("type", req.TrainingType))
@@ -328,7 +329,7 @@ func (s *trainingService) CreateTask(ctx context.Context, req *TrainingRequest) 
 
 	// 验证数据集
 	if req.Dataset == nil || len(req.Dataset.Samples) == 0 {
-		return nil, errors.New(errors.CodeInvalidArgument, "dataset is required")
+		return nil, errors.NewInternalError(errors.CodeInvalidArgument, "dataset is required")
 	}
 
 	// 应用默认配置
@@ -352,10 +353,10 @@ func (s *trainingService) CreateTask(ctx context.Context, req *TrainingRequest) 
 
 	// 保存任务
 	if err := s.taskRepo.Create(ctx, task); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to create task")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to create task")
 	}
 
-	s.metricsCollector.Increment("training_task_created",
+	s.metricsCollector.IncrementCounter("training_task_created",
 		map[string]string{
 			"model_id":      req.ModelID,
 			"training_type": string(req.TrainingType),
@@ -392,20 +393,20 @@ func (s *trainingService) StartTask(ctx context.Context, taskID string) error {
 	task.UpdatedAt = now
 
 	if err := s.taskRepo.Update(ctx, task); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to update task")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to update task")
 	}
 
 	// 提交到任务队列
 	select {
 	case s.taskQueue <- task:
 		s.runningTasks.Store(taskID, task)
-		s.metricsCollector.Increment("training_task_started",
+		s.metricsCollector.IncrementCounter("training_task_started",
 			map[string]string{"task_id": taskID})
 		s.logger.WithContext(ctx).Info("Training task started", logging.Any("task_id", taskID))
 	default:
 		task.Status = TaskStatusPending
 		s.taskRepo.Update(ctx, task)
-		return errors.New(errors.CodeResourceExhausted, "task queue is full")
+		return errors.NewInternalError("ERR_EXHAUSTED", "task queue is full")
 	}
 
 	return nil
@@ -443,12 +444,12 @@ func (s *trainingService) StopTask(ctx context.Context, taskID string) error {
 	task.UpdatedAt = now
 
 	if err := s.taskRepo.Update(ctx, task); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to update task")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to update task")
 	}
 
 	s.runningTasks.Delete(taskID)
 
-	s.metricsCollector.Increment("training_task_stopped",
+	s.metricsCollector.IncrementCounter("training_task_stopped",
 		map[string]string{"task_id": taskID})
 
 	s.logger.WithContext(ctx).Info("Training task stopped", logging.Any("task_id", taskID))
@@ -475,17 +476,17 @@ func (s *trainingService) PauseTask(ctx context.Context, taskID string) error {
 
 	engine := s.getEngine(task.TrainingType)
 	if err := engine.Pause(ctx, taskID); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to pause training")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to pause training")
 	}
 
 	task.Status = TaskStatusPaused
 	task.UpdatedAt = time.Now()
 
 	if err := s.taskRepo.Update(ctx, task); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to update task")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to update task")
 	}
 
-	s.metricsCollector.Increment("training_task_paused",
+	s.metricsCollector.IncrementCounter("training_task_paused",
 		map[string]string{"task_id": taskID})
 
 	s.logger.WithContext(ctx).Info("Training task paused", logging.Any("task_id", taskID))
@@ -512,17 +513,17 @@ func (s *trainingService) ResumeTask(ctx context.Context, taskID string) error {
 
 	engine := s.getEngine(task.TrainingType)
 	if err := engine.Resume(ctx, taskID); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to resume training")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to resume training")
 	}
 
 	task.Status = TaskStatusRunning
 	task.UpdatedAt = time.Now()
 
 	if err := s.taskRepo.Update(ctx, task); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to update task")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to update task")
 	}
 
-	s.metricsCollector.Increment("training_task_resumed",
+	s.metricsCollector.IncrementCounter("training_task_resumed",
 		map[string]string{"task_id": taskID})
 
 	s.logger.WithContext(ctx).Info("Training task resumed", logging.Any("task_id", taskID))
@@ -550,7 +551,7 @@ func (s *trainingService) ListTasks(ctx context.Context, filter *TaskFilter) ([]
 
 	tasks, err := s.taskRepo.List(ctx, filter)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to list tasks")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to list tasks")
 	}
 
 	return tasks, nil
@@ -569,14 +570,14 @@ func (s *trainingService) DeleteTask(ctx context.Context, taskID string) error {
 	}
 
 	if task.Status == TaskStatusRunning {
-		return errors.New(errors.CodeInvalidArgument, "cannot delete running task")
+		return errors.NewInternalError(errors.CodeInvalidArgument, "cannot delete running task")
 	}
 
 	if err := s.taskRepo.Delete(ctx, taskID); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to delete task")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to delete task")
 	}
 
-	s.metricsCollector.Increment("training_task_deleted",
+	s.metricsCollector.IncrementCounter("training_task_deleted",
 		map[string]string{"task_id": taskID})
 
 	s.logger.WithContext(ctx).Info("Training task deleted", logging.Any("task_id", taskID))
@@ -652,7 +653,7 @@ func (s *trainingService) executeTraining(ctx context.Context, task *TrainingTas
 
 	s.runningTasks.Delete(task.ID)
 
-	s.metricsCollector.Increment("training_task_completed",
+	s.metricsCollector.IncrementCounter("training_task_completed",
 		map[string]string{"task_id": task.ID})
 
 	s.logger.WithContext(ctx).Info("Training completed successfully", logging.Any("task_id", task.ID))
@@ -675,7 +676,7 @@ func (s *trainingService) handleTrainingError(ctx context.Context, task *Trainin
 
 	s.runningTasks.Delete(task.ID)
 
-	s.metricsCollector.Increment("training_task_failed",
+	s.metricsCollector.IncrementCounter("training_task_failed",
 		map[string]string{"task_id": task.ID})
 }
 

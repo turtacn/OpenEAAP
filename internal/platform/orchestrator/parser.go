@@ -438,7 +438,7 @@ func (p *parser) ParseIntent(ctx context.Context, input string) (*Intent, error)
 		Threshold: p.config.IntentConfidenceThreshold,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to detect intent")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to detect intent")
 	}
 
 	return intent, nil
@@ -453,7 +453,7 @@ func (p *parser) ExtractParameters(ctx context.Context, input string, schema *Pa
 	// 使用参数提取器
 	params, err := p.paramExtractor.Extract(ctx, input, schema)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to extract parameters")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to extract parameters")
 	}
 
 	return params, nil
@@ -468,7 +468,7 @@ func (p *parser) ExtractContext(ctx context.Context, input string, history []*Me
 	// 使用上下文构建器
 	contextInfo, err := p.contextBuilder.Build(ctx, input, history, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to build context")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to build context")
 	}
 
 	return contextInfo, nil
@@ -704,7 +704,7 @@ JSON:`, input)
 
 	var intent Intent
 	if err := json.Unmarshal([]byte(resp.Choices[0].Text), &intent); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to parse intent response")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to parse intent response")
 	}
 
 	return &intent, nil
@@ -762,7 +762,7 @@ JSON:`, input, string(schemaJSON))
 
 	var params map[string]interface{}
 	if err := json.Unmarshal([]byte(resp.Choices[0].Text), &params); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to parse parameters")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to parse parameters")
 	}
 
 	return params, nil

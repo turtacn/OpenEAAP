@@ -68,7 +68,7 @@ func (r *agentRepo) Create(ctx context.Context, agt *agent.Agent) error {
 	// 转换为数据库模型
 	model, err := r.toModel(agt)
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to convert agent to model")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert agent to model")
 	}
 
 	// 执行创建
@@ -120,7 +120,7 @@ func (r *agentRepo) Update(ctx context.Context, agt *agent.Agent) error {
 	// 转换为数据库模型
 	model, err := r.toModel(agt)
 	if err != nil {
-		return errors.WrapInternalError(err, errors.CodeInternalError, "failed to convert agent to model")
+		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert agent to model")
 	}
 
 	// 使用乐观锁更新
@@ -209,13 +209,11 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 	query := r.db.WithContext(ctx).Model(&AgentModel{})
 
 	// 应用过滤条件
-	}
 	if len(filter.RuntimeType) > 0 {
 		query = query.Where("runtime_type = ?", filter.RuntimeType)
 	}
 	if len(filter.Status) > 0 {
 		query = query.Where("status = ?", filter.Status)
-	}
 	}
 	if !filter.CreatedAfter.IsZero() {
 		query = query.Where("created_at >= ?", filter.CreatedAfter)
@@ -232,6 +230,9 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 
 	// 应用排序
 	orderBy := "created_at DESC"
+	if filter.SortBy != "" {
+		orderBy = filter.SortBy
+		if filter.SortOrder == agent.SortOrderDesc {
 			orderBy += " DESC"
 		} else {
 			orderBy += " ASC"
@@ -253,7 +254,7 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 	for i := range models {
 		agt, err := r.toEntity(&models[i])
 		if err != nil {
-			return nil, 0, errors.WrapInternalError(err, errors.CodeInternalError, "failed to convert model to entity")
+			return nil, 0, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert model to entity")
 		}
 		agents = append(agents, agt)
 	}
@@ -266,7 +267,7 @@ func (r *agentRepo) UpdateStatus(ctx context.Context, id string, status agent.Ag
 	if id == "" {
 		return errors.NewValidationError(errors.CodeInvalidParameter, "agent ID cannot be empty")
 	}
-	if !status.Valid() {
+	if !status != "" {
 		return errors.NewValidationError(errors.CodeInvalidParameter, "invalid agent status")
 	}
 
@@ -274,7 +275,7 @@ func (r *agentRepo) UpdateStatus(ctx context.Context, id string, status agent.Ag
 		Model(&AgentModel{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
-			"status":     status.String(),
+			"status":     string(status),
 			"updated_at": time.Now(),
 		})
 
@@ -311,7 +312,7 @@ func (r *agentRepo) BatchCreate(ctx context.Context, agents []*agent.Agent) erro
 
 		model, err := r.toModel(agt)
 		if err != nil {
-			return errors.WrapInternalError(err, errors.CodeInternalError, "failed to convert agent to model")
+			return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert agent to model")
 		}
 		models = append(models, *model)
 	}
@@ -338,9 +339,9 @@ func (r *agentRepo) toModel(agt *agent.Agent) (*AgentModel, error) {
 		ID:          agt.ID,
 		Name:        agt.Name,
 		Description: agt.Description,
-		RuntimeType: agt.RuntimeType.String(),
+		RuntimeType: string(agt.RuntimeType),
 		Config:      string(configJSON),
-		Status:      agt.Status.String(),
+		Status:      string(agt.Status),
 		Version:     agt.Version,
 		CreatedBy:   agt.CreatedBy,
 		UpdatedBy:   agt.UpdatedBy,

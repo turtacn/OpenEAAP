@@ -184,7 +184,7 @@ func (g *generatorImpl) Generate(ctx context.Context, req *GenerateRequest) (*Ge
 	llmResp, err := g.llmClient.Complete(ctx, llmReq)
 	if err != nil {
 		trace.RecordSpanError(ctx, err)
-		return nil, errors.Wrap(err, errors.CodeInternalError, "LLM completion failed")
+		return nil, errors.Wrap(err, "RAG_ERROR", "LLM completion failed")
 	}
 
 	answer := llmResp.Content
@@ -223,10 +223,10 @@ func (g *generatorImpl) Generate(ctx context.Context, req *GenerateRequest) (*Ge
 		VerifyIssues: verifyIssues,
 	}
 
- g.logger.WithContext(ctx).Info("generation completed", logging.Any("query", req.Query), logging.Any("answer_length", len(answer))
+ g.logger.WithContext(ctx).Info("generation completed", logging.Any("query", req.Query), logging.Any("answer_length", len(answer)))
 
-	span.AddTag("tokens_used", llmResp.TokensUsed)
-	span.AddTag("verified", verified)
+	span.SetAttributes(attribute.String("tokens_used", fmt.Sprint(llmResp.TokensUsed)))
+	span.SetAttributes(attribute.String("verified", fmt.Sprint(verified)))
 
 	return response, nil
 }
@@ -255,7 +255,7 @@ func (g *generatorImpl) GenerateStream(ctx context.Context, req *GenerateRequest
 
 	llmChunkChan, err := g.llmClient.CompleteStream(ctx, llmReq)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternal, "LLM stream failed")
+		return nil, errors.Wrap(err, "RAG_ERR", "LLM stream failed")
 	}
 
 	// 转换为 GenerateChunk
@@ -396,7 +396,7 @@ func (g *generatorImpl) validateRequest(req *GenerateRequest) error {
 func (g *generatorImpl) HealthCheck(ctx context.Context) error {
 	// 检查 LLM 客户端
 	if err := g.llmClient.HealthCheck(ctx); err != nil {
-		return errors.Wrap(err, errors.CodeUnavailable, "LLM client unhealthy")
+		return errors.Wrap(err, "RAG_ERR", "LLM client unhealthy")
 	}
 
 	return nil

@@ -246,7 +246,7 @@ func (c *L1LocalCache) evictLRU() {
 	c.removeNode(lruNode)
 	delete(c.entries, lruNode.key)
 
-	c.logger.Debug(context.Background(), "L1 cache evicted LRU entry", "key", lruNode.key)
+	c.logger.Debug("L1 cache evicted LRU entry", logging.String("key", lruNode.key))
 }
 
 // cleanupExpired periodically removes expired entries
@@ -285,10 +285,9 @@ func (c *L1LocalCache) performCleanup() {
 	}
 
 	if len(expiredKeys) > 0 {
-		c.logger.Debug(context.Background(), "L1 cache cleanup completed",
-			"expired_count", len(expiredKeys),
-			"remaining_count", len(c.entries),
-		)
+		c.logger.Debug("L1 cache cleanup completed",
+			logging.Int("expired_count", len(expiredKeys)),
+			logging.Int("remaining_count", len(c.entries)))
 	}
 }
 
@@ -323,7 +322,7 @@ func (c *L1LocalCache) Warmup(ctx context.Context, entries []*CacheEntry) error 
 		}
 	}
 
-	c.logger.WithContext(ctx).Info("L1 cache warmup completed", logging.Any("count", len(entries))
+	c.logger.WithContext(ctx).Info("L1 cache warmup completed", logging.Any("count", len(entries)))
 
 	return nil
 }

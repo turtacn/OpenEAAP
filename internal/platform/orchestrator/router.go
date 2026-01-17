@@ -384,7 +384,7 @@ func NewRouter(
 // Route 路由请求
 func (r *router) Route(ctx context.Context, req *RouteRequest) (*RouteResponse, error) {
 	if r.closed {
-		return nil, errors.New(errors.CodeInternalError, "router is closed")
+		return nil, errors.New("ERR_INTERNAL", "router is closed")
 	}
 	if req == nil {
 		return nil, errors.New(errors.CodeInvalidParameter, "route request cannot be nil")
@@ -470,7 +470,7 @@ func (r *router) SelectRuntime(ctx context.Context, req *RuntimeSelectionRequest
 	lb := r.getLoadBalancer(req.LoadBalancer)
 	runtime, err := lb.Next(ctx, filtered)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "load balancer failed")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "load balancer failed")
 	}
 
 	// 更新负载均衡器使用统计
@@ -484,13 +484,13 @@ func (r *router) SelectRuntime(ctx context.Context, req *RuntimeSelectionRequest
 // SelectModel 选择模型
 func (r *router) SelectModel(ctx context.Context, req *ModelSelectionRequest) (*ModelInfo, error) {
 	if r.modelRepo == nil {
-		return nil, errors.New(errors.CodeInternalError, "model repository not configured")
+		return nil, errors.New("ERR_INTERNAL", "model repository not configured")
 	}
 
 	// 获取所有可用模型
 	models, err := r.modelRepo.FindAll(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError, "failed to get models")
+		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to get models")
 	}
 
 	if len(models) == 0 {

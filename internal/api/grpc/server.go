@@ -281,7 +281,7 @@ func (s *Server) tracingInterceptor() grpc.UnaryServerInterceptor {
 		resp, err := handler(newCtx, req)
 
 		if err != nil {
-			span.SetStatus(trace.StatusError, err.Error())
+			span.SetStatus(// trace.StatusError, err.Error())
 		} else {
 			span.SetStatus(trace.StatusOK, "")
 		}
@@ -304,7 +304,7 @@ func (s *Server) metricsInterceptor() grpc.UnaryServerInterceptor {
 		}
 
 		s.metricsCollector.IncrementCounter("grpc_requests_total", labels)
-		s.metricsCollector.RecordHistogram("grpc_request_duration_seconds", duration.Seconds(), labels)
+		s.metricsCollector.RecordDuration("grpc_request_duration_seconds", duration.Seconds(), labels)
 
 		if err != nil {
 			s.metricsCollector.IncrementCounter("grpc_errors_total", labels)
@@ -390,7 +390,7 @@ func (s *Server) streamTracingInterceptor() grpc.StreamServerInterceptor {
 		err := handler(srv, ss)
 
 		if err != nil {
-			span.SetStatus(trace.StatusError, err.Error())
+			span.SetStatus(// trace.StatusError, err.Error())
 		} else {
 			span.SetStatus(trace.StatusOK, "")
 		}
@@ -414,7 +414,7 @@ func (s *Server) streamMetricsInterceptor() grpc.StreamServerInterceptor {
 		}
 
 		s.metricsCollector.IncrementCounter("grpc_stream_requests_total", labels)
-		s.metricsCollector.RecordHistogram("grpc_stream_duration_seconds", duration.Seconds(), labels)
+		s.metricsCollector.RecordDuration("grpc_stream_duration_seconds", duration.Seconds(), labels)
 
 		if err != nil {
 			s.metricsCollector.IncrementCounter("grpc_stream_errors_total", labels)

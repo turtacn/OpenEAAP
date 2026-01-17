@@ -176,7 +176,7 @@ func (l *policyLoader) Load(ctx context.Context) ([]*Policy, error) {
 	startTime := time.Now()
 	defer func() {
 		duration := time.Since(startTime)
-		l.metricsCollector.Histogram("policy_load_duration_ms",
+		l.metricsCollector.RecordDuration("policy_load_duration_ms",
 			float64(duration.Milliseconds()),
 			map[string]string{"source": "all"})
 	}()
@@ -244,7 +244,7 @@ func (l *policyLoader) Load(ctx context.Context) ([]*Policy, error) {
 		}
 	}
 
-	l.logger.WithContext(ctx).Info("Policies loaded successfully", logging.Any("count", len(allPolicies))
+	l.logger.WithContext(ctx).Info("Policies loaded successfully", logging.Any("count", len(allPolicies)))
 
 	l.metricsCollector.Gauge("loaded_policies_total",
 		float64(len(allPolicies)),
@@ -269,7 +269,7 @@ func (l *policyLoader) LoadFromFile(ctx context.Context, path string) (*Policy, 
 	// 读取文件内容
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError,
+		return nil, errors.Wrap(err, "ERR_INTERNAL",
 			fmt.Sprintf("failed to read policy file: %s", path))
 	}
 
@@ -346,11 +346,11 @@ func (l *policyLoader) LoadFromDirectory(ctx context.Context, dir string) ([]*Po
 	})
 
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError,
+		return nil, errors.Wrap(err, "ERR_INTERNAL",
 			fmt.Sprintf("failed to load policies from directory: %s", dir))
 	}
 
- l.logger.WithContext(ctx).Info("Policies loaded from directory", logging.Any("dir", dir), logging.Any("count", len(policies))
+ l.logger.WithContext(ctx).Info("Policies loaded from directory", logging.Any("dir", dir), logging.Any("count", len(policies)))
 
 	return policies, nil
 }
@@ -363,12 +363,12 @@ func (l *policyLoader) LoadFromDatabase(ctx context.Context, filter *PolicyFilte
 	l.logger.WithContext(ctx).Debug("Loading policies from database")
 
 	if l.policyRepo == nil {
-		return nil, errors.New(errors.CodeInternalError, "policy repository not configured")
+		return nil, errors.New("ERR_INTERNAL", "policy repository not configured")
 	}
 
 	policies, err := l.policyRepo.List(ctx, filter)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError,
+		return nil, errors.Wrap(err, "ERR_INTERNAL",
 			"failed to load policies from database")
 	}
 
@@ -381,7 +381,7 @@ func (l *policyLoader) LoadFromDatabase(ctx context.Context, filter *PolicyFilte
 		policy.Metadata["loaded_at"] = time.Now()
 	}
 
-	l.logger.WithContext(ctx).Info("Policies loaded from database", logging.Any("count", len(policies))
+	l.logger.WithContext(ctx).Info("Policies loaded from database", logging.Any("count", len(policies)))
 
 	return policies, nil
 }
@@ -394,13 +394,13 @@ func (l *policyLoader) LoadFromConfigCenter(ctx context.Context, key string) ([]
 	l.logger.WithContext(ctx).Debug("Loading policy from config center", logging.Any("key", key))
 
 	if l.configCenter == nil {
-		return nil, errors.New(errors.CodeInternalError, "config center not configured")
+		return nil, errors.New("ERR_INTERNAL", "config center not configured")
 	}
 
 	// 获取配置内容
 	content, err := l.configCenter.Get(ctx, key)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError,
+		return nil, errors.Wrap(err, "ERR_INTERNAL",
 			fmt.Sprintf("failed to get policy from config center: %s", key))
 	}
 
@@ -442,7 +442,7 @@ func (l *policyLoader) Reload(ctx context.Context) error {
 	// 加载新策略
 	newPolicies, err := l.Load(ctx)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to reload policies")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to reload policies")
 	}
 
 	// 更新 PDP 中的策略
@@ -510,9 +510,9 @@ func (l *policyLoader) Reload(ctx context.Context) error {
 		}
 	}
 
-	l.logger.WithContext(ctx).Info("Policies reloaded successfully", logging.Any("count", len(newPolicies))
+	l.logger.WithContext(ctx).Info("Policies reloaded successfully", logging.Any("count", len(newPolicies)))
 
-	l.metricsCollector.Increment("policy_reload_total",
+	l.metricsCollector.IncrementCounter("policy_reload_total",
 		map[string]string{"status": "success"})
 
 	return nil
@@ -819,11 +819,11 @@ func NewPolicyExporter(logger logging.Logger) *PolicyExporter {
 func (e *PolicyExporter) ExportToFile(ctx context.Context, policy *Policy, path string) error {
 	data, err := yaml.Marshal(policy)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError, "failed to marshal policy")
+		return errors.Wrap(err, "ERR_INTERNAL", "failed to marshal policy")
 	}
 
 	if err := ioutil.WriteFile(path, data, 0644); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError,
+		return errors.Wrap(err, "ERR_INTERNAL",
 			fmt.Sprintf("failed to write policy file: %s", path))
 	}
 
@@ -835,7 +835,7 @@ func (e *PolicyExporter) ExportToFile(ctx context.Context, policy *Policy, path 
 // ExportToDirectory 导出多个策略到目录
 func (e *PolicyExporter) ExportToDirectory(ctx context.Context, policies []*Policy, dir string) error {
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return errors.Wrap(err, errors.CodeInternalError,
+		return errors.Wrap(err, "ERR_INTERNAL",
 			fmt.Sprintf("failed to create directory: %s", dir))
 	}
 
@@ -848,7 +848,7 @@ func (e *PolicyExporter) ExportToDirectory(ctx context.Context, policies []*Poli
 		}
 	}
 
- e.logger.WithContext(ctx).Info("Policies exported to directory", logging.Any("count", len(policies))
+ e.logger.WithContext(ctx).Info("Policies exported to directory", logging.Any("count", len(policies)))
 
 	return nil
 }
@@ -944,7 +944,7 @@ func NewTemplateEngine(logger logging.Logger) *TemplateEngine {
 func (t *TemplateEngine) LoadTemplate(ctx context.Context, path string) (*PolicyTemplate, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError,
+		return nil, errors.Wrap(err, "ERR_INTERNAL",
 			fmt.Sprintf("failed to read template file: %s", path))
 	}
 
@@ -1080,7 +1080,7 @@ func (m *PolicyMigrator) Migrate(ctx context.Context, filter *PolicyFilter) erro
 	// 从源 PDP 获取策略
 	policies, err := m.sourcePDP.ListPolicies(ctx, filter)
 	if err != nil {
-		return errors.Wrap(err, errors.CodeInternalError,
+		return errors.Wrap(err, "ERR_INTERNAL",
 			"failed to list policies from source")
 	}
 
@@ -1094,7 +1094,7 @@ func (m *PolicyMigrator) Migrate(ctx context.Context, filter *PolicyFilter) erro
 		migratedCount++
 	}
 
- m.logger.WithContext(ctx).Info("Policy migration completed", logging.Any("total", len(policies))
+ m.logger.WithContext(ctx).Info("Policy migration completed", logging.Any("total", len(policies)))
 
 	return nil
 }
@@ -1124,7 +1124,7 @@ func NewPolicyBackupManager(backupDir string, logger logging.Logger) *PolicyBack
 // Backup 备份策略
 func (b *PolicyBackupManager) Backup(ctx context.Context, policies []*Policy) (string, error) {
 	if err := os.MkdirAll(b.backupDir, 0755); err != nil {
-		return "", errors.Wrap(err, errors.CodeInternalError,
+		return "", errors.Wrap(err, "ERR_INTERNAL",
 			"failed to create backup directory")
 	}
 
@@ -1139,7 +1139,7 @@ func (b *PolicyBackupManager) Backup(ctx context.Context, policies []*Policy) (s
 
 	data, err := yaml.Marshal(backup)
 	if err != nil {
-		return "", errors.Wrap(err, errors.CodeInternalError,
+		return "", errors.Wrap(err, "ERR_INTERNAL",
 			"failed to marshal backup")
 	}
 
@@ -1148,11 +1148,11 @@ func (b *PolicyBackupManager) Backup(ctx context.Context, policies []*Policy) (s
 	path := filepath.Join(b.backupDir, filename)
 
 	if err := ioutil.WriteFile(path, data, 0644); err != nil {
-		return "", errors.Wrap(err, errors.CodeInternalError,
+		return "", errors.Wrap(err, "ERR_INTERNAL",
 			"failed to write backup file")
 	}
 
- b.logger.WithContext(ctx).Info("Policy backup created", logging.Any("path", path), logging.Any("count", len(policies))
+ b.logger.WithContext(ctx).Info("Policy backup created", logging.Any("path", path), logging.Any("count", len(policies)))
 
 	return path, nil
 }
@@ -1161,7 +1161,7 @@ func (b *PolicyBackupManager) Backup(ctx context.Context, policies []*Policy) (s
 func (b *PolicyBackupManager) Restore(ctx context.Context, backupPath string) ([]*Policy, error) {
 	data, err := ioutil.ReadFile(backupPath)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError,
+		return nil, errors.Wrap(err, "ERR_INTERNAL",
 			"failed to read backup file")
 	}
 
@@ -1171,7 +1171,7 @@ func (b *PolicyBackupManager) Restore(ctx context.Context, backupPath string) ([
 			"failed to parse backup file")
 	}
 
- b.logger.WithContext(ctx).Info("Policy backup restored", logging.Any("path", backupPath), logging.Any("count", len(backup.Policies))
+ b.logger.WithContext(ctx).Info("Policy backup restored", logging.Any("path", backupPath), logging.Any("count", len(backup.Policies)))
 
 	return backup.Policies, nil
 }
@@ -1180,7 +1180,7 @@ func (b *PolicyBackupManager) Restore(ctx context.Context, backupPath string) ([
 func (b *PolicyBackupManager) ListBackups(ctx context.Context) ([]string, error) {
 	files, err := ioutil.ReadDir(b.backupDir)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternalError,
+		return nil, errors.Wrap(err, "ERR_INTERNAL",
 			"failed to read backup directory")
 	}
 

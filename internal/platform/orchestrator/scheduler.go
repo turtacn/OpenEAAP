@@ -256,7 +256,7 @@ func (s *scheduler) Schedule(ctx context.Context, req *ScheduleRequest) (*Task, 
 	s.runningMu.RLock()
 	if !s.running {
 		s.runningMu.RUnlock()
-		return nil, errors.New(errors.CodeInternalError, "scheduler not running")
+		return nil, errors.New("ERR_INTERNAL", "scheduler not running")
 	}
 	s.runningMu.RUnlock()
 
@@ -507,7 +507,7 @@ func (s *scheduler) Start() error {
 	s.runningMu.Lock()
 	if s.running {
 		s.runningMu.Unlock()
-		return errors.New(errors.CodeInternalError, "scheduler already running")
+		return errors.New("ERR_INTERNAL", "scheduler already running")
 	}
 	s.running = true
 	s.runningMu.Unlock()
@@ -540,7 +540,7 @@ func (s *scheduler) Stop() error {
 	s.runningMu.Lock()
 	if !s.running {
 		s.runningMu.Unlock()
-		return errors.New(errors.CodeInternalError, "scheduler not running")
+		return errors.New("ERR_INTERNAL", "scheduler not running")
 	}
 	s.running = false
 	s.runningMu.Unlock()

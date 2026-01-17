@@ -56,7 +56,7 @@ func (h *AgentGRPCHandler) CreateAgent(ctx context.Context, req *proto.CreateAge
 
 	// Validate request
 	if err := h.validateCreateAgentRequest(req); err != nil {
-		span.SetStatus(trace.StatusError, err.Error())
+		span.SetStatus(// trace.StatusError, err.Error())
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -73,7 +73,7 @@ func (h *AgentGRPCHandler) CreateAgent(ctx context.Context, req *proto.CreateAge
 	// Call application service
 	agentResp, err := h.agentService.CreateAgent(ctx, createDTO)
 	if err != nil {
-		span.SetStatus(trace.StatusError, err.Error())
+		span.SetStatus(// trace.StatusError, err.Error())
 		return nil, h.handleError(err)
 	}
 
@@ -99,7 +99,7 @@ func (h *AgentGRPCHandler) GetAgent(ctx context.Context, req *proto.GetAgentRequ
 
 	agentResp, err := h.agentService.GetAgent(ctx, req.Id)
 	if err != nil {
-		span.SetStatus(trace.StatusError, err.Error())
+		span.SetStatus(// trace.StatusError, err.Error())
 		return nil, h.handleError(err)
 	}
 
@@ -132,7 +132,7 @@ func (h *AgentGRPCHandler) ListAgents(ctx context.Context, req *proto.ListAgents
 
 	agentsResp, total, err := h.agentService.ListAgents(ctx, listDTO)
 	if err != nil {
-		span.SetStatus(trace.StatusError, err.Error())
+		span.SetStatus(// trace.StatusError, err.Error())
 		return nil, h.handleError(err)
 	}
 
@@ -168,7 +168,7 @@ func (h *AgentGRPCHandler) UpdateAgent(ctx context.Context, req *proto.UpdateAge
 
 	agentResp, err := h.agentService.UpdateAgent(ctx, updateDTO)
 	if err != nil {
-		span.SetStatus(trace.StatusError, err.Error())
+		span.SetStatus(// trace.StatusError, err.Error())
 		return nil, h.handleError(err)
 	}
 
@@ -189,7 +189,7 @@ func (h *AgentGRPCHandler) DeleteAgent(ctx context.Context, req *proto.DeleteAge
 	}
 
 	if err := h.agentService.DeleteAgent(ctx, req.Id); err != nil {
-		span.SetStatus(trace.StatusError, err.Error())
+		span.SetStatus(// trace.StatusError, err.Error())
 		return nil, h.handleError(err)
 	}
 
@@ -221,7 +221,7 @@ func (h *AgentGRPCHandler) ExecuteAgent(ctx context.Context, req *proto.ExecuteA
 
 	result, err := h.agentService.ExecuteAgent(ctx, executeDTO)
 	if err != nil {
-		span.SetStatus(trace.StatusError, err.Error())
+		span.SetStatus(// trace.StatusError, err.Error())
 		return nil, h.handleError(err)
 	}
 
@@ -281,7 +281,7 @@ func (h *AgentGRPCHandler) ExecuteAgentStream(req *proto.ExecuteAgentRequest, st
 
 		case err := <-errChan:
 			if err != nil {
-				span.SetStatus(trace.StatusError, err.Error())
+				span.SetStatus(// trace.StatusError, err.Error())
 				return h.handleError(err)
 			}
 
@@ -303,7 +303,7 @@ func (h *AgentGRPCHandler) ExecuteAgentStream(req *proto.ExecuteAgentRequest, st
 			}
 
 			if err := stream.Send(protoChunk); err != nil {
-				span.SetStatus(trace.StatusError, err.Error())
+				span.SetStatus(// trace.StatusError, err.Error())
 				h.logger.Error("failed to send stream chunk", err, nil)
 				return status.Error(codes.Internal, "failed to send stream chunk")
 			}
@@ -328,7 +328,7 @@ func (h *AgentGRPCHandler) TestAgent(ctx context.Context, req *proto.TestAgentRe
 
 	result, err := h.agentService.TestAgent(ctx, testDTO)
 	if err != nil {
-		span.SetStatus(trace.StatusError, err.Error())
+		span.SetStatus(// trace.StatusError, err.Error())
 		return nil, h.handleError(err)
 	}
 
