@@ -120,11 +120,11 @@ func NewPIIDetector(logger logging.Logger, config *DetectorConfig) (*PIIDetector
 	// Load ML model if enabled
 	if config.EnableMLModel && config.ModelPath != "" {
 		if err := detector.loadMLModel(config.ModelPath); err != nil {
-			logger.Warn(context.Background(), "failed to load ML model", "error", err)
+			logger.WithContext(context.Background()).Warn("failed to load ML model", logging.Error(err))
 		}
 	}
 
-	logger.Info(context.Background(), "PII detector initialized")
+	logger.WithContext(context.Background()).Info("PII detector initialized")
 
 	return detector, nil
 }
@@ -176,10 +176,10 @@ func (d *PIIDetector) Detect(ctx context.Context, text string) (*PIIDetectionRes
 		RedactedText: redactedText,
 	}
 
-	d.logger.Debug(ctx, "PII detection completed",
-		"entity_count", len(filteredEntities),
-		"has_pii", result.HasPII,
-		"risk_score", riskScore,
+	d.logger.WithContext(ctx).Debug("PII detection completed",
+		logging.Int("entity_count", len(filteredEntities)),
+		logging.Bool("has_pii", result.HasPII),
+		logging.Float64("risk_score", riskScore),
 	)
 
 	return result, nil

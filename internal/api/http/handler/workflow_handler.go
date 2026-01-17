@@ -50,7 +50,7 @@ func (h *WorkflowHandler) CreateWorkflow(c *gin.Context) {
 
 	var req dto.CreateWorkflowRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error(ctx, "Failed to bind request", "error", err)
+		h.logger.WithContext(ctx).Error("Failed to bind request", logging.Error(err))
 		span.RecordError(err)
 		c.JSON(http.StatusBadRequest, NewErrorResponse(
 			errors.ErrInvalidRequest,
@@ -59,17 +59,17 @@ func (h *WorkflowHandler) CreateWorkflow(c *gin.Context) {
 		return
 	}
 
-	h.logger.Info(ctx, "Creating workflow", "name", req.Name, "steps", len(req.Steps))
+	h.logger.WithContext(ctx).Info("Creating workflow", logging.Any("name", req.Name), logging.Any("steps", len(req.Steps))
 
 	workflow, err := h.workflowService.CreateWorkflow(ctx, &req)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to create workflow", "error", err)
+		h.logger.WithContext(ctx).Error("Failed to create workflow", logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
 	}
 
-	h.logger.Info(ctx, "Workflow created successfully", "workflow_id", workflow.ID)
+	h.logger.WithContext(ctx).Info("Workflow created successfully", logging.Any("workflow_id", workflow.ID))
 	span.SetAttribute("workflow.id", workflow.ID)
 	span.SetAttribute("workflow.name", workflow.Name)
 
@@ -100,11 +100,11 @@ func (h *WorkflowHandler) GetWorkflow(c *gin.Context) {
 	}
 
 	span.SetAttribute("workflow.id", workflowID)
-	h.logger.Debug(ctx, "Fetching workflow", "workflow_id", workflowID)
+	h.logger.WithContext(ctx).Debug("Fetching workflow", logging.Any("workflow_id", workflowID))
 
 	workflow, err := h.workflowService.GetWorkflow(ctx, workflowID)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to get workflow", "workflow_id", workflowID, "error", err)
+		h.logger.WithContext(ctx).Error("Failed to get workflow", logging.Any("workflow_id", workflowID), logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
@@ -150,11 +150,11 @@ func (h *WorkflowHandler) ListWorkflows(c *gin.Context) {
 	span.SetAttribute("pagination.page", page)
 	span.SetAttribute("pagination.page_size", pageSize)
 
-	h.logger.Debug(ctx, "Listing workflows", "page", page, "page_size", pageSize)
+	h.logger.WithContext(ctx).Debug("Listing workflows", logging.Any("page", page), logging.Any("page_size", pageSize))
 
 	workflows, err := h.workflowService.ListWorkflows(ctx, filterReq)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to list workflows", "error", err)
+		h.logger.WithContext(ctx).Error("Failed to list workflows", logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
@@ -191,7 +191,7 @@ func (h *WorkflowHandler) UpdateWorkflow(c *gin.Context) {
 
 	var req dto.UpdateWorkflowRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error(ctx, "Failed to bind request", "error", err)
+		h.logger.WithContext(ctx).Error("Failed to bind request", logging.Error(err))
 		span.RecordError(err)
 		c.JSON(http.StatusBadRequest, NewErrorResponse(
 			errors.ErrInvalidRequest,
@@ -201,17 +201,17 @@ func (h *WorkflowHandler) UpdateWorkflow(c *gin.Context) {
 	}
 
 	span.SetAttribute("workflow.id", workflowID)
-	h.logger.Info(ctx, "Updating workflow", "workflow_id", workflowID)
+	h.logger.WithContext(ctx).Info("Updating workflow", logging.Any("workflow_id", workflowID))
 
 	workflow, err := h.workflowService.UpdateWorkflow(ctx, workflowID, &req)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to update workflow", "workflow_id", workflowID, "error", err)
+		h.logger.WithContext(ctx).Error("Failed to update workflow", logging.Any("workflow_id", workflowID), logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
 	}
 
-	h.logger.Info(ctx, "Workflow updated successfully", "workflow_id", workflowID)
+	h.logger.WithContext(ctx).Info("Workflow updated successfully", logging.Any("workflow_id", workflowID))
 	c.JSON(http.StatusOK, workflow)
 }
 
@@ -239,16 +239,16 @@ func (h *WorkflowHandler) DeleteWorkflow(c *gin.Context) {
 	}
 
 	span.SetAttribute("workflow.id", workflowID)
-	h.logger.Info(ctx, "Deleting workflow", "workflow_id", workflowID)
+	h.logger.WithContext(ctx).Info("Deleting workflow", logging.Any("workflow_id", workflowID))
 
 	if err := h.workflowService.DeleteWorkflow(ctx, workflowID); err != nil {
-		h.logger.Error(ctx, "Failed to delete workflow", "workflow_id", workflowID, "error", err)
+		h.logger.WithContext(ctx).Error("Failed to delete workflow", logging.Any("workflow_id", workflowID), logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
 	}
 
-	h.logger.Info(ctx, "Workflow deleted successfully", "workflow_id", workflowID)
+	h.logger.WithContext(ctx).Info("Workflow deleted successfully", logging.Any("workflow_id", workflowID))
 	c.Status(http.StatusNoContent)
 }
 
@@ -280,7 +280,7 @@ func (h *WorkflowHandler) RunWorkflow(c *gin.Context) {
 
 	var req dto.RunWorkflowRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error(ctx, "Failed to bind request", "error", err)
+		h.logger.WithContext(ctx).Error("Failed to bind request", logging.Error(err))
 		span.RecordError(err)
 		c.JSON(http.StatusBadRequest, NewErrorResponse(
 			errors.ErrInvalidRequest,
@@ -291,17 +291,17 @@ func (h *WorkflowHandler) RunWorkflow(c *gin.Context) {
 
 	span.SetAttribute("workflow.id", workflowID)
 	span.SetAttribute("execution.async", req.Async)
-	h.logger.Info(ctx, "Running workflow", "workflow_id", workflowID, "async", req.Async)
+	h.logger.WithContext(ctx).Info("Running workflow", logging.Any("workflow_id", workflowID), logging.Any("async", req.Async))
 
 	result, err := h.workflowService.RunWorkflow(ctx, workflowID, &req)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to run workflow", "workflow_id", workflowID, "error", err)
+		h.logger.WithContext(ctx).Error("Failed to run workflow", logging.Any("workflow_id", workflowID), logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
 	}
 
-	h.logger.Info(ctx, "Workflow execution started", "workflow_id", workflowID, "execution_id", result.ExecutionID)
+	h.logger.WithContext(ctx).Info("Workflow execution started", logging.Any("workflow_id", workflowID), logging.Any("execution_id", result.ExecutionID))
 	span.SetAttribute("execution.id", result.ExecutionID)
 
 	c.JSON(http.StatusOK, result)
@@ -336,17 +336,17 @@ func (h *WorkflowHandler) PauseWorkflow(c *gin.Context) {
 
 	span.SetAttribute("workflow.id", workflowID)
 	span.SetAttribute("execution.id", executionID)
-	h.logger.Info(ctx, "Pausing workflow execution", "workflow_id", workflowID, "execution_id", executionID)
+	h.logger.WithContext(ctx).Info("Pausing workflow execution", logging.Any("workflow_id", workflowID), logging.Any("execution_id", executionID))
 
 	result, err := h.workflowService.PauseWorkflow(ctx, workflowID, executionID)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to pause workflow", "workflow_id", workflowID, "execution_id", executionID, "error", err)
+		h.logger.WithContext(ctx).Error("Failed to pause workflow", logging.Any("workflow_id", workflowID), logging.Any("execution_id", executionID), logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
 	}
 
-	h.logger.Info(ctx, "Workflow execution paused", "workflow_id", workflowID, "execution_id", executionID)
+	h.logger.WithContext(ctx).Info("Workflow execution paused", logging.Any("workflow_id", workflowID), logging.Any("execution_id", executionID))
 	c.JSON(http.StatusOK, result)
 }
 
@@ -379,17 +379,17 @@ func (h *WorkflowHandler) ResumeWorkflow(c *gin.Context) {
 
 	span.SetAttribute("workflow.id", workflowID)
 	span.SetAttribute("execution.id", executionID)
-	h.logger.Info(ctx, "Resuming workflow execution", "workflow_id", workflowID, "execution_id", executionID)
+	h.logger.WithContext(ctx).Info("Resuming workflow execution", logging.Any("workflow_id", workflowID), logging.Any("execution_id", executionID))
 
 	result, err := h.workflowService.ResumeWorkflow(ctx, workflowID, executionID)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to resume workflow", "workflow_id", workflowID, "execution_id", executionID, "error", err)
+		h.logger.WithContext(ctx).Error("Failed to resume workflow", logging.Any("workflow_id", workflowID), logging.Any("execution_id", executionID), logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
 	}
 
-	h.logger.Info(ctx, "Workflow execution resumed", "workflow_id", workflowID, "execution_id", executionID)
+	h.logger.WithContext(ctx).Info("Workflow execution resumed", logging.Any("workflow_id", workflowID), logging.Any("execution_id", executionID))
 	c.JSON(http.StatusOK, result)
 }
 
@@ -422,17 +422,17 @@ func (h *WorkflowHandler) CancelWorkflow(c *gin.Context) {
 
 	span.SetAttribute("workflow.id", workflowID)
 	span.SetAttribute("execution.id", executionID)
-	h.logger.Info(ctx, "Cancelling workflow execution", "workflow_id", workflowID, "execution_id", executionID)
+	h.logger.WithContext(ctx).Info("Cancelling workflow execution", logging.Any("workflow_id", workflowID), logging.Any("execution_id", executionID))
 
 	result, err := h.workflowService.CancelWorkflow(ctx, workflowID, executionID)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to cancel workflow", "workflow_id", workflowID, "execution_id", executionID, "error", err)
+		h.logger.WithContext(ctx).Error("Failed to cancel workflow", logging.Any("workflow_id", workflowID), logging.Any("execution_id", executionID), logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
 	}
 
-	h.logger.Info(ctx, "Workflow execution cancelled", "workflow_id", workflowID, "execution_id", executionID)
+	h.logger.WithContext(ctx).Info("Workflow execution cancelled", logging.Any("workflow_id", workflowID), logging.Any("execution_id", executionID))
 	c.JSON(http.StatusOK, result)
 }
 
@@ -464,11 +464,11 @@ func (h *WorkflowHandler) GetExecutionStatus(c *gin.Context) {
 
 	span.SetAttribute("workflow.id", workflowID)
 	span.SetAttribute("execution.id", executionID)
-	h.logger.Debug(ctx, "Fetching execution status", "workflow_id", workflowID, "execution_id", executionID)
+	h.logger.WithContext(ctx).Debug("Fetching execution status", logging.Any("workflow_id", workflowID), logging.Any("execution_id", executionID))
 
 	status, err := h.workflowService.GetExecutionStatus(ctx, workflowID, executionID)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to get execution status", "workflow_id", workflowID, "execution_id", executionID, "error", err)
+		h.logger.WithContext(ctx).Error("Failed to get execution status", logging.Any("workflow_id", workflowID), logging.Any("execution_id", executionID), logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
@@ -524,11 +524,11 @@ func (h *WorkflowHandler) ListExecutions(c *gin.Context) {
 	span.SetAttribute("pagination.page", page)
 	span.SetAttribute("pagination.page_size", pageSize)
 
-	h.logger.Debug(ctx, "Listing executions", "workflow_id", workflowID, "page", page)
+	h.logger.WithContext(ctx).Debug("Listing executions", logging.Any("workflow_id", workflowID), logging.Any("page", page))
 
 	executions, err := h.workflowService.ListExecutions(ctx, filterReq)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to list executions", "workflow_id", workflowID, "error", err)
+		h.logger.WithContext(ctx).Error("Failed to list executions", logging.Any("workflow_id", workflowID), logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return
@@ -568,11 +568,11 @@ func (h *WorkflowHandler) GetExecutionLogs(c *gin.Context) {
 
 	span.SetAttribute("workflow.id", workflowID)
 	span.SetAttribute("execution.id", executionID)
-	h.logger.Debug(ctx, "Fetching execution logs", "workflow_id", workflowID, "execution_id", executionID, "step", stepName)
+	h.logger.WithContext(ctx).Debug("Fetching execution logs", logging.Any("workflow_id", workflowID), logging.Any("execution_id", executionID), logging.Any("step", stepName))
 
 	logs, err := h.workflowService.GetExecutionLogs(ctx, workflowID, executionID, stepName)
 	if err != nil {
-		h.logger.Error(ctx, "Failed to get execution logs", "workflow_id", workflowID, "execution_id", executionID, "error", err)
+		h.logger.WithContext(ctx).Error("Failed to get execution logs", logging.Any("workflow_id", workflowID), logging.Any("execution_id", executionID), logging.Error(err))
 		span.RecordError(err)
 		handleServiceError(c, err)
 		return

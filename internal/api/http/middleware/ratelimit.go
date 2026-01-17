@@ -95,7 +95,7 @@ func (m *RateLimitMiddleware) Handler() gin.HandlerFunc {
 		// Extract rate limit key based on strategy
 		key := m.extractKey(c)
 		if key == "" {
-			m.logger.Warn(ctx, "Failed to extract rate limit key", "key_type", m.config.KeyType)
+			m.logger.WithContext(ctx).Warn("Failed to extract rate limit key", logging.Any("key_type", m.config.KeyType))
 			c.Next()
 			return
 		}
@@ -106,7 +106,7 @@ func (m *RateLimitMiddleware) Handler() gin.HandlerFunc {
 		// Check rate limit
 		allowed, remaining, resetTime, err := m.checkRateLimit(ctx, key)
 		if err != nil {
-			m.logger.Error(ctx, "Rate limit check failed", "error", err, "key", key)
+			m.logger.WithContext(ctx).Error("Rate limit check failed", logging.Error(err), logging.Any("key", key))
 			span.RecordError(err)
 			// On error, allow request to proceed (fail open)
 			c.Next()
@@ -119,7 +119,7 @@ func (m *RateLimitMiddleware) Handler() gin.HandlerFunc {
 		c.Header("X-RateLimit-Reset", fmt.Sprintf("%d", resetTime.Unix()))
 
 		if !allowed {
-			m.logger.Warn(ctx, "Rate limit exceeded", "key", key, "limit", m.config.RequestsLimit)
+			m.logger.WithContext(ctx).Warn("Rate limit exceeded", logging.Any("key", key), logging.Any("limit", m.config.RequestsLimit))
 			span.SetAttribute("ratelimit.exceeded", true)
 
 			retryAfter := time.Until(resetTime).Seconds()

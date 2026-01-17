@@ -173,7 +173,7 @@ func NewOptimizer(
 	modelRepo model.Repository,
 	agentRepo agent.Repository,
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,
 	config *OptimizerConfig,
 ) Optimizer {
@@ -201,7 +201,7 @@ func (o *optimizer) Analyze(ctx context.Context, modelID string) (*OptimizationP
 			map[string]string{"model_id": modelID})
 	}()
 
-	o.logger.Info(ctx, "Analyzing feedback for optimization", "model_id", modelID)
+	o.logger.WithContext(ctx).Info("Analyzing feedback for optimization", logging.Any("model_id", modelID))
 
 	// 获取反馈统计
 	stats, err := o.feedbackCollector.GetStats(ctx, modelID)
@@ -279,10 +279,7 @@ func (o *optimizer) Analyze(ctx context.Context, modelID string) (*OptimizationP
 	o.metricsCollector.Increment("optimizer_plan_generated",
 		map[string]string{"model_id": modelID, "type": string(plan.Type)})
 
-	o.logger.Info(ctx, "Optimization plan generated",
-		"plan_id", plan.ID,
-		"recommendations", len(recommendations),
-		"expected_improvement", expectedImprovement)
+ o.logger.WithContext(ctx).Info("Optimization plan generated", logging.Any("plan_id", plan.ID), logging.Any("recommendations", len(recommendations))
 
 	return plan, nil
 }
@@ -292,7 +289,7 @@ func (o *optimizer) PrepareTrainingData(ctx context.Context, modelID string) (*T
 	ctx, span := o.tracer.Start(ctx, "Optimizer.PrepareTrainingData")
 	defer span.End()
 
-	o.logger.Info(ctx, "Preparing training data", "model_id", modelID)
+	o.logger.WithContext(ctx).Info("Preparing training data", logging.Any("model_id", modelID))
 
 	// 查询高质量反馈
 	positiveFeedbacks, err := o.feedbackCollector.Query(ctx, &FeedbackFilter{
@@ -372,10 +369,7 @@ func (o *optimizer) PrepareTrainingData(ctx context.Context, modelID string) (*T
 		float64(len(samples)),
 		map[string]string{"model_id": modelID})
 
-	o.logger.Info(ctx, "Training data prepared",
-		"dataset_id", dataset.ID,
-		"sample_count", len(samples),
-		"quality", quality)
+ o.logger.WithContext(ctx).Info("Training data prepared", logging.Any("dataset_id", dataset.ID), logging.Any("sample_count", len(samples))
 
 	return dataset, nil
 }
@@ -385,7 +379,7 @@ func (o *optimizer) GeneratePromptSuggestions(ctx context.Context, modelID strin
 	ctx, span := o.tracer.Start(ctx, "Optimizer.GeneratePromptSuggestions")
 	defer span.End()
 
-	o.logger.Info(ctx, "Generating prompt suggestions", "model_id", modelID)
+	o.logger.WithContext(ctx).Info("Generating prompt suggestions", logging.Any("model_id", modelID))
 
 	// 获取模型当前 Prompt
 	mdl, err := o.modelRepo.GetByID(ctx, modelID)
@@ -448,9 +442,7 @@ func (o *optimizer) GeneratePromptSuggestions(ctx context.Context, modelID strin
 	o.metricsCollector.Increment("optimizer_prompt_suggestions_generated",
 		map[string]string{"model_id": modelID, "count": fmt.Sprintf("%d", len(suggestions))})
 
-	o.logger.Info(ctx, "Prompt suggestions generated",
-		"model_id", modelID,
-		"count", len(suggestions))
+ o.logger.WithContext(ctx).Info("Prompt suggestions generated", logging.Any("model_id", modelID), logging.Any("count", len(suggestions))
 
 	return suggestions, nil
 }
@@ -460,7 +452,7 @@ func (o *optimizer) OptimizeStrategy(ctx context.Context, agentID string) (*Stra
 	ctx, span := o.tracer.Start(ctx, "Optimizer.OptimizeStrategy")
 	defer span.End()
 
-	o.logger.Info(ctx, "Optimizing strategy", "agent_id", agentID)
+	o.logger.WithContext(ctx).Info("Optimizing strategy", logging.Any("agent_id", agentID))
 
 	// 获取 Agent 配置
 	agt, err := o.agentRepo.GetByID(ctx, agentID)
@@ -526,9 +518,7 @@ func (o *optimizer) OptimizeStrategy(ctx context.Context, agentID string) (*Stra
 	o.metricsCollector.Increment("optimizer_strategy_updated",
 		map[string]string{"agent_id": agentID})
 
-	o.logger.Info(ctx, "Strategy optimization completed",
-		"agent_id", agentID,
-		"updates", len(updates))
+ o.logger.WithContext(ctx).Info("Strategy optimization completed", logging.Any("agent_id", agentID), logging.Any("updates", len(updates))
 
 	return strategyUpdate, nil
 }
@@ -538,7 +528,7 @@ func (o *optimizer) ApplyOptimization(ctx context.Context, plan *OptimizationPla
 	ctx, span := o.tracer.Start(ctx, "Optimizer.ApplyOptimization")
 	defer span.End()
 
-	o.logger.Info(ctx, "Applying optimization plan", "plan_id", plan.ID)
+	o.logger.WithContext(ctx).Info("Applying optimization plan", logging.Any("plan_id", plan.ID))
 
 	if plan.Status != "pending" && plan.Status != "approved" {
 		return errors.New(errors.CodeInvalidArgument,
@@ -548,8 +538,7 @@ func (o *optimizer) ApplyOptimization(ctx context.Context, plan *OptimizationPla
 	// 应用每个建议
 	for _, rec := range plan.Recommendations {
 		if err := o.applyRecommendation(ctx, plan.ModelID, rec); err != nil {
-			o.logger.Error(ctx, "Failed to apply recommendation",
-				"recommendation", rec.Type, "error", err)
+   o.logger.WithContext(ctx).Error("Failed to apply recommendation", logging.Any("recommendation", rec.Type), logging.Error(err))
 			// 继续应用其他建议
 		}
 	}
@@ -562,7 +551,7 @@ func (o *optimizer) ApplyOptimization(ctx context.Context, plan *OptimizationPla
 	o.metricsCollector.Increment("optimizer_plan_applied",
 		map[string]string{"model_id": plan.ModelID, "type": string(plan.Type)})
 
-	o.logger.Info(ctx, "Optimization plan applied successfully", "plan_id", plan.ID)
+	o.logger.WithContext(ctx).Info("Optimization plan applied successfully", logging.Any("plan_id", plan.ID))
 
 	return nil
 }
@@ -572,7 +561,7 @@ func (o *optimizer) RollbackOptimization(ctx context.Context, planID string) err
 	ctx, span := o.tracer.Start(ctx, "Optimizer.RollbackOptimization")
 	defer span.End()
 
-	o.logger.Info(ctx, "Rolling back optimization", "plan_id", planID)
+	o.logger.WithContext(ctx).Info("Rolling back optimization", logging.Any("plan_id", planID))
 
 	// 实现回滚逻辑
 	// 这里简化实现，实际需要从存储中恢复原始配置
@@ -580,7 +569,7 @@ func (o *optimizer) RollbackOptimization(ctx context.Context, planID string) err
 	o.metricsCollector.Increment("optimizer_plan_rolled_back",
 		map[string]string{"plan_id": planID})
 
-	o.logger.Info(ctx, "Optimization rolled back successfully", "plan_id", planID)
+	o.logger.WithContext(ctx).Info("Optimization rolled back successfully", logging.Any("plan_id", planID))
 
 	return nil
 }
@@ -1043,7 +1032,7 @@ func (o *optimizer) applyRecommendation(ctx context.Context, modelID string, rec
 }
 
 func (o *optimizer) applyPromptOptimization(ctx context.Context, modelID string, rec *Recommendation) error {
-	o.logger.Info(ctx, "Applying prompt optimization", "model_id", modelID)
+	o.logger.WithContext(ctx).Info("Applying prompt optimization", logging.Any("model_id", modelID))
 
 	// 实际实现应更新模型配置
 	// 这里简化处理
@@ -1052,7 +1041,7 @@ func (o *optimizer) applyPromptOptimization(ctx context.Context, modelID string,
 }
 
 func (o *optimizer) triggerFinetune(ctx context.Context, modelID string, rec *Recommendation) error {
-	o.logger.Info(ctx, "Triggering finetune", "model_id", modelID)
+	o.logger.WithContext(ctx).Info("Triggering finetune", logging.Any("model_id", modelID))
 
 	// 实际实现应创建训练任务
 	// 这里简化处理
@@ -1061,7 +1050,7 @@ func (o *optimizer) triggerFinetune(ctx context.Context, modelID string, rec *Re
 }
 
 func (o *optimizer) applyStrategyOptimization(ctx context.Context, modelID string, rec *Recommendation) error {
-	o.logger.Info(ctx, "Applying strategy optimization", "model_id", modelID)
+	o.logger.WithContext(ctx).Info("Applying strategy optimization", logging.Any("model_id", modelID))
 
 	// 实际实现应更新配置
 	// 这里简化处理

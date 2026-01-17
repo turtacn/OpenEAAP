@@ -22,7 +22,7 @@ import (
 // VLLMClient provides a client for vLLM inference engine
 type VLLMClient struct {
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 	baseURL          string
 	httpClient       *http.Client
 	apiKey           string
@@ -127,7 +127,7 @@ type BatchResponse struct {
 }
 
 // NewVLLMClient creates a new vLLM client
-func NewVLLMClient(logger logging.Logger, metricsCollector metrics.Collector, config *VLLMConfig) *VLLMClient {
+func NewVLLMClient(logger logging.Logger, metricsCollector metrics.MetricsCollector, config *VLLMConfig) *VLLMClient {
 	if config.Timeout == 0 {
 		config.Timeout = 60 * time.Second
 	}
@@ -162,7 +162,7 @@ func (c *VLLMClient) Complete(ctx context.Context, req *CompletionRequest) (*Com
 
 	for attempt := 0; attempt <= c.maxRetries; attempt++ {
 		if attempt > 0 {
-			c.logger.Info(ctx, "retrying vLLM request", "attempt", attempt)
+			c.logger.WithContext(ctx).Info("retrying vLLM request", logging.Any("attempt", attempt))
 			time.Sleep(time.Duration(attempt) * time.Second)
 		}
 
@@ -183,11 +183,7 @@ func (c *VLLMClient) Complete(ctx context.Context, req *CompletionRequest) (*Com
 
 	c.recordMetrics("complete", "success", time.Since(startTime))
 
-	c.logger.Info(ctx, "vLLM completion completed",
-		"model", req.Model,
-		"tokens", resp.Usage.TotalTokens,
-		"latency_ms", time.Since(startTime).Milliseconds(),
-	)
+ c.logger.WithContext(ctx).Info("vLLM completion completed", logging.Any("model", req.Model), logging.Any("tokens", resp.Usage.TotalTokens), logging.Duration("latency_ms", time.Since(startTime))
 
 	return resp, nil
 }
@@ -233,7 +229,7 @@ func (c *VLLMClient) CompleteStream(ctx context.Context, req *CompletionRequest)
 			line, err := reader.ReadBytes('\n')
 			if err != nil {
 				if err != io.EOF {
-					c.logger.Error(ctx, "stream read error", "error", err)
+					c.logger.WithContext(ctx).Error("stream read error", logging.Error(err))
 				}
 				return
 			}
@@ -255,7 +251,7 @@ func (c *VLLMClient) CompleteStream(ctx context.Context, req *CompletionRequest)
 
 			var chunk StreamChunk
 			if err := json.Unmarshal(line, &chunk); err != nil {
-				c.logger.Warn(ctx, "failed to parse stream chunk", "error", err)
+				c.logger.WithContext(ctx).Warn("failed to parse stream chunk", logging.Error(err))
 				continue
 			}
 
@@ -307,10 +303,7 @@ func (c *VLLMClient) CompleteBatch(ctx context.Context, requests []CompletionReq
 
 	c.recordMetrics("batch", "success", time.Since(startTime))
 
-	c.logger.Info(ctx, "vLLM batch completed",
-		"request_count", len(requests),
-		"latency_ms", time.Since(startTime).Milliseconds(),
-	)
+ c.logger.WithContext(ctx).Info("vLLM batch completed", logging.Any("request_count", len(requests))
 
 	return &batchResp, nil
 }
@@ -341,7 +334,7 @@ func (c *VLLMClient) CreateKVCacheSession(ctx context.Context, sessionID string,
 			fmt.Sprintf("failed to create KV-Cache session: %s", string(body)))
 	}
 
-	c.logger.Info(ctx, "KV-Cache session created", "session_id", sessionID)
+	c.logger.WithContext(ctx).Info("KV-Cache session created", logging.Any("session_id", sessionID))
 
 	return nil
 }
@@ -371,7 +364,7 @@ func (c *VLLMClient) DeleteKVCacheSession(ctx context.Context, sessionID string)
 			fmt.Sprintf("failed to delete KV-Cache session: %s", string(body)))
 	}
 
-	c.logger.Info(ctx, "KV-Cache session deleted", "session_id", sessionID)
+	c.logger.WithContext(ctx).Info("KV-Cache session deleted", logging.Any("session_id", sessionID))
 
 	return nil
 }

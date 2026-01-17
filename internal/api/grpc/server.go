@@ -31,7 +31,7 @@ type Server struct {
 	listener         net.Listener
 	logger           logging.Logger
 	tracer           trace.Tracer
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 
 	// 处理器
 	agentHandler    *handler.AgentGRPCHandler
@@ -47,7 +47,7 @@ func NewServer(
 	cfg *config.GRPCConfig,
 	logger logging.Logger,
 	tracer trace.Tracer,
-	metricsCollector metrics.Collector,
+	metricsCollector metrics.MetricsCollector,
 	agentService service.AgentService,
 	workflowService service.WorkflowService,
 	modelService service.ModelService,

@@ -106,7 +106,7 @@ type policyLoader struct {
 	policyRepo       PolicyRepository
 	configCenter     ConfigCenter
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config           *PolicyLoaderConfig
@@ -150,7 +150,7 @@ func NewPolicyLoader(
 	policyRepo PolicyRepository,
 	configCenter ConfigCenter,
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,
 	config *PolicyLoaderConfig,
 ) PolicyLoader {
@@ -181,7 +181,7 @@ func (l *policyLoader) Load(ctx context.Context) ([]*Policy, error) {
 			map[string]string{"source": "all"})
 	}()
 
-	l.logger.Info(ctx, "Loading policies from all sources")
+	l.logger.WithContext(ctx).Info("Loading policies from all sources")
 
 	allPolicies := []*Policy{}
 
@@ -189,8 +189,7 @@ func (l *policyLoader) Load(ctx context.Context) ([]*Policy, error) {
 	for _, path := range l.config.FilePaths {
 		policy, err := l.LoadFromFile(ctx, path)
 		if err != nil {
-			l.logger.Warn(ctx, "Failed to load policy from file",
-				"path", path, "error", err)
+   l.logger.WithContext(ctx).Warn("Failed to load policy from file", logging.Any("path", path), logging.Error(err))
 			if l.config.FailOnValidationError {
 				return nil, err
 			}
@@ -203,8 +202,7 @@ func (l *policyLoader) Load(ctx context.Context) ([]*Policy, error) {
 	for _, dir := range l.config.DirectoryPaths {
 		policies, err := l.LoadFromDirectory(ctx, dir)
 		if err != nil {
-			l.logger.Warn(ctx, "Failed to load policies from directory",
-				"dir", dir, "error", err)
+   l.logger.WithContext(ctx).Warn("Failed to load policies from directory", logging.Any("dir", dir), logging.Error(err))
 			if l.config.FailOnValidationError {
 				return nil, err
 			}
@@ -217,7 +215,7 @@ func (l *policyLoader) Load(ctx context.Context) ([]*Policy, error) {
 	if l.config.DatabaseEnabled && l.policyRepo != nil {
 		policies, err := l.LoadFromDatabase(ctx, nil)
 		if err != nil {
-			l.logger.Warn(ctx, "Failed to load policies from database", "error", err)
+			l.logger.WithContext(ctx).Warn("Failed to load policies from database", logging.Error(err))
 			if l.config.FailOnValidationError {
 				return nil, err
 			}
@@ -230,7 +228,7 @@ func (l *policyLoader) Load(ctx context.Context) ([]*Policy, error) {
 	if l.config.ConfigCenterEnabled && l.configCenter != nil {
 		policies, err := l.loadFromConfigCenter(ctx)
 		if err != nil {
-			l.logger.Warn(ctx, "Failed to load policies from config center", "error", err)
+			l.logger.WithContext(ctx).Warn("Failed to load policies from config center", logging.Error(err))
 			if l.config.FailOnValidationError {
 				return nil, err
 			}
@@ -246,7 +244,7 @@ func (l *policyLoader) Load(ctx context.Context) ([]*Policy, error) {
 		}
 	}
 
-	l.logger.Info(ctx, "Policies loaded successfully", "count", len(allPolicies))
+	l.logger.WithContext(ctx).Info("Policies loaded successfully", logging.Any("count", len(allPolicies))
 
 	l.metricsCollector.Gauge("loaded_policies_total",
 		float64(len(allPolicies)),
@@ -260,7 +258,7 @@ func (l *policyLoader) LoadFromFile(ctx context.Context, path string) (*Policy, 
 	ctx, span := l.tracer.Start(ctx, "PolicyLoader.LoadFromFile")
 	defer span.End()
 
-	l.logger.Debug(ctx, "Loading policy from file", "path", path)
+	l.logger.WithContext(ctx).Debug("Loading policy from file", logging.Any("path", path))
 
 	// 检查文件是否存在
 	if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -297,8 +295,7 @@ func (l *policyLoader) LoadFromFile(ctx context.Context, path string) (*Policy, 
 	policy.Metadata["source_file"] = path
 	policy.Metadata["loaded_at"] = time.Now()
 
-	l.logger.Info(ctx, "Policy loaded from file",
-		"path", path, "policy_id", policy.ID)
+ l.logger.WithContext(ctx).Info("Policy loaded from file", logging.Any("path", path), logging.Any("policy_id", policy.ID))
 
 	return &policy, nil
 }
@@ -308,7 +305,7 @@ func (l *policyLoader) LoadFromDirectory(ctx context.Context, dir string) ([]*Po
 	ctx, span := l.tracer.Start(ctx, "PolicyLoader.LoadFromDirectory")
 	defer span.End()
 
-	l.logger.Debug(ctx, "Loading policies from directory", "dir", dir)
+	l.logger.WithContext(ctx).Debug("Loading policies from directory", logging.Any("dir", dir))
 
 	// 检查目录是否存在
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -337,8 +334,7 @@ func (l *policyLoader) LoadFromDirectory(ctx context.Context, dir string) ([]*Po
 
 		policy, err := l.LoadFromFile(ctx, path)
 		if err != nil {
-			l.logger.Warn(ctx, "Failed to load policy file",
-				"path", path, "error", err)
+   l.logger.WithContext(ctx).Warn("Failed to load policy file", logging.Any("path", path), logging.Error(err))
 			if l.config.FailOnValidationError {
 				return err
 			}
@@ -354,8 +350,7 @@ func (l *policyLoader) LoadFromDirectory(ctx context.Context, dir string) ([]*Po
 			fmt.Sprintf("failed to load policies from directory: %s", dir))
 	}
 
-	l.logger.Info(ctx, "Policies loaded from directory",
-		"dir", dir, "count", len(policies))
+ l.logger.WithContext(ctx).Info("Policies loaded from directory", logging.Any("dir", dir), logging.Any("count", len(policies))
 
 	return policies, nil
 }
@@ -365,7 +360,7 @@ func (l *policyLoader) LoadFromDatabase(ctx context.Context, filter *PolicyFilte
 	ctx, span := l.tracer.Start(ctx, "PolicyLoader.LoadFromDatabase")
 	defer span.End()
 
-	l.logger.Debug(ctx, "Loading policies from database")
+	l.logger.WithContext(ctx).Debug("Loading policies from database")
 
 	if l.policyRepo == nil {
 		return nil, errors.New(errors.CodeInternalError, "policy repository not configured")
@@ -386,7 +381,7 @@ func (l *policyLoader) LoadFromDatabase(ctx context.Context, filter *PolicyFilte
 		policy.Metadata["loaded_at"] = time.Now()
 	}
 
-	l.logger.Info(ctx, "Policies loaded from database", "count", len(policies))
+	l.logger.WithContext(ctx).Info("Policies loaded from database", logging.Any("count", len(policies))
 
 	return policies, nil
 }
@@ -396,7 +391,7 @@ func (l *policyLoader) LoadFromConfigCenter(ctx context.Context, key string) ([]
 	ctx, span := l.tracer.Start(ctx, "PolicyLoader.LoadFromConfigCenter")
 	defer span.End()
 
-	l.logger.Debug(ctx, "Loading policy from config center", "key", key)
+	l.logger.WithContext(ctx).Debug("Loading policy from config center", logging.Any("key", key))
 
 	if l.configCenter == nil {
 		return nil, errors.New(errors.CodeInternalError, "config center not configured")
@@ -432,8 +427,7 @@ func (l *policyLoader) LoadFromConfigCenter(ctx context.Context, key string) ([]
 	policy.Metadata["config_key"] = key
 	policy.Metadata["loaded_at"] = time.Now()
 
-	l.logger.Info(ctx, "Policy loaded from config center",
-		"key", key, "policy_id", policy.ID)
+ l.logger.WithContext(ctx).Info("Policy loaded from config center", logging.Any("key", key), logging.Any("policy_id", policy.ID))
 
 	return []*Policy{&policy}, nil
 }
@@ -443,7 +437,7 @@ func (l *policyLoader) Reload(ctx context.Context) error {
 	ctx, span := l.tracer.Start(ctx, "PolicyLoader.Reload")
 	defer span.End()
 
-	l.logger.Info(ctx, "Reloading policies")
+	l.logger.WithContext(ctx).Info("Reloading policies")
 
 	// 加载新策略
 	newPolicies, err := l.Load(ctx)
@@ -469,8 +463,7 @@ func (l *policyLoader) Reload(ctx context.Context) error {
 			// 如果不存在，则移除
 			if !found {
 				if err := l.pdp.RemovePolicy(ctx, policyID); err != nil {
-					l.logger.Warn(ctx, "Failed to remove policy",
-						"policy_id", policyID, "error", err)
+     l.logger.WithContext(ctx).Warn("Failed to remove policy", logging.Any("policy_id", policyID), logging.Error(err))
 				} else {
 					l.notifyChange(&PolicyChangeEvent{
 						Type:      ChangeTypeDeleted,
@@ -490,8 +483,7 @@ func (l *policyLoader) Reload(ctx context.Context) error {
 			if _, exists := l.loadedPolicies.Load(policy.ID); exists {
 				// 更新
 				if err := l.pdp.UpdatePolicy(ctx, policy); err != nil {
-					l.logger.Warn(ctx, "Failed to update policy",
-						"policy_id", policy.ID, "error", err)
+     l.logger.WithContext(ctx).Warn("Failed to update policy", logging.Any("policy_id", policy.ID), logging.Error(err))
 				} else {
 					l.notifyChange(&PolicyChangeEvent{
 						Type:      ChangeTypeUpdated,
@@ -504,8 +496,7 @@ func (l *policyLoader) Reload(ctx context.Context) error {
 			} else {
 				// 添加
 				if err := l.pdp.AddPolicy(ctx, policy); err != nil {
-					l.logger.Warn(ctx, "Failed to add policy",
-						"policy_id", policy.ID, "error", err)
+     l.logger.WithContext(ctx).Warn("Failed to add policy", logging.Any("policy_id", policy.ID), logging.Error(err))
 				} else {
 					l.notifyChange(&PolicyChangeEvent{
 						Type:      ChangeTypeAdded,
@@ -519,7 +510,7 @@ func (l *policyLoader) Reload(ctx context.Context) error {
 		}
 	}
 
-	l.logger.Info(ctx, "Policies reloaded successfully", "count", len(newPolicies))
+	l.logger.WithContext(ctx).Info("Policies reloaded successfully", logging.Any("count", len(newPolicies))
 
 	l.metricsCollector.Increment("policy_reload_total",
 		map[string]string{"status": "success"})
@@ -532,7 +523,7 @@ func (l *policyLoader) Watch(ctx context.Context) (<-chan *PolicyChangeEvent, er
 	ctx, span := l.tracer.Start(ctx, "PolicyLoader.Watch")
 	defer span.End()
 
-	l.logger.Debug(ctx, "Starting policy watch")
+	l.logger.WithContext(ctx).Debug("Starting policy watch")
 
 	eventChan := make(chan *PolicyChangeEvent, 100)
 
@@ -558,7 +549,7 @@ func (l *policyLoader) StartAutoReload(ctx context.Context, interval time.Durati
 	ctx, span := l.tracer.Start(ctx, "PolicyLoader.StartAutoReload")
 	defer span.End()
 
-	l.logger.Info(ctx, "Starting auto-reload", "interval", interval)
+	l.logger.WithContext(ctx).Info("Starting auto-reload", logging.Any("interval", interval))
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -612,7 +603,7 @@ func (l *policyLoader) Validate(ctx context.Context, path string) error {
 	ctx, span := l.tracer.Start(ctx, "PolicyLoader.Validate")
 	defer span.End()
 
-	l.logger.Debug(ctx, "Validating policy file", "path", path)
+	l.logger.WithContext(ctx).Debug("Validating policy file", logging.Any("path", path))
 
 	policy, err := l.LoadFromFile(ctx, path)
 	if err != nil {
@@ -635,15 +626,13 @@ func (l *policyLoader) loadFromConfigCenter(ctx context.Context) ([]*Policy, err
 	for key, content := range allConfigs {
 		var policy Policy
 		if err := yaml.Unmarshal([]byte(content), &policy); err != nil {
-			l.logger.Warn(ctx, "Failed to parse policy from config center",
-				"key", key, "error", err)
+   l.logger.WithContext(ctx).Warn("Failed to parse policy from config center", logging.Any("key", key), logging.Error(err))
 			continue
 		}
 
 		if l.config.ValidateOnLoad {
 			if err := l.validatePolicy(&policy); err != nil {
-				l.logger.Warn(ctx, "Policy validation failed",
-					"key", key, "error", err)
+    l.logger.WithContext(ctx).Warn("Policy validation failed", logging.Any("key", key), logging.Error(err))
 				if l.config.FailOnValidationError {
 					return nil, err
 				}
@@ -724,7 +713,7 @@ func (l *policyLoader) watchFile(ctx context.Context, path string) {
 			case <-ticker.C:
 				info, err := os.Stat(path)
 				if err != nil {
-					l.logger.Warn(ctx, "Failed to stat file", "path", path, "error", err)
+					l.logger.WithContext(ctx).Warn("Failed to stat file", logging.Any("path", path), logging.Error(err))
 					continue
 				}
 
@@ -733,14 +722,14 @@ func (l *policyLoader) watchFile(ctx context.Context, path string) {
 				watcher.mu.RUnlock()
 
 				if info.ModTime().After(lastModified) {
-					l.logger.Info(ctx, "Policy file changed, reloading", "path", path)
+					l.logger.WithContext(ctx).Info("Policy file changed, reloading", logging.Any("path", path))
 
 					watcher.mu.Lock()
 					watcher.lastModified = info.ModTime()
 					watcher.mu.Unlock()
 
 					if err := l.Reload(context.Background()); err != nil {
-						l.logger.Error(ctx, "Failed to reload policies", "error", err)
+						l.logger.WithContext(ctx).Error("Failed to reload policies", logging.Error(err))
 					}
 				}
 
@@ -760,7 +749,7 @@ func (l *policyLoader) watchConfigCenter(ctx context.Context, eventChan chan *Po
 	// 监听配置中心的所有策略配置
 	allConfigs, err := l.configCenter.GetAll(ctx, l.config.ConfigCenterPrefix)
 	if err != nil {
-		l.logger.Error(ctx, "Failed to get configs from config center", "error", err)
+		l.logger.WithContext(ctx).Error("Failed to get configs from config center", logging.Error(err))
 		return
 	}
 
@@ -768,15 +757,14 @@ func (l *policyLoader) watchConfigCenter(ctx context.Context, eventChan chan *Po
 		go func(configKey string) {
 			watchChan, err := l.configCenter.Watch(ctx, configKey)
 			if err != nil {
-				l.logger.Error(ctx, "Failed to watch config", "key", configKey, "error", err)
+				l.logger.WithContext(ctx).Error("Failed to watch config", logging.Any("key", configKey), logging.Error(err))
 				return
 			}
 
 			for content := range watchChan {
 				var policy Policy
 				if err := yaml.Unmarshal([]byte(content), &policy); err != nil {
-					l.logger.Warn(ctx, "Failed to parse policy update",
-						"key", configKey, "error", err)
+     l.logger.WithContext(ctx).Warn("Failed to parse policy update", logging.Any("key", configKey), logging.Error(err))
 					continue
 				}
 
@@ -796,8 +784,7 @@ func (l *policyLoader) watchConfigCenter(ctx context.Context, eventChan chan *Po
 				// 更新 PDP
 				if l.pdp != nil {
 					if err := l.pdp.UpdatePolicy(ctx, &policy); err != nil {
-						l.logger.Error(ctx, "Failed to update policy in PDP",
-							"policy_id", policy.ID, "error", err)
+      l.logger.WithContext(ctx).Error("Failed to update policy in PDP", logging.Any("policy_id", policy.ID), logging.Error(err))
 					}
 				}
 			}
@@ -840,8 +827,7 @@ func (e *PolicyExporter) ExportToFile(ctx context.Context, policy *Policy, path 
 			fmt.Sprintf("failed to write policy file: %s", path))
 	}
 
-	e.logger.Info(ctx, "Policy exported to file",
-		"policy_id", policy.ID, "path", path)
+ e.logger.WithContext(ctx).Info("Policy exported to file", logging.Any("policy_id", policy.ID), logging.Any("path", path))
 
 	return nil
 }
@@ -862,8 +848,7 @@ func (e *PolicyExporter) ExportToDirectory(ctx context.Context, policies []*Poli
 		}
 	}
 
-	e.logger.Info(ctx, "Policies exported to directory",
-		"count", len(policies), "dir", dir)
+ e.logger.WithContext(ctx).Info("Policies exported to directory", logging.Any("count", len(policies))
 
 	return nil
 }
@@ -971,8 +956,7 @@ func (t *TemplateEngine) LoadTemplate(ctx context.Context, path string) (*Policy
 
 	t.templates.Store(template.Name, &template)
 
-	t.logger.Info(ctx, "Policy template loaded",
-		"name", template.Name, "path", path)
+ t.logger.WithContext(ctx).Info("Policy template loaded", logging.Any("name", template.Name), logging.Any("path", path))
 
 	return &template, nil
 }
@@ -1009,8 +993,7 @@ func (t *TemplateEngine) GeneratePolicy(ctx context.Context, templateName string
 	policy.Metadata["generated_at"] = time.Now()
 	policy.Metadata["template_variables"] = variables
 
-	t.logger.Info(ctx, "Policy generated from template",
-		"template", templateName, "policy_id", policy.ID)
+ t.logger.WithContext(ctx).Info("Policy generated from template", logging.Any("template", templateName), logging.Any("policy_id", policy.ID))
 
 	return &policy, nil
 }
@@ -1042,7 +1025,7 @@ func (c *PolicyConverter) ConvertToXACML(ctx context.Context, policy *Policy) (s
     </Rule>
 </Policy>`, policy.ID, policy.Version, policy.Description, policy.ID, policy.Effect)
 
-	c.logger.Info(ctx, "Policy converted to XACML", "policy_id", policy.ID)
+	c.logger.WithContext(ctx).Info("Policy converted to XACML", logging.Any("policy_id", policy.ID))
 
 	return xacml, nil
 }
@@ -1065,7 +1048,7 @@ func (c *PolicyConverter) ConvertFromXACML(ctx context.Context, xacml string) (*
 		},
 	}
 
-	c.logger.Info(ctx, "Policy converted from XACML", "policy_id", policy.ID)
+	c.logger.WithContext(ctx).Info("Policy converted from XACML", logging.Any("policy_id", policy.ID))
 
 	return policy, nil
 }
@@ -1092,7 +1075,7 @@ func NewPolicyMigrator(
 
 // Migrate 迁移策略
 func (m *PolicyMigrator) Migrate(ctx context.Context, filter *PolicyFilter) error {
-	m.logger.Info(ctx, "Starting policy migration")
+	m.logger.WithContext(ctx).Info("Starting policy migration")
 
 	// 从源 PDP 获取策略
 	policies, err := m.sourcePDP.ListPolicies(ctx, filter)
@@ -1105,15 +1088,13 @@ func (m *PolicyMigrator) Migrate(ctx context.Context, filter *PolicyFilter) erro
 	migratedCount := 0
 	for _, policy := range policies {
 		if err := m.targetPDP.AddPolicy(ctx, policy); err != nil {
-			m.logger.Warn(ctx, "Failed to migrate policy",
-				"policy_id", policy.ID, "error", err)
+   m.logger.WithContext(ctx).Warn("Failed to migrate policy", logging.Any("policy_id", policy.ID), logging.Error(err))
 			continue
 		}
 		migratedCount++
 	}
 
-	m.logger.Info(ctx, "Policy migration completed",
-		"total", len(policies), "migrated", migratedCount)
+ m.logger.WithContext(ctx).Info("Policy migration completed", logging.Any("total", len(policies))
 
 	return nil
 }
@@ -1171,8 +1152,7 @@ func (b *PolicyBackupManager) Backup(ctx context.Context, policies []*Policy) (s
 			"failed to write backup file")
 	}
 
-	b.logger.Info(ctx, "Policy backup created",
-		"path", path, "count", len(policies))
+ b.logger.WithContext(ctx).Info("Policy backup created", logging.Any("path", path), logging.Any("count", len(policies))
 
 	return path, nil
 }
@@ -1191,8 +1171,7 @@ func (b *PolicyBackupManager) Restore(ctx context.Context, backupPath string) ([
 			"failed to parse backup file")
 	}
 
-	b.logger.Info(ctx, "Policy backup restored",
-		"path", backupPath, "count", len(backup.Policies))
+ b.logger.WithContext(ctx).Info("Policy backup restored", logging.Any("path", backupPath), logging.Any("count", len(backup.Policies))
 
 	return backup.Policies, nil
 }

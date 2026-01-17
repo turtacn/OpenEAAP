@@ -111,7 +111,7 @@ func (c *L3VectorCache) Get(ctx context.Context, key string) (*CacheEntry, error
 	// Generate embedding for the key
 	embedding, err := c.generateEmbedding(ctx, key)
 	if err != nil {
-		c.logger.Warn(ctx, "failed to generate embedding", "error", err)
+		c.logger.WithContext(ctx).Warn("failed to generate embedding", logging.Error(err))
 		c.missCount++
 		return nil, nil
 	}
@@ -119,7 +119,7 @@ func (c *L3VectorCache) Get(ctx context.Context, key string) (*CacheEntry, error
 	// Search for similar vectors
 	searchResult, err := c.searchSimilar(ctx, embedding)
 	if err != nil {
-		c.logger.Warn(ctx, "vector search failed", "error", err)
+		c.logger.WithContext(ctx).Warn("vector search failed", logging.Error(err))
 		c.missCount++
 		return nil, nil
 	}
@@ -135,10 +135,7 @@ func (c *L3VectorCache) Get(ctx context.Context, key string) (*CacheEntry, error
 	// Check similarity threshold
 	if topResult.Similarity < c.similarityThreshold {
 		c.missCount++
-		c.logger.Debug(ctx, "similarity below threshold",
-			"similarity", topResult.Similarity,
-			"threshold", c.similarityThreshold,
-		)
+  c.logger.WithContext(ctx).Debug("similarity below threshold", logging.Any("similarity", topResult.Similarity), logging.Any("threshold", c.similarityThreshold))
 		return nil, nil
 	}
 
@@ -153,7 +150,7 @@ func (c *L3VectorCache) Get(ctx context.Context, key string) (*CacheEntry, error
 	// Deserialize response
 	var response interface{}
 	if err := json.Unmarshal([]byte(topResult.Response), &response); err != nil {
-		c.logger.Warn(ctx, "failed to deserialize response", "error", err)
+		c.logger.WithContext(ctx).Warn("failed to deserialize response", logging.Error(err))
 		c.missCount++
 		return nil, nil
 	}
@@ -161,7 +158,7 @@ func (c *L3VectorCache) Get(ctx context.Context, key string) (*CacheEntry, error
 	// Deserialize request
 	var request interface{}
 	if err := json.Unmarshal([]byte(topResult.Request), &request); err != nil {
-		c.logger.Warn(ctx, "failed to deserialize request", "error", err)
+		c.logger.WithContext(ctx).Warn("failed to deserialize request", logging.Error(err))
 	}
 
 	entry := &CacheEntry{
@@ -177,16 +174,10 @@ func (c *L3VectorCache) Get(ctx context.Context, key string) (*CacheEntry, error
 	c.hitCount++
 
 	latency := time.Since(startTime)
-	c.logger.Debug(ctx, "L3 cache hit",
-		"key", key,
-		"similarity", topResult.Similarity,
-		"latency_ms", latency.Milliseconds(),
-	)
+ c.logger.WithContext(ctx).Debug("L3 cache hit", logging.Any("key", key), logging.Any("similarity", topResult.Similarity), logging.Any("latency_ms", latency.Milliseconds())
 
 	if latency > 50*time.Millisecond {
-		c.logger.Warn(ctx, "L3 cache GET latency exceeded 50ms",
-			"latency_ms", latency.Milliseconds(),
-		)
+  c.logger.WithContext(ctx).Warn("L3 cache GET latency exceeded 50ms", logging.Any("latency_ms", latency.Milliseconds())
 	}
 
 	return entry, nil
@@ -251,9 +242,7 @@ func (c *L3VectorCache) Set(ctx context.Context, entry *CacheEntry) error {
 
 	latency := time.Since(startTime)
 	if latency > 50*time.Millisecond {
-		c.logger.Warn(ctx, "L3 cache SET latency exceeded 50ms",
-			"latency_ms", latency.Milliseconds(),
-		)
+  c.logger.WithContext(ctx).Warn("L3 cache SET latency exceeded 50ms", logging.Any("latency_ms", latency.Milliseconds())
 	}
 
 	return nil
@@ -291,7 +280,7 @@ func (c *L3VectorCache) Clear(ctx context.Context) error {
 		return errors.Wrap(err, errors.CodeInternalError, "failed to reinitialize collection")
 	}
 
-	c.logger.Info(ctx, "L3 cache cleared")
+	c.logger.WithContext(ctx).Info("L3 cache cleared")
 
 	return nil
 }
@@ -335,7 +324,7 @@ func (c *L3VectorCache) initializeCollection(ctx context.Context, config *Vector
 	}
 
 	if hasCollection {
-		c.logger.Info(ctx, "collection already exists", "name", config.CollectionName)
+		c.logger.WithContext(ctx).Info("collection already exists", logging.Any("name", config.CollectionName))
 		return nil
 	}
 
@@ -416,7 +405,7 @@ func (c *L3VectorCache) initializeCollection(ctx context.Context, config *Vector
 		return err
 	}
 
-	c.logger.Info(ctx, "collection created and loaded", "name", config.CollectionName)
+	c.logger.WithContext(ctx).Info("collection created and loaded", logging.Any("name", config.CollectionName))
 
 	return nil
 }
@@ -494,7 +483,7 @@ func (c *L3VectorCache) searchSimilar(ctx context.Context, embedding []float32) 
 }
 
 // parseSearchResult parses Milvus search results
-func (c *L3VectorCache) parseSearchResult(field *entity.FieldData) []*vectorCacheEntry {
+func (c *L3VectorCache) parseSearchResult(field *interface{}) []*vectorCacheEntry {
 	// This is a simplified parser
 	// Actual implementation would properly parse all fields
 	entries := make([]*vectorCacheEntry, 0)
@@ -534,7 +523,7 @@ func (c *L3VectorCache) insertVector(ctx context.Context, entry *vectorCacheEntr
 
 	// Flush to ensure data is persisted
 	if err := c.client.Flush(ctx, c.collectionName, false); err != nil {
-		c.logger.Warn(ctx, "flush failed", "error", err)
+		c.logger.WithContext(ctx).Warn("flush failed", logging.Error(err))
 	}
 
 	return nil
@@ -565,9 +554,9 @@ func (c *L3VectorCache) performCleanup() {
 	expr := fmt.Sprintf("expires_at < %d", now)
 
 	if err := c.client.Delete(ctx, c.collectionName, "", expr); err != nil {
-		c.logger.Warn(ctx, "cleanup failed", "error", err)
+		c.logger.WithContext(ctx).Warn("cleanup failed", logging.Error(err))
 	} else {
-		c.logger.Debug(ctx, "L3 cache cleanup completed")
+		c.logger.WithContext(ctx).Debug("L3 cache cleanup completed")
 	}
 }
 
@@ -582,7 +571,7 @@ func (c *L3VectorCache) GetMetrics(ctx context.Context) (map[string]interface{},
 	// Get collection stats
 	stats, err := c.client.GetCollectionStatistics(ctx, c.collectionName)
 	if err != nil {
-		c.logger.Warn(ctx, "failed to get collection stats", "error", err)
+		c.logger.WithContext(ctx).Warn("failed to get collection stats", logging.Error(err))
 	}
 
 	return map[string]interface{}{

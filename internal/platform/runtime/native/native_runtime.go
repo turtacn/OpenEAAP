@@ -164,13 +164,13 @@ func NewNativeRuntime(
 	memoryManager MemoryManager,
 ) (*NativeRuntime, error) {
 	if config == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "config cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "config cannot be nil")
 	}
 	if logger == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "logger cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "logger cannot be nil")
 	}
 	if llmClient == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "llm client cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "llm client cannot be nil")
 	}
 
 	nr := &NativeRuntime{
@@ -243,7 +243,7 @@ func (nr *NativeRuntime) Initialize(ctx context.Context, config *runtime.Runtime
 	defer nr.mu.Unlock()
 
 	if nr.status == runtime.RuntimeStatusReady {
-		return errors.New(errors.CodeInternalError, "runtime already initialized")
+		return errors.NewInternalError(errors.CodeInternalError, "runtime already initialized")
 	}
 
 	// 验证配置
@@ -278,7 +278,7 @@ func (nr *NativeRuntime) Initialize(ctx context.Context, config *runtime.Runtime
 // Execute 执行任务
 func (nr *NativeRuntime) Execute(ctx context.Context, req *runtime.ExecuteRequest) (*runtime.ExecuteResponse, error) {
 	if !nr.IsReady() {
-		return nil, errors.New(errors.CodeInternalError, "runtime not ready")
+		return nil, errors.NewInternalError(errors.CodeInternalError, "runtime not ready")
 	}
 
 	// 更新指标
@@ -337,7 +337,7 @@ func (nr *NativeRuntime) ExecuteStream(ctx context.Context, req *runtime.Execute
 	errChan := make(chan error, 1)
 
 	if !nr.config.EnableStreaming {
-		errChan <- errors.New(errors.CodeInvalidParameter, "streaming not enabled")
+		errChan <- errors.NewValidationError(errors.CodeInvalidParameter, "streaming not enabled")
 		close(chunkChan)
 		close(errChan)
 		return chunkChan, errChan
@@ -439,7 +439,7 @@ func (nr *NativeRuntime) Shutdown(ctx context.Context) error {
 	case <-done:
 		nr.logger.Info("native runtime shutdown completed", "runtime_id", nr.id)
 	case <-ctx.Done():
-		return errors.New(errors.CodeDeadlineExceeded, "shutdown timeout")
+		return errors.NewTimeoutError("DEADLINE_EXCEEDED", "shutdown timeout")
 	}
 
 	nr.status = runtime.RuntimeStatusShutdown
@@ -567,7 +567,7 @@ func (nr *NativeRuntime) executeReAct(ctx context.Context, req *runtime.ExecuteR
 
 		// 检查是否达到最大步骤数
 		if step >= maxReActSteps {
-			return nil, errors.New(errors.CodeDeadlineExceeded, "max steps exceeded")
+			return nil, errors.NewTimeoutError("DEADLINE_EXCEEDED", "max steps exceeded")
 		}
 	}
 
@@ -737,15 +737,15 @@ func (nr *NativeRuntime) formatMemories(memories []*Memory) string {
 // validateConfig 验证配置
 func (nr *NativeRuntime) validateConfig(config *runtime.RuntimeConfig) error {
 	if config == nil {
-		return errors.New(errors.CodeInvalidParameter, "config cannot be nil")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "config cannot be nil")
 	}
 
 	if config.ID == "" {
-		return errors.New(errors.CodeInvalidParameter, "runtime id cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "runtime id cannot be empty")
 	}
 
 	if config.Type != runtime.RuntimeTypeNative {
-		return errors.New(errors.CodeInvalidParameter, "invalid runtime type")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "invalid runtime type")
 	}
 
 	return nil

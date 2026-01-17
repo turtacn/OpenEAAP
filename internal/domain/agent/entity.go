@@ -312,6 +312,24 @@ type ExecutionStats struct {
 	LastExecutionStatus string `json:"last_execution_status,omitempty"`
 }
 
+// AgentStatistics represents aggregate statistics for agents
+type AgentStatistics struct {
+	// Total number of agents
+	TotalCount int64 `json:"total_count"`
+
+	// Agents by status
+	ByStatus map[string]int64 `json:"by_status"`
+
+	// Agents by runtime type
+	ByRuntimeType map[string]int64 `json:"by_runtime_type"`
+
+	// Active agents count
+	ActiveCount int64 `json:"active_count"`
+
+	// Archived agents count
+	ArchivedCount int64 `json:"archived_count"`
+}
+
 // ============================================================================
 // Entity Factory
 // ============================================================================

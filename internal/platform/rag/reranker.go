@@ -160,18 +160,14 @@ func (r *rerankerImpl) Rerank(ctx context.Context, req *RerankRequest) ([]*Retri
 	}
 
 	latency := time.Since(startTime)
-	r.logger.Info(ctx, "reranking completed",
-		"method", req.Method,
-		"input_count", len(req.Chunks),
-		"output_count", len(rerankedChunks),
-		"latency_ms", latency.Milliseconds())
+ r.logger.WithContext(ctx).Info("reranking completed", logging.Any("method", req.Method), logging.Any("input_count", len(req.Chunks))
 
 	return rerankedChunks, nil
 }
 
 // rerankByScore 基于原始分数重排序
 func (r *rerankerImpl) rerankByScore(ctx context.Context, chunks []*RetrievedChunk) []*RetrievedChunk {
-	r.logger.Debug(ctx, "reranking by score")
+	r.logger.WithContext(ctx).Debug("reranking by score")
 
 	// 创建副本以避免修改原始数据
 	reranked := make([]*RetrievedChunk, len(chunks))
@@ -187,7 +183,7 @@ func (r *rerankerImpl) rerankByScore(ctx context.Context, chunks []*RetrievedChu
 
 // rerankByMultiFactor 基于多因子重排序
 func (r *rerankerImpl) rerankByMultiFactor(ctx context.Context, query string, chunks []*RetrievedChunk) []*RetrievedChunk {
-	r.logger.Debug(ctx, "reranking by multi-factor")
+	r.logger.WithContext(ctx).Debug("reranking by multi-factor")
 
 	now := time.Now()
 	scoredChunks := make([]*ScoredChunk, len(chunks))
@@ -216,13 +212,7 @@ func (r *rerankerImpl) rerankByMultiFactor(ctx context.Context, query string, ch
 			Score: finalScore,
 		}
 
-		r.logger.Debug(ctx, "chunk scores calculated",
-			"chunk_id", chunk.ChunkID,
-			"relevance", relevanceScore,
-			"freshness", freshnessScore,
-			"authority", authorityScore,
-			"diversity", diversityScore,
-			"final", finalScore)
+  r.logger.WithContext(ctx).Debug("chunk scores calculated", logging.Any("chunk_id", chunk.ChunkID), logging.Any("relevance", relevanceScore), logging.Any("freshness", freshnessScore), logging.Any("authority", authorityScore), logging.Any("diversity", diversityScore), logging.Any("final", finalScore))
 	}
 
 	// 按综合分数降序排序
@@ -341,7 +331,7 @@ func (r *rerankerImpl) rerankByModel(ctx context.Context, query string, chunks [
 		return nil, errors.New(errors.CodeUnimplemented, "rerank model client not configured")
 	}
 
-	r.logger.Debug(ctx, "reranking by model")
+	r.logger.WithContext(ctx).Debug("reranking by model")
 
 	// 调用模型进行重排序
 	scoredChunks, err := r.modelClient.Rerank(ctx, query, chunks)
@@ -366,7 +356,7 @@ func (r *rerankerImpl) rerankByModel(ctx context.Context, query string, chunks [
 
 // rerankByHybrid 混合重排序（结合多因子和模型）
 func (r *rerankerImpl) rerankByHybrid(ctx context.Context, query string, chunks []*RetrievedChunk) ([]*RetrievedChunk, error) {
-	r.logger.Debug(ctx, "reranking by hybrid method")
+	r.logger.WithContext(ctx).Debug("reranking by hybrid method")
 
 	// 1. 多因子重排序
 	multiFactorChunks := r.rerankByMultiFactor(ctx, query, chunks)
@@ -375,7 +365,7 @@ func (r *rerankerImpl) rerankByHybrid(ctx context.Context, query string, chunks 
 	if r.modelClient != nil {
 		modelChunks, err := r.rerankByModel(ctx, query, chunks)
 		if err != nil {
-			r.logger.Warn(ctx, "model reranking failed, using multi-factor only", "error", err)
+			r.logger.WithContext(ctx).Warn("model reranking failed, using multi-factor only", logging.Error(err))
 			return multiFactorChunks, nil
 		}
 
@@ -448,7 +438,7 @@ func (r *rerankerImpl) HealthCheck(ctx context.Context) error {
 	// 检查模型客户端（如果配置）
 	if r.modelClient != nil {
 		if err := r.modelClient.HealthCheck(ctx); err != nil {
-			r.logger.Warn(ctx, "rerank model client unhealthy", "error", err)
+			r.logger.WithContext(ctx).Warn("rerank model client unhealthy", logging.Error(err))
 			// 模型不可用时，仍可使用多因子排序，不返回错误
 		}
 	}

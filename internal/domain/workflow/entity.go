@@ -1031,3 +1031,23 @@ func (w *Workflow) ToJSON() ([]byte, error) {
 }
 
 //Personal.AI order the ending
+
+// WorkflowStatistics represents workflow execution statistics
+type WorkflowStatistics struct {
+	TotalExecutions      int64   `json:"total_executions"`
+	SuccessfulExecutions int64   `json:"successful_executions"`
+	FailedExecutions     int64   `json:"failed_executions"`
+	AvgExecutionTimeMs   int64   `json:"avg_execution_time_ms"`
+	SuccessRate          float64 `json:"success_rate"`
+}
+
+// ExecutionStatus represents workflow execution status
+type ExecutionStatus string
+
+const (
+	ExecutionStatusPending   ExecutionStatus = "pending"
+	ExecutionStatusRunning   ExecutionStatus = "running"
+	ExecutionStatusCompleted ExecutionStatus = "completed"
+	ExecutionStatusFailed    ExecutionStatus = "failed"
+	ExecutionStatusCancelled ExecutionStatus = "cancelled"
+)

@@ -197,7 +197,7 @@ type PolicyRepository interface {
 type pdp struct {
 	policyRepo       PolicyRepository
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	config          *PDPConfig
@@ -222,7 +222,7 @@ type PDPConfig struct {
 func NewPolicyDecisionPoint(
 	policyRepo PolicyRepository,
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector *metrics.MetricsCollector,
 	tracer trace.Tracer,
 	config *PDPConfig,
 ) PolicyDecisionPoint {
@@ -249,16 +249,12 @@ func (p *pdp) Evaluate(ctx context.Context, request *AccessRequest) (*Decision, 
 		}
 	}()
 
-	p.logger.Debug(ctx, "Evaluating access request",
-		"request_id", request.RequestID,
-		"subject", request.Subject.ID,
-		"resource", request.Resource.ID,
-		"action", request.Action)
+ p.logger.WithContext(ctx).Debug("Evaluating access request", logging.Any("request_id", request.RequestID), logging.Any("subject", request.Subject.ID), logging.Any("resource", request.Resource.ID), logging.Any("action", request.Action))
 
 	// 检查缓存
 	if p.config.CacheEnabled {
 		if cached, ok := p.getCachedDecision(request); ok {
-			p.logger.Debug(ctx, "Decision found in cache", "request_id", request.RequestID)
+			p.logger.WithContext(ctx).Debug("Decision found in cache", logging.Any("request_id", request.RequestID))
 			return cached, nil
 		}
 	}
@@ -270,7 +266,7 @@ func (p *pdp) Evaluate(ctx context.Context, request *AccessRequest) (*Decision, 
 	}
 
 	if len(policies) == 0 {
-		p.logger.Debug(ctx, "No applicable policies found", "request_id", request.RequestID)
+		p.logger.WithContext(ctx).Debug("No applicable policies found", logging.Any("request_id", request.RequestID))
 		return p.createDecision(request, p.config.DefaultEffect, "no applicable policies", nil), nil
 	}
 
@@ -302,10 +298,7 @@ func (p *pdp) Evaluate(ctx context.Context, request *AccessRequest) (*Decision, 
 			})
 	}
 
-	p.logger.Info(ctx, "Access request evaluated",
-		"request_id", request.RequestID,
-		"effect", decision.Effect,
-		"duration_ms", time.Since(startTime).Milliseconds())
+ p.logger.WithContext(ctx).Info("Access request evaluated", logging.Any("request_id", request.RequestID), logging.Any("effect", decision.Effect), logging.Duration("duration_ms", time.Since(startTime))
 
 	return decision, nil
 }
@@ -315,7 +308,7 @@ func (p *pdp) EvaluateBatch(ctx context.Context, requests []*AccessRequest) ([]*
 	ctx, span := p.tracer.Start(ctx, "PDP.EvaluateBatch")
 	defer span.End()
 
-	p.logger.Debug(ctx, "Evaluating batch requests", "count", len(requests))
+	p.logger.WithContext(ctx).Debug("Evaluating batch requests", logging.Any("count", len(requests))
 
 	decisions := make([]*Decision, len(requests))
 
@@ -369,7 +362,7 @@ func (p *pdp) AddPolicy(ctx context.Context, policy *Policy) error {
 	ctx, span := p.tracer.Start(ctx, "PDP.AddPolicy")
 	defer span.End()
 
-	p.logger.Info(ctx, "Adding policy", "policy_id", policy.ID, "policy_name", policy.Name)
+	p.logger.WithContext(ctx).Info("Adding policy", logging.Any("policy_id", policy.ID), logging.Any("policy_name", policy.Name))
 
 	// 验证策略
 	if err := p.validatePolicy(policy); err != nil {
@@ -395,7 +388,7 @@ func (p *pdp) AddPolicy(ctx context.Context, policy *Policy) error {
 		p.clearEvaluationCache()
 	}
 
-	p.logger.Info(ctx, "Policy added successfully", "policy_id", policy.ID)
+	p.logger.WithContext(ctx).Info("Policy added successfully", logging.Any("policy_id", policy.ID))
 
 	return nil
 }
@@ -405,7 +398,7 @@ func (p *pdp) RemovePolicy(ctx context.Context, policyID string) error {
 	ctx, span := p.tracer.Start(ctx, "PDP.RemovePolicy")
 	defer span.End()
 
-	p.logger.Info(ctx, "Removing policy", "policy_id", policyID)
+	p.logger.WithContext(ctx).Info("Removing policy", logging.Any("policy_id", policyID))
 
 	if err := p.policyRepo.Delete(ctx, policyID); err != nil {
 		return errors.Wrap(err, errors.CodeInternalError, "failed to delete policy")
@@ -419,7 +412,7 @@ func (p *pdp) RemovePolicy(ctx context.Context, policyID string) error {
 		p.clearEvaluationCache()
 	}
 
-	p.logger.Info(ctx, "Policy removed successfully", "policy_id", policyID)
+	p.logger.WithContext(ctx).Info("Policy removed successfully", logging.Any("policy_id", policyID))
 
 	return nil
 }
@@ -429,7 +422,7 @@ func (p *pdp) UpdatePolicy(ctx context.Context, policy *Policy) error {
 	ctx, span := p.tracer.Start(ctx, "PDP.UpdatePolicy")
 	defer span.End()
 
-	p.logger.Info(ctx, "Updating policy", "policy_id", policy.ID)
+	p.logger.WithContext(ctx).Info("Updating policy", logging.Any("policy_id", policy.ID))
 
 	// 验证策略
 	if err := p.validatePolicy(policy); err != nil {
@@ -450,7 +443,7 @@ func (p *pdp) UpdatePolicy(ctx context.Context, policy *Policy) error {
 		p.clearEvaluationCache()
 	}
 
-	p.logger.Info(ctx, "Policy updated successfully", "policy_id", policy.ID)
+	p.logger.WithContext(ctx).Info("Policy updated successfully", logging.Any("policy_id", policy.ID))
 
 	return nil
 }
@@ -523,7 +516,7 @@ func (p *pdp) evaluateDenyOverrides(ctx context.Context, request *AccessRequest,
 		// 评估条件
 		conditionResult, err := p.evaluateCondition(ctx, request, policy.Condition)
 		if err != nil {
-			p.logger.Warn(ctx, "Failed to evaluate condition", "policy_id", policy.ID, "error", err)
+			p.logger.WithContext(ctx).Warn("Failed to evaluate condition", logging.Any("policy_id", policy.ID), logging.Error(err))
 			continue
 		}
 
@@ -575,7 +568,7 @@ func (p *pdp) evaluatePermitOverrides(ctx context.Context, request *AccessReques
 
 		conditionResult, err := p.evaluateCondition(ctx, request, policy.Condition)
 		if err != nil {
-			p.logger.Warn(ctx, "Failed to evaluate condition", "policy_id", policy.ID, "error", err)
+			p.logger.WithContext(ctx).Warn("Failed to evaluate condition", logging.Any("policy_id", policy.ID), logging.Error(err))
 			continue
 		}
 
@@ -622,7 +615,7 @@ func (p *pdp) evaluateFirstApplicable(ctx context.Context, request *AccessReques
 
 		conditionResult, err := p.evaluateCondition(ctx, request, policy.Condition)
 		if err != nil {
-			p.logger.Warn(ctx, "Failed to evaluate condition", "policy_id", policy.ID, "error", err)
+			p.logger.WithContext(ctx).Warn("Failed to evaluate condition", logging.Any("policy_id", policy.ID), logging.Error(err))
 			continue
 		}
 
@@ -874,7 +867,7 @@ func (p *pdp) auditDecision(ctx context.Context, request *AccessRequest, decisio
 		"duration_ms":         decision.Duration.Milliseconds(),
 	}
 
-	p.logger.Info(ctx, "Access decision audit", "audit", auditEntry)
+	p.logger.WithContext(ctx).Info("Access decision audit", logging.Any("audit", auditEntry))
 }
 
 func sortPoliciesByPriority(policies []*Policy) {

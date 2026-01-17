@@ -522,7 +522,7 @@ type complianceChecker struct {
 	policyEngine     policy.PolicyDecisionPoint
 	auditLogger      audit.AuditLogger
 	logger           logging.Logger
-	metricsCollector metrics.Collector
+	metricsCollector *metrics.MetricsCollector
 	tracer           trace.Tracer
 
 	frameworks sync.Map // map[FrameworkType]*ComplianceFramework
@@ -545,7 +545,7 @@ func NewComplianceChecker(
 	policyEngine policy.PolicyDecisionPoint,
 	auditLogger audit.AuditLogger,
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,
 	config *ComplianceConfig,
 ) ComplianceChecker {
@@ -571,9 +571,7 @@ func (c *complianceChecker) CheckCompliance(ctx context.Context, request *Compli
 
 	startTime := time.Now()
 
-	c.logger.Info(ctx, "Checking compliance",
-		"request_id", request.RequestID,
-		"framework", request.Framework)
+ c.logger.WithContext(ctx).Info("Checking compliance", logging.Any("request_id", request.RequestID), logging.Any("framework", request.Framework))
 
 	result := &ComplianceCheckResult{
 		RequestID:       request.RequestID,
@@ -653,11 +651,7 @@ func (c *complianceChecker) CheckCompliance(ctx context.Context, request *Compli
 	// 记录指标
 	c.recordMetrics(result)
 
-	c.logger.Info(ctx, "Compliance check completed",
-		"request_id", request.RequestID,
-		"status", result.Status,
-		"score", result.Score,
-		"violations", len(result.Violations))
+ c.logger.WithContext(ctx).Info("Compliance check completed", logging.Any("request_id", request.RequestID), logging.Any("status", result.Status), logging.Any("score", result.Score), logging.Any("violations", len(result.Violations))
 
 	return result, nil
 }
@@ -667,7 +661,7 @@ func (c *complianceChecker) ValidateOperation(ctx context.Context, operation *Op
 	ctx, span := c.tracer.Start(ctx, "ComplianceChecker.ValidateOperation")
 	defer span.End()
 
-	c.logger.Debug(ctx, "Validating operation", "operation_id", operation.ID)
+	c.logger.WithContext(ctx).Debug("Validating operation", logging.Any("operation_id", operation.ID))
 
 	result := &ValidationResult{
 		IsValid:     true,
@@ -691,8 +685,7 @@ func (c *complianceChecker) ValidateOperation(ctx context.Context, operation *Op
 
 		checkResult, err := c.CheckCompliance(ctx, checkRequest)
 		if err != nil {
-			c.logger.Warn(ctx, "Framework check failed",
-				"framework", framework.Type, "error", err)
+   c.logger.WithContext(ctx).Warn("Framework check failed", logging.Any("framework", framework.Type), logging.Error(err))
 			return true
 		}
 
@@ -727,7 +720,7 @@ func (c *complianceChecker) BatchCheck(ctx context.Context, requests []*Complian
 	ctx, span := c.tracer.Start(ctx, "ComplianceChecker.BatchCheck")
 	defer span.End()
 
-	c.logger.Info(ctx, "Batch compliance check", "count", len(requests))
+	c.logger.WithContext(ctx).Info("Batch compliance check", logging.Any("count", len(requests))
 
 	results := make([]*ComplianceCheckResult, len(requests))
 	var wg sync.WaitGroup
@@ -740,8 +733,7 @@ func (c *complianceChecker) BatchCheck(ctx context.Context, requests []*Complian
 
 			result, err := c.CheckCompliance(ctx, req)
 			if err != nil {
-				c.logger.Error(ctx, "Batch check item failed",
-					"request_id", req.RequestID, "error", err)
+    c.logger.WithContext(ctx).Error("Batch check item failed", logging.Any("request_id", req.RequestID), logging.Error(err))
 				return
 			}
 
@@ -837,7 +829,7 @@ func (c *complianceChecker) GenerateComplianceReport(ctx context.Context, reques
 	ctx, span := c.tracer.Start(ctx, "ComplianceChecker.GenerateComplianceReport")
 	defer span.End()
 
-	c.logger.Info(ctx, "Generating compliance report", "framework", request.Framework)
+	c.logger.WithContext(ctx).Info("Generating compliance report", logging.Any("framework", request.Framework))
 
 	report := &ComplianceReport{
 		ID:          fmt.Sprintf("report_%d", time.Now().UnixNano()),
@@ -885,7 +877,7 @@ func (c *complianceChecker) GenerateComplianceReport(ctx context.Context, reques
 		}
 	}
 
-	c.logger.Info(ctx, "Compliance report generated", "report_id", report.ID)
+	c.logger.WithContext(ctx).Info("Compliance report generated", logging.Any("report_id", report.ID))
 
 	return report, nil
 }
@@ -949,7 +941,7 @@ func (c *complianceChecker) RemedyViolation(ctx context.Context, violationID str
 	ctx, span := c.tracer.Start(ctx, "ComplianceChecker.RemedyViolation")
 	defer span.End()
 
-	c.logger.Info(ctx, "Remedying violation", "violation_id", violationID)
+	c.logger.WithContext(ctx).Info("Remedying violation", logging.Any("violation_id", violationID))
 
 	// 获取违规记录
 	value, ok := c.violations.Load(violationID)
@@ -978,7 +970,7 @@ func (c *complianceChecker) RemedyViolation(ctx context.Context, violationID str
 		Message:      fmt.Sprintf("Violation remedied: %s", violationID),
 	})
 
-	c.logger.Info(ctx, "Violation remedied", "violation_id", violationID)
+	c.logger.WithContext(ctx).Info("Violation remedied", logging.Any("violation_id", violationID))
 
 	return nil
 }
@@ -988,12 +980,11 @@ func (c *complianceChecker) RegisterFramework(ctx context.Context, framework *Co
 	ctx, span := c.tracer.Start(ctx, "ComplianceChecker.RegisterFramework")
 	defer span.End()
 
-	c.logger.Info(ctx, "Registering compliance framework",
-		"type", framework.Type, "version", framework.Version)
+ c.logger.WithContext(ctx).Info("Registering compliance framework", logging.Any("type", framework.Type), logging.Any("version", framework.Version))
 
 	c.frameworks.Store(framework.Type, framework)
 
-	c.logger.Info(ctx, "Compliance framework registered", "type", framework.Type)
+	c.logger.WithContext(ctx).Info("Compliance framework registered", logging.Any("type", framework.Type))
 
 	return nil
 }
@@ -1003,11 +994,11 @@ func (c *complianceChecker) UpdateFramework(ctx context.Context, framework *Comp
 	ctx, span := c.tracer.Start(ctx, "ComplianceChecker.UpdateFramework")
 	defer span.End()
 
-	c.logger.Info(ctx, "Updating compliance framework", "type", framework.Type)
+	c.logger.WithContext(ctx).Info("Updating compliance framework", logging.Any("type", framework.Type))
 
 	c.frameworks.Store(framework.Type, framework)
 
-	c.logger.Info(ctx, "Compliance framework updated", "type", framework.Type)
+	c.logger.WithContext(ctx).Info("Compliance framework updated", logging.Any("type", framework.Type))
 
 	return nil
 }

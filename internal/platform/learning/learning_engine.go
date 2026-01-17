@@ -140,7 +140,7 @@ func NewLearningEngine(
 	messageQueue message.MessageQueue,
 	modelRepo model.Repository,
 	logger logging.Logger,
-	metricsCollector metrics.Collector,
+	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,
 	config *LearningConfig,
 ) OnlineLearningEngine {
@@ -166,7 +166,7 @@ func (e *learningEngine) Start(ctx context.Context) error {
 	ctx, span := e.tracer.Start(ctx, "LearningEngine.Start")
 	defer span.End()
 
-	e.logger.Info(ctx, "Starting online learning engine")
+	e.logger.WithContext(ctx).Info("Starting online learning engine")
 
 	// 启动反馈处理协程
 	e.wg.Add(1)
@@ -188,7 +188,7 @@ func (e *learningEngine) Start(ctx context.Context) error {
 	}
 
 	e.metricsCollector.Increment("learning_engine_started", nil)
-	e.logger.Info(ctx, "Online learning engine started successfully")
+	e.logger.WithContext(ctx).Info("Online learning engine started successfully")
 
 	return nil
 }
@@ -198,13 +198,13 @@ func (e *learningEngine) Stop(ctx context.Context) error {
 	ctx, span := e.tracer.Start(ctx, "LearningEngine.Stop")
 	defer span.End()
 
-	e.logger.Info(ctx, "Stopping online learning engine")
+	e.logger.WithContext(ctx).Info("Stopping online learning engine")
 
 	e.cancel()
 	e.wg.Wait()
 
 	e.metricsCollector.Increment("learning_engine_stopped", nil)
-	e.logger.Info(ctx, "Online learning engine stopped successfully")
+	e.logger.WithContext(ctx).Info("Online learning engine stopped successfully")
 
 	return nil
 }
@@ -223,7 +223,7 @@ func (e *learningEngine) ProcessFeedback(ctx context.Context, feedback *Feedback
 
 	// 验证反馈数据
 	if err := e.validateFeedback(feedback); err != nil {
-		e.logger.Warn(ctx, "Invalid feedback", "error", err, "feedback_id", feedback.ID)
+		e.logger.WithContext(ctx).Warn("Invalid feedback", logging.Error(err), logging.Any("feedback_id", feedback.ID))
 		e.metricsCollector.Increment("learning_invalid_feedback",
 			map[string]string{"model_id": feedback.ModelID})
 		return errors.Wrap(err, errors.CodeInvalidArgument, "invalid feedback")
@@ -231,7 +231,7 @@ func (e *learningEngine) ProcessFeedback(ctx context.Context, feedback *Feedback
 
 	// 收集反馈
 	if err := e.feedbackCollector.Collect(ctx, feedback); err != nil {
-		e.logger.Error(ctx, "Failed to collect feedback", "error", err, "feedback_id", feedback.ID)
+		e.logger.WithContext(ctx).Error("Failed to collect feedback", logging.Error(err), logging.Any("feedback_id", feedback.ID))
 		e.metricsCollector.Increment("learning_collect_feedback_failed",
 			map[string]string{"model_id": feedback.ModelID})
 		return errors.Wrap(err, errors.CodeInternalError, "failed to collect feedback")
@@ -245,14 +245,12 @@ func (e *learningEngine) ProcessFeedback(ctx context.Context, feedback *Feedback
 			"type":     string(feedback.FeedbackType),
 		})
 
-	e.logger.Info(ctx, "Feedback processed successfully",
-		"feedback_id", feedback.ID,
-		"model_id", feedback.ModelID)
+ e.logger.WithContext(ctx).Info("Feedback processed successfully", logging.Any("feedback_id", feedback.ID), logging.Any("model_id", feedback.ModelID))
 
 	// 检查是否需要触发优化
 	if e.config.AutoOptimizeEnabled {
 		if err := e.checkAndTriggerOptimization(ctx, feedback.ModelID); err != nil {
-			e.logger.Warn(ctx, "Failed to check optimization trigger", "error", err)
+			e.logger.WithContext(ctx).Warn("Failed to check optimization trigger", logging.Error(err))
 		}
 	}
 
@@ -264,9 +262,7 @@ func (e *learningEngine) TriggerOptimization(ctx context.Context, req *Optimizat
 	ctx, span := e.tracer.Start(ctx, "LearningEngine.TriggerOptimization")
 	defer span.End()
 
-	e.logger.Info(ctx, "Triggering model optimization",
-		"model_id", req.ModelID,
-		"type", req.OptimizationType)
+ e.logger.WithContext(ctx).Info("Triggering model optimization", logging.Any("model_id", req.ModelID), logging.Any("type", req.OptimizationType))
 
 	// 检查是否已有运行中的任务
 	if !req.ForceTrigger {
@@ -350,7 +346,7 @@ func (e *learningEngine) GetLearningStats(ctx context.Context, modelID string) (
 	// 获取性能趋势
 	trend, err := e.getPerformanceTrend(ctx, modelID)
 	if err != nil {
-		e.logger.Warn(ctx, "Failed to get performance trend", "error", err)
+		e.logger.WithContext(ctx).Warn("Failed to get performance trend", logging.Error(err))
 		trend = []PerformancePoint{}
 	}
 
@@ -432,7 +428,7 @@ func (e *learningEngine) subscribeFeedbackQueue(ctx context.Context) error {
 	return e.messageQueue.Subscribe(ctx, "feedback", func(msg []byte) error {
 		var feedback Feedback
 		if err := json.Unmarshal(msg, &feedback); err != nil {
-			e.logger.Error(ctx, "Failed to unmarshal feedback message", "error", err)
+			e.logger.WithContext(ctx).Error("Failed to unmarshal feedback message", logging.Error(err))
 			return err
 		}
 		return e.ProcessFeedback(ctx, &feedback)
@@ -484,8 +480,7 @@ func (e *learningEngine) checkAllModelsForOptimization(ctx context.Context) erro
 
 	for _, mdl := range models {
 		if err := e.checkAndTriggerOptimization(ctx, mdl.ID); err != nil {
-			e.logger.Warn(ctx, "Failed to check model for optimization",
-				"model_id", mdl.ID, "error", err)
+   e.logger.WithContext(ctx).Warn("Failed to check model for optimization", logging.Any("model_id", mdl.ID), logging.Error(err))
 		}
 	}
 
@@ -517,10 +512,7 @@ func (e *learningEngine) monitorPerformanceDegradation(ctx context.Context) erro
 			if previousValue, ok := previous.Metrics[metric]; ok {
 				degradation := (previousValue - latestValue) / previousValue
 				if degradation > e.config.PerformanceDegradation {
-					e.logger.Warn(ctx, "Performance degradation detected",
-						"model_id", mdl.ID,
-						"metric", metric,
-						"degradation", degradation)
+     e.logger.WithContext(ctx).Warn("Performance degradation detected", logging.Any("model_id", mdl.ID), logging.Any("metric", metric), logging.Any("degradation", degradation))
 
 					e.metricsCollector.Increment("learning_performance_degradation_detected",
 						map[string]string{"model_id": mdl.ID, "metric": metric})
@@ -544,7 +536,7 @@ func (e *learningEngine) monitorTrainingTask(ctx context.Context, modelID, taskI
 		case <-ticker.C:
 			task, err := e.trainingService.GetTask(ctx, taskID)
 			if err != nil {
-				e.logger.Error(ctx, "Failed to get training task", "error", err, "task_id", taskID)
+				e.logger.WithContext(ctx).Error("Failed to get training task", logging.Error(err), logging.Any("task_id", taskID))
 				continue
 			}
 
@@ -563,9 +555,7 @@ func (e *learningEngine) monitorTrainingTask(ctx context.Context, modelID, taskI
 				e.metricsCollector.Increment("learning_optimization_completed",
 					map[string]string{"model_id": modelID})
 
-				e.logger.Info(ctx, "Optimization completed",
-					"model_id", modelID,
-					"task_id", taskID)
+    e.logger.WithContext(ctx).Info("Optimization completed", logging.Any("model_id", modelID), logging.Any("task_id", taskID))
 				return
 			}
 
@@ -575,9 +565,7 @@ func (e *learningEngine) monitorTrainingTask(ctx context.Context, modelID, taskI
 				e.metricsCollector.Increment("learning_optimization_failed",
 					map[string]string{"model_id": modelID})
 
-				e.logger.Error(ctx, "Optimization failed",
-					"model_id", modelID,
-					"task_id", taskID)
+    e.logger.WithContext(ctx).Error("Optimization failed", logging.Any("model_id", modelID), logging.Any("task_id", taskID))
 				return
 			}
 		}
