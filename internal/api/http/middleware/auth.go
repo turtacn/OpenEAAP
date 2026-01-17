@@ -11,6 +11,7 @@ import (
 	"github.com/openeeap/openeeap/internal/observability/logging"
 	"github.com/openeeap/openeeap/internal/observability/trace"
 	"github.com/openeeap/openeeap/pkg/errors"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // ContextKey represents keys used for storing values in context
@@ -97,14 +98,14 @@ func NewAuthMiddleware(config AuthConfig) *AuthMiddleware {
 // Handler returns the Gin middleware handler
 func (m *AuthMiddleware) Handler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx, span := m.tracer.StartSpan(c.Request.Context(), "AuthMiddleware.Handler")
+		ctx, span := m.tracer.Start(c.Request.Context(), "AuthMiddleware.Handler")
 		defer span.End()
 
 		path := c.Request.URL.Path
 
 		// Skip authentication for certain paths (e.g., health checks, public endpoints)
 		if m.skipPaths[path] {
-			m.logger.Debug(ctx, "Skipping authentication", "path", path)
+			m.logger.WithContext(ctx).Debug("Skipping authentication", logging.String("path", path))
 			c.Next()
 			return
 		}
@@ -125,7 +126,7 @@ func (m *AuthMiddleware) Handler() gin.HandlerFunc {
 			authType = "jwt"
 			userInfo, err = m.validateJWT(ctx, authHeader)
 			if err != nil {
-				m.logger.Warn(ctx, "JWT validation failed", "error", err)
+				m.logger.WithContext(ctx).Warn("JWT validation failed", logging.Error(err))
 				span.RecordError(err)
 				if !optional {
 					c.JSON(http.StatusUnauthorized, gin.H{
@@ -143,7 +144,7 @@ func (m *AuthMiddleware) Handler() gin.HandlerFunc {
 			authType = "apikey"
 			userInfo, err = m.validateAPIKey(ctx, apiKey)
 			if err != nil {
-				m.logger.Warn(ctx, "API key validation failed", "error", err)
+				m.logger.WithContext(ctx).Warn("API key validation failed", logging.Error(err))
 				span.RecordError(err)
 				if !optional {
 					c.JSON(http.StatusUnauthorized, gin.H{
@@ -158,7 +159,7 @@ func (m *AuthMiddleware) Handler() gin.HandlerFunc {
 
 		// If no valid authentication found and authentication is required
 		if userInfo == nil && !optional {
-			m.logger.Warn(ctx, "No valid authentication provided", "path", path)
+			m.logger.WithContext(ctx).Warn("No valid authentication provided", logging.String("path", path))
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"code":    errors.UnauthorizedError,
 				"message": "Authentication required",
@@ -182,12 +183,14 @@ func (m *AuthMiddleware) Handler() gin.HandlerFunc {
 			c.Request = c.Request.WithContext(ctx)
 
 			// Add user info to span
-			span.SetAttribute("user.id", userInfo.UserID)
-			span.SetAttribute("user.email", userInfo.Email)
-			span.SetAttribute("user.role", userInfo.Role)
-			span.SetAttribute("auth.type", authType)
+			span.SetAttributes(
+				attribute.String("user.id", userInfo.UserID),
+				attribute.String("user.email", userInfo.Email),
+				attribute.String("user.role", userInfo.Role),
+				attribute.String("auth.type", authType),
+			)
 
-			m.logger.Debug(ctx, "User authenticated", "user_id", userInfo.UserID, "auth_type", authType)
+			m.logger.WithContext(ctx).Debug("User authenticated", logging.String("user_id", userInfo.UserID), logging.String("auth_type", authType))
 		}
 
 		c.Next()
@@ -207,7 +210,7 @@ func (m *AuthMiddleware) validateJWT(ctx context.Context, authHeader string) (*U
 	// Extract token from "Bearer <token>" format
 	parts := strings.SplitN(authHeader, " ", 2)
 	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-		return nil, errors.NewUnauthorizedError("Invalid authorization header format")
+		return nil, errors.UnauthorizedError("Invalid authorization header format")
 	}
 
 	tokenString := parts[1]
@@ -216,25 +219,25 @@ func (m *AuthMiddleware) validateJWT(ctx context.Context, authHeader string) (*U
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		// Validate signing method
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.NewUnauthorizedError("Invalid signing method")
+			return nil, errors.UnauthorizedError("Invalid signing method")
 		}
 		return []byte(m.jwtSecret), nil
 	})
 
 	if err != nil {
-		m.logger.Error(ctx, "Failed to parse JWT token", "error", err)
-		return nil, errors.NewUnauthorizedError("Invalid token: " + err.Error())
+		m.logger.Error("Failed to parse JWT token", logging.Error(err))
+		return nil, errors.UnauthorizedError("Invalid token: " + err.Error())
 	}
 
 	// Extract claims
 	claims, ok := token.Claims.(*JWTClaims)
 	if !ok || !token.Valid {
-		return nil, errors.NewUnauthorizedError("Invalid token claims")
+		return nil, errors.UnauthorizedError("Invalid token claims")
 	}
 
 	// Validate required claims
 	if claims.UserID == "" {
-		return nil, errors.NewUnauthorizedError("Missing user_id in token claims")
+		return nil, errors.UnauthorizedError("Missing user_id in token claims")
 	}
 
 	return &UserInfo{
@@ -248,19 +251,19 @@ func (m *AuthMiddleware) validateJWT(ctx context.Context, authHeader string) (*U
 // validateAPIKey validates an API key and extracts user information
 func (m *AuthMiddleware) validateAPIKey(ctx context.Context, apiKey string) (*UserInfo, error) {
 	if apiKey == "" {
-		return nil, errors.NewUnauthorizedError("Empty API key")
+		return nil, errors.UnauthorizedError("Empty API key")
 	}
 
 	// Validate API key using the store
 	keyInfo, err := m.apiKeyStore.ValidateAPIKey(ctx, apiKey)
 	if err != nil {
-		m.logger.Error(ctx, "API key validation failed", "error", err)
-		return nil, errors.NewUnauthorizedError("Invalid API key")
+		m.logger.Error("API key validation failed", logging.Error(err))
+		return nil, errors.UnauthorizedError("Invalid API key")
 	}
 
 	// Check if API key has expired
 	if keyInfo.ExpiresAt > 0 && keyInfo.ExpiresAt < currentTimestamp() {
-		return nil, errors.NewUnauthorizedError("API key has expired")
+		return nil, errors.UnauthorizedError("API key has expired")
 	}
 
 	return &UserInfo{
@@ -316,9 +319,9 @@ func RequireRole(logger logging.Logger, requiredRole string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := GetUserRole(c)
 		if !exists {
-			logger.Warn(c.Request.Context(), "User role not found in context")
+			logger.Warn("User role not found in context")
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    errors.UnauthorizedError,
+				"code":    "UNAUTHORIZED",
 				"message": "Authentication required",
 			})
 			c.Abort()
@@ -326,9 +329,9 @@ func RequireRole(logger logging.Logger, requiredRole string) gin.HandlerFunc {
 		}
 
 		if role != requiredRole && role != "admin" { // Admin has access to everything
-			logger.Warn(c.Request.Context(), "Insufficient permissions", "required_role", requiredRole, "user_role", role)
+			logger.Warn("Insufficient permissions", logging.String("required_role", requiredRole), logging.String("user_role", role))
 			c.JSON(http.StatusForbidden, gin.H{
-				"code":    errors.ErrForbidden,
+				"code":    "FORBIDDEN",
 				"message": "Insufficient permissions",
 			})
 			c.Abort()
@@ -344,9 +347,9 @@ func RequireAnyRole(logger logging.Logger, requiredRoles ...string) gin.HandlerF
 	return func(c *gin.Context) {
 		role, exists := GetUserRole(c)
 		if !exists {
-			logger.Warn(c.Request.Context(), "User role not found in context")
+			logger.Warn("User role not found in context")
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    errors.UnauthorizedError,
+				"code":    "UNAUTHORIZED",
 				"message": "Authentication required",
 			})
 			c.Abort()
@@ -369,9 +372,9 @@ func RequireAnyRole(logger logging.Logger, requiredRoles ...string) gin.HandlerF
 		}
 
 		if !hasRole {
-			logger.Warn(c.Request.Context(), "Insufficient permissions", "required_roles", requiredRoles, "user_role", role)
+			logger.Warn("Insufficient permissions", logging.Strings("required_roles", requiredRoles), logging.String("user_role", role))
 			c.JSON(http.StatusForbidden, gin.H{
-				"code":    errors.ErrForbidden,
+				"code":    "FORBIDDEN",
 				"message": "Insufficient permissions",
 			})
 			c.Abort()

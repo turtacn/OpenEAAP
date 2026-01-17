@@ -46,14 +46,16 @@ type VectorConfig struct {
 
 // vectorCacheEntry represents a cache entry stored in Milvus
 type vectorCacheEntry struct {
-	ID        int64     `json:"id"`
-	Key       string    `json:"key"`
-	Embedding []float32 `json:"embedding"`
-	Request   string    `json:"request"`
-	Response  string    `json:"response"`
-	CreatedAt int64     `json:"created_at"`
-	ExpiresAt int64     `json:"expires_at"`
-	Metadata  string    `json:"metadata"`
+	ID         int64     `json:"id"`
+	Key        string    `json:"key"`
+	Embedding  []float32 `json:"embedding"`
+	Request    string    `json:"request"`
+	Response   string    `json:"response"`
+	Score      float64   `json:"score"`       // Similarity score from vector search
+	Similarity float64   `json:"similarity"`  // Alias for Score
+	CreatedAt  int64     `json:"created_at"`
+	ExpiresAt  int64     `json:"expires_at"`
+	Metadata   string    `json:"metadata"`
 }
 
 // NewL3VectorCache creates a new L3 vector cache instance
@@ -74,7 +76,7 @@ func NewL3VectorCache(logger logging.Logger, config *VectorConfig) (*L3VectorCac
 	// Authenticate if credentials provided
 	if config.Username != "" && config.Password != "" {
 		// Milvus authentication would be implemented here
-		logger.Info(ctx, "Milvus authentication enabled")
+		logger.WithContext(ctx).Info("Milvus authentication enabled")
 	}
 
 	cache := &L3VectorCache{
@@ -472,7 +474,9 @@ func (c *L3VectorCache) searchSimilar(ctx context.Context, embedding []float32) 
 		entries := c.parseSearchResult(result)
 		for i, entry := range entries {
 			if i < len(searchResult[0].Scores) {
-				entry.Score = float64(searchResult[0].Scores[i])
+				score := float64(searchResult[0].Scores[i])
+				entry.Similarity = score
+				entry.Score = score
 			}
 			results = append(results, entry)
 		}

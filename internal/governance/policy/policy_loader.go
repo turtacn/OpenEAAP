@@ -2,6 +2,7 @@
 package policy
 
 import (
+"github.com/prometheus/client_golang/prometheus"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -175,10 +176,9 @@ func (l *policyLoader) Load(ctx context.Context) ([]*Policy, error) {
 
 	startTime := time.Now()
 	defer func() {
-		duration := time.Since(startTime)
 		l.metricsCollector.ObserveDuration("policy_load_duration_ms",
-			float64(duration.Milliseconds()),
-			map[string]string{"source": "all"})
+			startTime,
+			prometheus.Labels{"source": "all"})
 	}()
 
 	l.logger.WithContext(ctx).Info("Loading policies from all sources")
@@ -566,10 +566,10 @@ func (l *policyLoader) StartAutoReload(ctx context.Context, interval time.Durati
 			select {
 			case <-l.autoReloadTicker.C:
 				if err := l.Reload(context.Background()); err != nil {
-					l.logger.Error(context.Background(), "Auto-reload failed", "error", err)
+					l.logger.Error("Auto-reload failed", "error", err)
 				}
 			case <-l.autoReloadStop:
-				l.logger.Info(context.Background(), "Auto-reload stopped")
+				l.logger.Info("Auto-reload stopped")
 				return
 			}
 		}
@@ -593,7 +593,7 @@ func (l *policyLoader) StopAutoReload() error {
 	l.autoReloadTicker = nil
 	l.autoReloadStop = nil
 
-	l.logger.Info(context.Background(), "Auto-reload stopped")
+	l.logger.Info("Auto-reload stopped")
 
 	return nil
 }
@@ -800,7 +800,7 @@ func (l *policyLoader) notifyChange(event *PolicyChangeEvent) {
 		select {
 		case listener <- event:
 		default:
-			l.logger.Warn(context.Background(), "Failed to send change event, channel full")
+			l.logger.Warn("Failed to send change event, channel full")
 		}
 	}
 }

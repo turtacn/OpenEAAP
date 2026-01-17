@@ -63,4 +63,6 @@ const (
 	CodeNotFound         = "NOT_FOUND"
 	CodeUnauthorized     = "UNAUTHORIZED"
 	CodeForbidden        = "FORBIDDEN"
+	CodeConflict         = "CONFLICT"
+	CodeTimeout          = "TIMEOUT"
 )

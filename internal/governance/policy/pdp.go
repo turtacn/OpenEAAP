@@ -2,6 +2,7 @@
 package policy
 
 import (
+"github.com/prometheus/client_golang/prometheus"
 	"context"
 	"fmt"
 	"sync"
@@ -244,8 +245,8 @@ func (p *pdp) Evaluate(ctx context.Context, request *AccessRequest) (*Decision, 
 	defer func() {
 		if p.config.EnableMetrics {
 			p.metricsCollector.ObserveDuration("pdp_evaluation_duration_ms",
-				float64(time.Since(startTime).Milliseconds()),
-				map[string]string{"resource_type": request.Resource.Type})
+				startTime,
+				prometheus.Labels{"resource_type": request.Resource.Type})
 		}
 	}()
 

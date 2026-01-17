@@ -180,7 +180,7 @@ func (r *Router) RegisterEngine(config *EngineConfig) error {
 	}
 	r.metricsMu.Unlock()
 
-	r.logger.Info(context.Background(), "engine registered",
+	r.logger.Info("engine registered",
 		"name", config.Name,
 		"weight", config.Weight,
 		"priority", config.Priority,
@@ -204,7 +204,7 @@ func (r *Router) UnregisterEngine(name string) error {
 	delete(r.metrics, name)
 	r.metricsMu.Unlock()
 
-	r.logger.Info(context.Background(), "engine unregistered", "name", name)
+	r.logger.Info("engine unregistered", "name", name)
 
 	return nil
 }
@@ -223,7 +223,7 @@ func (r *Router) AddRoutingRule(rule *RoutingRule) error {
 	// Sort rules by priority (higher priority first)
 	r.sortRules()
 
-	r.logger.Info(context.Background(), "routing rule added",
+	r.logger.Info("routing rule added",
 		"name", rule.Name,
 		"priority", rule.Priority,
 		"target", rule.TargetEngine,

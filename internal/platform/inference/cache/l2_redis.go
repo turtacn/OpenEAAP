@@ -313,7 +313,7 @@ func (c *L2RedisCache) storeSimHashMapping(ctx context.Context, key string, entr
 	simHashKey := c.buildSimHashKey(fmt.Sprintf("%d", simHash))
 
 	// Use ZADD with score as simhash value for range queries
-	if err := c.client.ZAdd(ctx, c.keyPrefix+":simhash:index", &redis.Z{
+	if err := c.client.ZAdd(ctx, c.keyPrefix+":simhash:index", redis.Z{
 		Score:  float64(simHash),
 		Member: key,
 	}).Err(); err != nil {
@@ -373,7 +373,7 @@ func (c *L2RedisCache) findBySimilarity(ctx context.Context, key string) (*Cache
 
 		// Calculate actual similarity
 		similarity := c.calculateSimilarity(key, member)
-		entry.Score = similarity
+		entry.Similarity = similarity
 
 		// Return if similarity is high enough (> 0.95)
 		if similarity > 0.95 {

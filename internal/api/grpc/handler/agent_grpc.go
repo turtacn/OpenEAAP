@@ -442,7 +442,7 @@ func (h *AgentGRPCHandler) handleError(err error) error {
 			return status.Error(codes.AlreadyExists, appErr.Message)
 		case pkgerrors.CodeInvalidArgument:
 			return status.Error(codes.InvalidArgument, appErr.Message)
-		case pkgerrors.PermissionError:
+		case pkgerrors.ForbiddenError:
 			return status.Error(codes.PermissionDenied, appErr.Message)
 		case pkgerrors.CodeUnauthenticated:
 			return status.Error(codes.Unauthenticated, appErr.Message)

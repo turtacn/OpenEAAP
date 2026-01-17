@@ -2,6 +2,7 @@
 package audit
 
 import (
+"github.com/prometheus/client_golang/prometheus"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -749,9 +750,9 @@ func (a *auditLogger) recordMetrics(entry *AuditEntry) {
 		})
 
 	if entry.Duration > 0 {
-		a.metricsCollector.ObserveDuration("audit_operation_duration_ms",
-			float64(entry.Duration.Milliseconds()),
-			map[string]string{
+		a.metricsCollector.ObserveHistogram("audit_operation_duration_ms",
+			entry.Duration.Seconds(),
+			prometheus.Labels{
 				"event_type": string(entry.EventType),
 				"action":     entry.Action,
 			})

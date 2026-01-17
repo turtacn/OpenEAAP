@@ -207,7 +207,7 @@ func (c *VLLMClient) CompleteStream(ctx context.Context, req *CompletionRequest)
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
-		return nil, errors.New("ERR_INTERNAL",
+		return nil, errors.NewInternalError("ERR_INTERNAL",
 			fmt.Sprintf("vLLM returned status %d: %s", resp.StatusCode, string(body)))
 	}
 
@@ -291,7 +291,7 @@ func (c *VLLMClient) CompleteBatch(ctx context.Context, requests []CompletionReq
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		c.recordMetrics("batch", "error", time.Since(startTime))
-		return nil, errors.New("ERR_INTERNAL",
+		return nil, errors.NewInternalError("ERR_INTERNAL",
 			fmt.Sprintf("vLLM returned status %d: %s", resp.StatusCode, string(body)))
 	}
 
@@ -330,7 +330,7 @@ func (c *VLLMClient) CreateKVCacheSession(ctx context.Context, sessionID string,
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
-		return errors.New("ERR_INTERNAL",
+		return errors.NewInternalError("ERR_INTERNAL",
 			fmt.Sprintf("failed to create KV-Cache session: %s", string(body)))
 	}
 
@@ -360,7 +360,7 @@ func (c *VLLMClient) DeleteKVCacheSession(ctx context.Context, sessionID string)
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
-		return errors.New("ERR_INTERNAL",
+		return errors.NewInternalError("ERR_INTERNAL",
 			fmt.Sprintf("failed to delete KV-Cache session: %s", string(body)))
 	}
 
@@ -385,7 +385,7 @@ func (c *VLLMClient) HealthCheck(ctx context.Context) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.New("ERR_INTERNAL",
+		return errors.NewInternalError("ERR_INTERNAL",
 			fmt.Sprintf("vLLM unhealthy: status %d", resp.StatusCode))
 	}
 
@@ -413,7 +413,7 @@ func (c *VLLMClient) GetModels(ctx context.Context) ([]string, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, errors.New("ERR_INTERNAL",
+		return nil, errors.NewInternalError("ERR_INTERNAL",
 			fmt.Sprintf("failed to get models: %s", string(body)))
 	}
 

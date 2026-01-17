@@ -187,9 +187,9 @@ func (cm *CacheManager) Get(ctx context.Context, req interface{}) (interface{}, 
 		entry, err := cm.l3Cache.Get(ctx, key)
 		if err == nil && entry != nil {
 			// Check similarity threshold
-			if entry.Score >= cm.config.L3SimilarityThreshold {
+			if entry.Similarity >= cm.config.L3SimilarityThreshold {
 				cm.recordCacheHit(LevelL3, time.Since(startTime))
-    cm.logger.WithContext(ctx).Debug("L3 cache hit", logging.Any("key", key), logging.Any("similarity", entry.Score))
+    cm.logger.WithContext(ctx).Debug("L3 cache hit", logging.Any("key", key), logging.Any("similarity", entry.Similarity))
 
 				// Promote to L2 and L1
 				if cm.config.L2Enabled && cm.l2Cache != nil {

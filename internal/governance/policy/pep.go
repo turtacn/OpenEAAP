@@ -2,6 +2,7 @@
 package policy
 
 import (
+"github.com/prometheus/client_golang/prometheus"
 	"context"
 	"fmt"
 	"sync"
@@ -258,7 +259,7 @@ func (p *pep) Enforce(ctx context.Context, request *AccessRequest) (*Enforcement
 
 	// 记录指标
 	if p.config.EnableMetrics {
-		p.recordMetrics(request, decision, duration)
+		p.recordMetrics(request, decision, startTime)
 	}
 
  p.logger.WithContext(ctx).Info("Access policy enforced", logging.Any("request_id", request.RequestID), logging.Any("allowed", result.Allowed), logging.Any("duration_ms", duration.Milliseconds()))
@@ -373,7 +374,7 @@ func (p *pep) PreAuthorize(ctx context.Context, subjectID, resourceID, action st
 	}
 
 	if !result.Allowed {
-		return errors.New(errors.PermissionError,
+		return errors.New(errors.ForbiddenError,
 			fmt.Sprintf("access denied: %s", result.Decision.Reason))
 	}
 
@@ -394,7 +395,7 @@ func (p *pep) PostAuthorize(ctx context.Context, request *AccessRequest, result 
 	}
 
 	if !enforcementResult.Allowed {
-		return errors.New(errors.PermissionError,
+		return errors.New(errors.ForbiddenError,
 			fmt.Sprintf("post-authorization denied: %s", enforcementResult.Decision.Reason))
 	}
 
@@ -590,10 +591,10 @@ func (p *pep) recordError() {
 	p.stats.errors++
 }
 
-func (p *pep) recordMetrics(request *AccessRequest, decision *Decision, duration time.Duration) {
+func (p *pep) recordMetrics(request *AccessRequest, decision *Decision, startTime time.Time) {
 	p.metricsCollector.ObserveDuration("pep_enforcement_duration_ms",
-		float64(duration.Milliseconds()),
-		map[string]string{
+		startTime,
+		prometheus.Labels{
 			"resource_type": request.Resource.Type,
 			"action":        request.Action,
 		})

@@ -693,10 +693,11 @@ func (kc *kafkaClient) Subscribe(ctx context.Context, req *SubscribeRequest) (Co
 
 	// 创建 Sarama 配置
 	config := sarama.NewConfig()
-	config.Version = kc.config.Version != ""
-	if config.Version {
-		version, _ := sarama.ParseKafkaVersion(kc.config.Version)
-		config.Version = version
+	if kc.config.Version != "" {
+		version, err := sarama.ParseKafkaVersion(kc.config.Version)
+		if err == nil {
+			config.Version = version
+		}
 	}
 	config.Consumer.Return.Errors = true
 
@@ -781,10 +782,17 @@ func (kc *kafkaClient) CreateTopic(ctx context.Context, config *TopicConfig) err
 		return errors.NewValidationError(errors.CodeInvalidParameter, "topic name cannot be empty")
 	}
 
+	// Convert ConfigEntries to the format Sarama expects
+	configEntries := make(map[string]*string)
+	for k, v := range config.ConfigEntries {
+		val := v
+		configEntries[k] = &val
+	}
+	
 	detail := &sarama.TopicDetail{
 		NumPartitions:     config.NumPartitions,
 		ReplicationFactor: config.ReplicationFactor,
-		ConfigEntries:     config.ConfigEntries,
+		ConfigEntries:     configEntries,
 	}
 
 	err := kc.admin.CreateTopic(config.Name, detail, false)
@@ -1196,7 +1204,7 @@ func (c *consumer) Start(ctx context.Context) error {
 					if c.errorHandler != nil {
 						c.errorHandler(err)
 					}
-					c.logger.Error("failed to handle message", "error", err)
+					c.logger.Error("failed to handle message", logging.Error(err))
 				}
 
 				c.mu.Lock()
@@ -1207,7 +1215,7 @@ func (c *consumer) Start(ctx context.Context) error {
 				if c.errorHandler != nil {
 					c.errorHandler(err)
 				}
-				c.logger.Error("consumer error", "error", err)
+				c.logger.Error("consumer error", logging.Error(err))
 			}
 		}
 	}()
@@ -1306,7 +1314,7 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 				if h.errorHandler != nil {
 					h.errorHandler(err)
 				}
-				h.logger.Error("failed to handle message", "error", err)
+				h.logger.Error("failed to handle message", logging.Error(err))
 				continue
 			}
 

@@ -373,11 +373,11 @@ func (e *learningEngine) processFeedbackLoop() {
 	for {
 		select {
 		case <-e.ctx.Done():
-			e.logger.Info(context.Background(), "Feedback processing loop stopped")
+			e.logger.Info("Feedback processing loop stopped")
 			return
 		case <-ticker.C:
 			if err := e.flushFeedbacks(context.Background()); err != nil {
-				e.logger.Error(context.Background(), "Failed to flush feedbacks", "error", err)
+				e.logger.Error("Failed to flush feedbacks", "error", err)
 			}
 		}
 	}
@@ -393,11 +393,11 @@ func (e *learningEngine) autoOptimizationLoop() {
 	for {
 		select {
 		case <-e.ctx.Done():
-			e.logger.Info(context.Background(), "Auto optimization loop stopped")
+			e.logger.Info("Auto optimization loop stopped")
 			return
 		case <-ticker.C:
 			if err := e.checkAllModelsForOptimization(context.Background()); err != nil {
-				e.logger.Error(context.Background(), "Failed to check models for optimization", "error", err)
+				e.logger.Error("Failed to check models for optimization", "error", err)
 			}
 		}
 	}
@@ -413,11 +413,11 @@ func (e *learningEngine) performanceMonitorLoop() {
 	for {
 		select {
 		case <-e.ctx.Done():
-			e.logger.Info(context.Background(), "Performance monitor loop stopped")
+			e.logger.Info("Performance monitor loop stopped")
 			return
 		case <-ticker.C:
 			if err := e.monitorPerformanceDegradation(context.Background()); err != nil {
-				e.logger.Error(context.Background(), "Failed to monitor performance", "error", err)
+				e.logger.Error("Failed to monitor performance", "error", err)
 			}
 		}
 	}

@@ -86,7 +86,7 @@ type modelRepo struct {
 // NewModelRepository 创建 Model 仓储
 func NewModelRepository(db *gorm.DB) (model.ModelRepository, error) {
 	if db == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "database connection cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "database connection cannot be nil")
 	}
 
 	// 自动迁移表结构
@@ -104,7 +104,7 @@ func NewModelRepository(db *gorm.DB) (model.ModelRepository, error) {
 // Create 创建 Model
 func (r *modelRepo) Create(ctx context.Context, mdl *model.Model) error {
 	if mdl == nil {
-		return errors.New(errors.CodeInvalidParameter, "model cannot be nil")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "model cannot be nil")
 	}
 
 	// 验证 Model
@@ -121,7 +121,7 @@ func (r *modelRepo) Create(ctx context.Context, mdl *model.Model) error {
 	// 执行创建
 	if err := r.db.WithContext(ctx).Create(dbModel).Error; err != nil {
 		if isDuplicateKeyError(err) {
-			return errors.Wrap(err, errors.ConflictError, "model already exists")
+			return errors.Wrap(err, errors.CodeConflict, "model already exists")
 		}
 		return errors.Wrap(err, errors.CodeDatabaseError, "failed to create model")
 	}
@@ -133,16 +133,59 @@ func (r *modelRepo) Create(ctx context.Context, mdl *model.Model) error {
 	return nil
 }
 
+// BatchCreate creates multiple models
+func (r *modelRepo) BatchCreate(ctx context.Context, models []*model.Model) error {
+	if len(models) == 0 {
+		return nil
+	}
+	
+	dbModels := make([]*ModelModel, 0, len(models))
+	for _, mdl := range models {
+		if mdl == nil {
+			continue
+		}
+		
+		if err := mdl.Validate(); err != nil {
+			return errors.Wrap(err, errors.CodeInvalidParameter, "invalid model in batch")
+		}
+		
+		dbModel, err := r.toModel(mdl)
+		if err != nil {
+			return errors.Wrap(err, errors.CodeInternalError, "failed to convert model")
+		}
+		dbModels = append(dbModels, dbModel)
+	}
+	
+	if len(dbModels) == 0 {
+		return nil
+	}
+	
+	// Create in batch
+	if err := r.db.WithContext(ctx).Create(&dbModels).Error; err != nil {
+		return errors.Wrap(err, errors.CodeDatabaseError, "failed to batch create models")
+	}
+	
+	// Update timestamps
+	for i, dbModel := range dbModels {
+		if i < len(models) && models[i] != nil {
+			models[i].CreatedAt = dbModel.CreatedAt
+			models[i].UpdatedAt = dbModel.UpdatedAt
+		}
+	}
+	
+	return nil
+}
+
 // GetByID 根据 ID 获取 Model
 func (r *modelRepo) GetByID(ctx context.Context, id string) (*model.Model, error) {
 	if id == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "model ID cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "model ID cannot be empty")
 	}
 
 	var dbModel ModelModel
 	if err := r.db.WithContext(ctx).First(&dbModel, "id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, errors.New(errors.CodeNotFound, "model not found")
+			return nil, errors.NewNotFoundError(errors.CodeNotFound, "model not found")
 		}
 		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get model")
 	}
@@ -153,13 +196,13 @@ func (r *modelRepo) GetByID(ctx context.Context, id string) (*model.Model, error
 // GetByName 根据名称获取 Model
 func (r *modelRepo) GetByName(ctx context.Context, name string) (*model.Model, error) {
 	if name == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "model name cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "model name cannot be empty")
 	}
 
 	var dbModel ModelModel
 	if err := r.db.WithContext(ctx).First(&dbModel, "name = ?", name).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, errors.New(errors.CodeNotFound, "model not found")
+			return nil, errors.NewNotFoundError(errors.CodeNotFound, "model not found")
 		}
 		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get model by name")
 	}
@@ -170,10 +213,10 @@ func (r *modelRepo) GetByName(ctx context.Context, name string) (*model.Model, e
 // Update 更新 Model
 func (r *modelRepo) Update(ctx context.Context, mdl *model.Model) error {
 	if mdl == nil {
-		return errors.New(errors.CodeInvalidParameter, "model cannot be nil")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "model cannot be nil")
 	}
 	if mdl.ID == "" {
-		return errors.New(errors.CodeInvalidParameter, "model ID cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "model ID cannot be empty")
 	}
 
 	// 验证 Model
@@ -215,7 +258,7 @@ func (r *modelRepo) Update(ctx context.Context, mdl *model.Model) error {
 	}
 
 	if result.RowsAffected == 0 {
-		return errors.New(errors.CodeNotFound, "model not found")
+		return errors.NewNotFoundError(errors.CodeNotFound, "model not found")
 	}
 
 	// 更新实体的时间戳
@@ -227,7 +270,7 @@ func (r *modelRepo) Update(ctx context.Context, mdl *model.Model) error {
 // Delete 删除 Model（软删除）
 func (r *modelRepo) Delete(ctx context.Context, id string) error {
 	if id == "" {
-		return errors.New(errors.CodeInvalidParameter, "model ID cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "model ID cannot be empty")
 	}
 
 	result := r.db.WithContext(ctx).Delete(&ModelModel{}, "id = ?", id)
@@ -236,9 +279,104 @@ func (r *modelRepo) Delete(ctx context.Context, id string) error {
 	}
 
 	if result.RowsAffected == 0 {
-		return errors.New(errors.CodeNotFound, "model not found")
+		return errors.NewNotFoundError(errors.CodeNotFound, "model not found")
 	}
 
+	return nil
+}
+
+// AddTag adds a tag to a model
+func (r *modelRepo) AddTag(ctx context.Context, id string, tag string) error {
+	if id == "" {
+		return errors.NewValidationError(errors.CodeInvalidParameter, "model ID cannot be empty")
+	}
+	if tag == "" {
+		return errors.NewValidationError(errors.CodeInvalidParameter, "tag cannot be empty")
+	}
+	
+	// Get the model
+	var dbModel ModelModel
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&dbModel).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.NewNotFoundError(errors.CodeNotFound, "model not found")
+		}
+		return errors.Wrap(err, errors.CodeDatabaseError, "failed to get model")
+	}
+	
+	// Parse tags
+	var tags []string
+	if dbModel.Tags != "" {
+		if err := json.Unmarshal([]byte(dbModel.Tags), &tags); err != nil {
+			tags = []string{}
+		}
+	}
+	
+	// Check if tag already exists
+	for _, t := range tags {
+		if t == tag {
+			return nil // Tag already exists
+		}
+	}
+	
+	// Add the tag
+	tags = append(tags, tag)
+	tagsJSON, err := json.Marshal(tags)
+	if err != nil {
+		return errors.Wrap(err, errors.CodeInternalError, "failed to marshal tags")
+	}
+	
+	// Update the model
+	if err := r.db.WithContext(ctx).Model(&ModelModel{}).Where("id = ?", id).Update("tags", string(tagsJSON)).Error; err != nil {
+		return errors.Wrap(err, errors.CodeDatabaseError, "failed to update model tags")
+	}
+	
+	return nil
+}
+
+// RemoveTag removes a tag from a model
+func (r *modelRepo) RemoveTag(ctx context.Context, id string, tag string) error {
+	if id == "" {
+		return errors.NewValidationError(errors.CodeInvalidParameter, "model ID cannot be empty")
+	}
+	if tag == "" {
+		return errors.NewValidationError(errors.CodeInvalidParameter, "tag cannot be empty")
+	}
+	
+	// Get the model
+	var dbModel ModelModel
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&dbModel).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.NewNotFoundError(errors.CodeNotFound, "model not found")
+		}
+		return errors.Wrap(err, errors.CodeDatabaseError, "failed to get model")
+	}
+	
+	// Parse tags
+	var tags []string
+	if dbModel.Tags != "" {
+		if err := json.Unmarshal([]byte(dbModel.Tags), &tags); err != nil {
+			tags = []string{}
+		}
+	}
+	
+	// Remove the tag
+	newTags := make([]string, 0)
+	for _, t := range tags {
+		if t != tag {
+			newTags = append(newTags, t)
+		}
+	}
+	
+	tagsJSON, err := json.Marshal(newTags)
+	if err != nil {
+		return errors.Wrap(err, errors.CodeInternalError, "failed to marshal tags")
+	}
+	
+	// Update the model
+	if err := r.db.WithContext(ctx).Model(&ModelModel{}).Where("id = ?", id).Update("tags", string(tagsJSON)).Error; err != nil {
+		return errors.Wrap(err, errors.CodeDatabaseError, "failed to update model tags")
+	}
+	
 	return nil
 }
 
@@ -327,10 +465,10 @@ func (r *modelRepo) List(ctx context.Context, filter *model.ModelFilter) ([]*mod
 // UpdateStatus 更新 Model 状态
 func (r *modelRepo) UpdateStatus(ctx context.Context, id string, status model.ModelStatus) error {
 	if id == "" {
-		return errors.New(errors.CodeInvalidParameter, "model ID cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "model ID cannot be empty")
 	}
 	if !status.Valid() {
-		return errors.New(errors.CodeInvalidParameter, "invalid model status")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "invalid model status")
 	}
 
 	result := r.db.WithContext(ctx).
@@ -346,7 +484,7 @@ func (r *modelRepo) UpdateStatus(ctx context.Context, id string, status model.Mo
 	}
 
 	if result.RowsAffected == 0 {
-		return errors.New(errors.CodeNotFound, "model not found")
+		return errors.NewNotFoundError(errors.CodeNotFound, "model not found")
 	}
 
 	return nil
@@ -355,7 +493,7 @@ func (r *modelRepo) UpdateStatus(ctx context.Context, id string, status model.Mo
 // SetDefault 设置默认模型
 func (r *modelRepo) SetDefault(ctx context.Context, id string, modelType model.ModelType) error {
 	if id == "" {
-		return errors.New(errors.CodeInvalidParameter, "model ID cannot be empty")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "model ID cannot be empty")
 	}
 
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -376,7 +514,7 @@ func (r *modelRepo) SetDefault(ctx context.Context, id string, modelType model.M
 		}
 
 		if result.RowsAffected == 0 {
-			return errors.New(errors.CodeNotFound, "model not found")
+			return errors.NewNotFoundError(errors.CodeNotFound, "model not found")
 		}
 
 		return nil
@@ -390,7 +528,7 @@ func (r *modelRepo) GetDefault(ctx context.Context, modelType model.ModelType) (
 		Where("type = ? AND is_default = ?", modelType.String(), true).
 		First(&dbModel).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, errors.New(errors.CodeNotFound, "default model not found")
+			return nil, errors.NewNotFoundError(errors.CodeNotFound, "default model not found")
 		}
 		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get default model")
 	}
@@ -401,7 +539,7 @@ func (r *modelRepo) GetDefault(ctx context.Context, modelType model.ModelType) (
 // CreateVersion 创建模型版本
 func (r *modelRepo) CreateVersion(ctx context.Context, version *model.ModelVersion) error {
 	if version == nil {
-		return errors.New(errors.CodeInvalidParameter, "model version cannot be nil")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "model version cannot be nil")
 	}
 
 	versionModel, err := r.versionToModel(version)
@@ -425,7 +563,7 @@ func (r *modelRepo) CreateVersion(ctx context.Context, version *model.ModelVersi
 // GetVersionsByModelID 获取模型的所有版本
 func (r *modelRepo) GetVersionsByModelID(ctx context.Context, modelID string) ([]*model.ModelVersion, error) {
 	if modelID == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "model ID cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "model ID cannot be empty")
 	}
 
 	var versionModels []ModelVersionModel
@@ -451,7 +589,7 @@ func (r *modelRepo) GetVersionsByModelID(ctx context.Context, modelID string) ([
 // RecordMetrics 记录模型指标
 func (r *modelRepo) RecordMetrics(ctx context.Context, metrics *model.ModelMetrics) error {
 	if metrics == nil {
-		return errors.New(errors.CodeInvalidParameter, "metrics cannot be nil")
+		return errors.NewValidationError(errors.CodeInvalidParameter, "metrics cannot be nil")
 	}
 
 	metricsModel := r.metricsToModel(metrics)
@@ -466,7 +604,7 @@ func (r *modelRepo) RecordMetrics(ctx context.Context, metrics *model.ModelMetri
 // GetMetrics 获取模型指标
 func (r *modelRepo) GetMetrics(ctx context.Context, modelID string, metricType string, start, end time.Time) ([]*model.ModelMetrics, error) {
 	if modelID == "" {
-		return nil, errors.New(errors.CodeInvalidParameter, "model ID cannot be empty")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "model ID cannot be empty")
 	}
 
 	query := r.db.WithContext(ctx).
@@ -737,6 +875,56 @@ func (r *modelRepo) metricsToModel(metrics *model.ModelMetrics) *ModelMetricsMod
 		Tags:       string(tagsJSON),
 		CreatedAt:  time.Now(),
 	}
+}
+
+// BatchUpdate updates multiple models
+func (r *modelRepo) BatchUpdate(ctx context.Context, models []*model.Model) error {
+	if len(models) == 0 {
+		return nil
+	}
+
+	// Use transaction for batch update
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, mdl := range models {
+			if mdl == nil {
+				continue
+			}
+			if mdl.ID == "" {
+				return errors.NewValidationError(errors.CodeInvalidParameter, "model ID cannot be empty")
+			}
+
+			// Validate model
+			if err := mdl.Validate(); err != nil {
+				return errors.Wrap(err, errors.CodeInvalidParameter, "invalid model")
+			}
+
+			// Convert to database model
+			dbModel, err := r.toModel(mdl)
+			if err != nil {
+				return errors.Wrap(err, "ERR_INTERNAL", "failed to convert model to db model")
+			}
+
+			// Execute update
+			if err := tx.Save(dbModel).Error; err != nil {
+				return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to update model")
+			}
+		}
+		return nil
+	})
+}
+
+// BatchDelete deletes multiple models by their IDs
+func (r *modelRepo) BatchDelete(ctx context.Context, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	result := r.db.WithContext(ctx).Delete(&ModelModel{}, "id IN ?", ids)
+	if result.Error != nil {
+		return errors.WrapDatabaseError(result.Error, errors.CodeDatabaseError, "failed to batch delete models")
+	}
+
+	return nil
 }
 
 // metricsToEntity 将数据库模型转换为指标实体
