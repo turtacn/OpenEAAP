@@ -75,7 +75,7 @@ install_tools() {
 
    # Check Go installation
    if ! check_command go; then
-       log_error "Go is not installed. Please install Go 1.21+ first."
+       log_error "Go is not installed. Please install Go 1.24+ first."
        exit 1
    fi
 
