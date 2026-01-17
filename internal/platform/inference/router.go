@@ -757,7 +757,7 @@ func (r *Router) recordRoutingMetrics(strategy, engine string, latency time.Dura
 			"engine":   engine,
 		})
 
-	r.metricsCollector.ObserveDuration("router_route_latency_ms", float64(latency.Milliseconds()),
+	r.metricsCollector.ObserveHistogram("router_route_latency_ms", float64(latency.Milliseconds()),
 		map[string]string{
 			"strategy": strategy,
 		})

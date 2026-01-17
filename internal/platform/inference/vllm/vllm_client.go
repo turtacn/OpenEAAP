@@ -508,7 +508,7 @@ func (c *VLLMClient) recordMetrics(operation, status string, latency time.Durati
 			"status":    status,
 		})
 
-	c.metricsCollector.ObserveDuration("vllm_request_latency_ms", float64(latency.Milliseconds()),
+	c.metricsCollector.ObserveHistogram("vllm_request_latency_ms", float64(latency.Milliseconds()),
 		map[string]string{
 			"operation": operation,
 		})

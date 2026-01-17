@@ -498,7 +498,7 @@ func (g *PrivacyGateway) recordMetrics(direction string, action PrivacyAction, h
 			"has_pii":   fmt.Sprintf("%t", hasPII),
 		})
 
-	g.metricsCollector.ObserveDuration("privacy_gateway_latency_ms", float64(latency.Milliseconds()),
+	g.metricsCollector.ObserveHistogram("privacy_gateway_latency_ms", float64(latency.Milliseconds()),
 		map[string]string{
 			"direction": direction,
 		})

@@ -513,7 +513,7 @@ func (cm *CacheManager) recordCacheHit(level CacheLevel, latency time.Duration) 
 				"level": string(level),
 			})
 
-		cm.metricsCollector.ObserveDuration("cache_latency_ms", float64(latency.Milliseconds()),
+		cm.metricsCollector.ObserveHistogram("cache_latency_ms", float64(latency.Milliseconds()),
 			map[string]string{
 				"level":  string(level),
 				"result": "hit",
@@ -530,7 +530,7 @@ func (cm *CacheManager) recordCacheMiss(latency time.Duration) {
 	if cm.metricsCollector != nil {
 		cm.metricsCollector.IncrementCounter("cache_misses_total", nil)
 
-		cm.metricsCollector.ObserveDuration("cache_latency_ms", float64(latency.Milliseconds()),
+		cm.metricsCollector.ObserveHistogram("cache_latency_ms", float64(latency.Milliseconds()),
 			map[string]string{
 				"result": "miss",
 			})
@@ -542,7 +542,7 @@ func (cm *CacheManager) recordCacheSet(latency time.Duration) {
 	if cm.metricsCollector != nil {
 		cm.metricsCollector.IncrementCounter("cache_sets_total", nil)
 
-		cm.metricsCollector.ObserveDuration("cache_set_latency_ms", float64(latency.Milliseconds()), nil)
+		cm.metricsCollector.ObserveHistogram("cache_set_latency_ms", float64(latency.Milliseconds()), nil)
 	}
 }
 
