@@ -307,22 +307,7 @@ func (r *agentRepo) HardDelete(ctx context.Context, id string) error {
 }
 
 // List 列出 Agent（分页）
-func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*agent.Agent, int64, error) {
-	if filter == nil {
-		filter = &agent.AgentFilter{}
-	}
-
-	// 应用默认值
-	if filter.Limit <= 0 {
-		filter.Limit = 20
-	}
-	if filter.Limit > 100 {
-		filter.Limit = 100
-	}
-	if filter.Offset < 0 {
-		filter.Offset = 0
-	}
-
+func (r *agentRepo) List(ctx context.Context, filter agent.AgentFilter) ([]*agent.Agent, error) {
 	// 构建查询
 	query := r.db.WithContext(ctx).Model(&AgentModel{})
 
@@ -340,12 +325,6 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 		query = query.Where("created_at <= ?", filter.CreatedBefore)
 	}
 
-	// 获取总数
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to count agents")
-	}
-
 	// 应用排序
 	orderBy := "created_at DESC"
 	if filter.SortBy != "" {
@@ -359,12 +338,21 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 	query = query.Order(orderBy)
 
 	// 应用分页
+	if filter.Limit <= 0 {
+		filter.Limit = 20
+	}
+	if filter.Limit > 100 {
+		filter.Limit = 100
+	}
+	if filter.Offset < 0 {
+		filter.Offset = 0
+	}
 	query = query.Offset(filter.Offset).Limit(filter.Limit)
 
 	// 查询数据
 	var models []AgentModel
 	if err := query.Find(&models).Error; err != nil {
-		return nil, 0, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to list agents")
+		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to list agents")
 	}
 
 	// 转换为实体
@@ -372,12 +360,12 @@ func (r *agentRepo) List(ctx context.Context, filter *agent.AgentFilter) ([]*age
 	for i := range models {
 		agt, err := r.toEntity(&models[i])
 		if err != nil {
-			return nil, 0, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert model to entity")
+			return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert model to entity")
 		}
 		agents = append(agents, agt)
 	}
 
-	return agents, total, nil
+	return agents, nil
 }
 
 // UpdateStatus 更新 Agent 状态
@@ -587,7 +575,7 @@ func (r *agentRepo) Archive(ctx context.Context, id string) error {
 // GetArchived retrieves archived agents
 func (r *agentRepo) GetArchived(ctx context.Context, filter agent.AgentFilter) ([]*agent.Agent, error) {
 	filter.IncludeArchived = true
-	agents, _, err := r.List(ctx, &filter)
+	agents, err := r.List(ctx, filter)
 	return agents, err
 }
 
@@ -780,3 +768,93 @@ func (r *agentRepo) IncrementExecutionCount(ctx context.Context, id string, succ
 	return nil
 }
 
+
+// Restore restores a soft-deleted agent
+func (r *agentRepo) Restore(ctx context.Context, id string) error {
+result := r.db.WithContext(ctx).
+Model(&AgentModel{}).
+Where("id = ? AND deleted_at IS NOT NULL", id).
+Update("deleted_at", nil)
+
+if result.Error != nil {
+return errors.Wrap(result.Error, errors.CodeDatabaseError, "failed to restore agent")
+}
+
+if result.RowsAffected == 0 {
+return errors.NewNotFoundError(errors.CodeNotFound, "agent not found or not deleted")
+}
+
+return nil
+}
+
+// Search searches agents by query
+func (r *agentRepo) Search(ctx context.Context, query string, filter agent.AgentFilter) ([]*agent.Agent, error) {
+// Build query
+q := r.db.WithContext(ctx).Model(&AgentModel{})
+
+// Apply search across name and description
+if query != "" {
+q = q.Where("name LIKE ? OR description LIKE ?", "%"+query+"%", "%"+query+"%")
+}
+
+// Apply filters
+if len(filter.RuntimeType) > 0 {
+q = q.Where("runtime_type = ?", filter.RuntimeType)
+}
+if len(filter.Status) > 0 {
+q = q.Where("status = ?", filter.Status)
+}
+if !filter.CreatedAfter.IsZero() {
+q = q.Where("created_at >= ?", filter.CreatedAfter)
+}
+if !filter.CreatedBefore.IsZero() {
+q = q.Where("created_at <= ?", filter.CreatedBefore)
+}
+
+// Apply pagination
+if filter.Limit <= 0 {
+filter.Limit = 20
+}
+if filter.Limit > 100 {
+filter.Limit = 100
+}
+q = q.Offset(filter.Offset).Limit(filter.Limit)
+
+// Execute query
+var models []AgentModel
+if err := q.Find(&models).Error; err != nil {
+return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to search agents")
+}
+
+// Convert to entities
+agents := make([]*agent.Agent, 0, len(models))
+for i := range models {
+agt, err := r.toEntity(&models[i])
+if err != nil {
+return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert model to entity")
+}
+agents = append(agents, agt)
+}
+
+return agents, nil
+}
+
+// SoftDelete performs soft delete on an agent
+func (r *agentRepo) SoftDelete(ctx context.Context, id string) error {
+if id == "" {
+return errors.NewValidationError(errors.CodeInvalidParameter, "agent ID cannot be empty")
+}
+
+result := r.db.WithContext(ctx).Model(&AgentModel{}).
+Where("id = ?", id).
+Update("deleted_at", time.Now())
+
+if result.Error != nil {
+return errors.WrapDatabaseError(result.Error, errors.CodeDatabaseError, "failed to soft delete agent")
+}
+if result.RowsAffected == 0 {
+return errors.NewNotFoundError(errors.CodeNotFound, "agent not found")
+}
+
+return nil
+}

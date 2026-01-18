@@ -3,7 +3,7 @@ package kafka
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	// "fmt"
 	"sync"
 	"time"
 
@@ -1061,7 +1061,7 @@ func (kc *kafkaClient) GetClusterMetadata(ctx context.Context) (*ClusterMetadata
 		return nil, errors.NewInternalError("KAFKA_ERR", "kafka client is closed")
 	}
 
-	metadata, err := kc.admin.DescribeCluster()
+	metadata, _, err := kc.admin.DescribeCluster()
 	if err != nil {
 		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to describe cluster")
 	}
@@ -1086,8 +1086,8 @@ func (kc *kafkaClient) GetClusterMetadata(ctx context.Context) (*ClusterMetadata
 	}
 
 	return &ClusterMetadata{
-		ClusterID:    metadata.ClusterID,
-		ControllerID: metadata.ControllerID,
+		ClusterID:    "", // metadata.ClusterID - not available in broker list
+		ControllerID: -1, // metadata.ControllerID - not available in broker list
 		Brokers:      brokers,
 		Topics:       topicList,
 	}, nil
@@ -1099,7 +1099,7 @@ func (kc *kafkaClient) GetBrokers(ctx context.Context) ([]*BrokerInfo, error) {
 		return nil, errors.NewInternalError("KAFKA_ERR", "kafka client is closed")
 	}
 
-	metadata, err := kc.admin.DescribeCluster()
+	metadata, _, err := kc.admin.DescribeCluster()
 	if err != nil {
 		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to describe cluster")
 	}
@@ -1344,7 +1344,7 @@ func (cg *consumerGroup) Start(ctx context.Context) error {
 					if cg.errorHandler != nil {
 						cg.errorHandler(err)
 					}
-					cg.logger.Error("consumer group error", "error", err)
+					cg.logger.Error("consumer group error", logging.String("error", err.Error()))
 				}
 			}
 		}

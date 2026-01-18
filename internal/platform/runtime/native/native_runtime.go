@@ -20,8 +20,8 @@ type NativeRuntime struct {
 	name           string
 	version        string
 	config         *runtime.RuntimeConfig
-	logger         logger.Logger
-	llmClient      llm.LLMClient
+	logger         logging.Logger
+	// llmClient      llm.LLMClient
 	toolManager    ToolManager
 	memoryManager  MemoryManager
 	status         runtime.RuntimeStatus
@@ -269,8 +269,8 @@ func (nr *NativeRuntime) Initialize(ctx context.Context, config *runtime.Runtime
 
 	nr.status = runtime.RuntimeStatusReady
 	nr.logger.Info("native runtime initialized",
-		"runtime_id", nr.id,
-		"version", nr.version)
+		logging.String("runtime_id", nr.id),
+		logging.String("version", nr.version))
 
 	return nil
 }
@@ -422,7 +422,7 @@ func (nr *NativeRuntime) Shutdown(ctx context.Context) error {
 		return nil
 	}
 
-	nr.logger.Info("shutting down native runtime", "runtime_id", nr.id)
+	nr.logger.Info("shutting down native runtime", logging.String("runtime_id", nr.id))
 
 	// 发送关闭信号
 	close(nr.shutdownChan)
@@ -437,7 +437,7 @@ func (nr *NativeRuntime) Shutdown(ctx context.Context) error {
 	// 等待关闭完成或超时
 	select {
 	case <-done:
-		nr.logger.Info("native runtime shutdown completed", "runtime_id", nr.id)
+		nr.logger.Info("native runtime shutdown completed", logging.String("runtime_id", nr.id))
 	case <-ctx.Done():
 		return errors.NewTimeoutError("DEADLINE_EXCEEDED", "shutdown timeout")
 	}
@@ -472,7 +472,7 @@ func (nr *NativeRuntime) UpdateConfig(ctx context.Context, config *runtime.Runti
 	nr.config = config
 	nr.metadata.UpdatedAt = time.Now()
 
-	nr.logger.Info("native runtime configuration updated", "runtime_id", nr.id)
+	nr.logger.Info("native runtime configuration updated", logging.String("runtime_id", nr.id))
 	return nil
 }
 
@@ -490,7 +490,7 @@ func (nr *NativeRuntime) executeReAct(ctx context.Context, req *runtime.ExecuteR
 	if nr.memoryManager != nil {
 		memories, err := nr.memoryManager.Retrieve(ctx, req.Input, 5)
 		if err != nil {
-			nr.logger.Warn("failed to retrieve memories", "error", err)
+			nr.logger.Warn("failed to retrieve memories", logging.String("error", err))
 		} else {
 			conversationHistory = nr.formatMemories(memories)
 		}
@@ -511,6 +511,7 @@ func (nr *NativeRuntime) executeReAct(ctx context.Context, req *runtime.ExecuteR
 		}
 
 		// 添加之前的步骤到上下文
+		/*
 		for _, s := range result.Steps {
 			messages = append(messages,
 				llm.Message{
@@ -519,6 +520,7 @@ func (nr *NativeRuntime) executeReAct(ctx context.Context, req *runtime.ExecuteR
 				},
 			)
 		}
+		*/
 
 		// 调用LLM
 		llmResp, err := nr.llmClient.Chat(ctx, &llm.ChatRequest{
@@ -584,7 +586,7 @@ func (nr *NativeRuntime) executeReAct(ctx context.Context, req *runtime.ExecuteR
 			Timestamp: time.Now(),
 		}
 		if err := nr.memoryManager.Store(ctx, memory); err != nil {
-			nr.logger.Warn("failed to store memory", "error", err)
+			nr.logger.Warn("failed to store memory", logging.String("error", err))
 		}
 	}
 
@@ -687,7 +689,7 @@ func (nr *NativeRuntime) parseReActResponse(response string) (*ReActStep, bool, 
 		// 尝试解析JSON
 		var input map[string]interface{}
 		if err := json.Unmarshal([]byte(inputStr), &input); err != nil {
-			nr.logger.Warn("failed to parse action input as JSON", "input", inputStr, "error", err)
+			nr.logger.Warn("failed to parse action input as JSON", logging.String("input", inputStr), logging.String("error", err))
 			// 如果不是JSON，使用原始字符串
 			step.ActionInput = map[string]interface{}{"input": inputStr}
 		} else {
@@ -799,7 +801,7 @@ func (nr *NativeRuntime) healthCheckLoop() {
 			cancel()
 
 			if err != nil {
-				nr.logger.Warn("health check failed", "error", err)
+				nr.logger.Warn("health check failed", logging.String("error", err))
 			}
 		case <-nr.shutdownChan:
 			return

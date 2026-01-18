@@ -5,6 +5,7 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -387,7 +388,7 @@ func RequireAnyRole(logger logging.Logger, requiredRoles ...string) gin.HandlerF
 
 // currentTimestamp returns current Unix timestamp
 func currentTimestamp() int64 {
-	return jwt.NewNumericDate(jwt.TimeFunc()).Unix()
+	return jwt.NewNumericDate(time.Now()).Unix()
 }
 
 //Personal.AI order the ending

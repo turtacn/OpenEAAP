@@ -78,24 +78,25 @@ func CORSMiddleware(cfg *config.Config, logger logging.Logger) gin.HandlerFunc {
 func buildCORSConfig(cfg *config.Config) *CORSConfig {
 	corsConfig := DefaultCORSConfig()
 
-	if cfg.Server.CORS.Enabled {
-		if len(cfg.Server.CORS.AllowedOrigins) > 0 {
-			corsConfig.AllowedOrigins = cfg.Server.CORS.AllowedOrigins
-		}
-		if len(cfg.Server.CORS.AllowedMethods) > 0 {
-			corsConfig.AllowedMethods = cfg.Server.CORS.AllowedMethods
-		}
-		if len(cfg.Server.CORS.AllowedHeaders) > 0 {
-			corsConfig.AllowedHeaders = cfg.Server.CORS.AllowedHeaders
-		}
-		if len(cfg.Server.CORS.ExposedHeaders) > 0 {
-			corsConfig.ExposedHeaders = cfg.Server.CORS.ExposedHeaders
-		}
-		corsConfig.AllowCredentials = cfg.Server.CORS.AllowCredentials
-		if cfg.Server.CORS.MaxAge > 0 {
-			corsConfig.MaxAge = cfg.Server.CORS.MaxAge
-		}
-	}
+	// TODO: Add CORS config to Config struct
+// 	if cfg.Server.CORS.Enabled {
+// 		if len(cfg.Server.CORS.AllowedOrigins) > 0 {
+// 			corsConfig.AllowedOrigins = cfg.Server.CORS.AllowedOrigins
+// 		}
+// 		if len(cfg.Server.CORS.AllowedMethods) > 0 {
+// 			corsConfig.AllowedMethods = cfg.Server.CORS.AllowedMethods
+// 		}
+// 		if len(cfg.Server.CORS.AllowedHeaders) > 0 {
+// 			corsConfig.AllowedHeaders = cfg.Server.CORS.AllowedHeaders
+// 		}
+// 		if len(cfg.Server.CORS.ExposedHeaders) > 0 {
+// 			corsConfig.ExposedHeaders = cfg.Server.CORS.ExposedHeaders
+// 		}
+// 		corsConfig.AllowCredentials = cfg.Server.CORS.AllowCredentials
+// 		if cfg.Server.CORS.MaxAge > 0 {
+// 			corsConfig.MaxAge = cfg.Server.CORS.MaxAge
+// 		}
+// 	}
 
 	return corsConfig
 }

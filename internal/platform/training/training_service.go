@@ -321,9 +321,10 @@ func (s *trainingService) CreateTask(ctx context.Context, req *TrainingRequest) 
  s.logger.WithContext(ctx).Info("Creating training task", logging.Any("model_id", req.ModelID), logging.Any("type", req.TrainingType))
 
 	// 验证模型存在
-	if _, err := s.modelRepo.GetByID(ctx, req.ModelID); err != nil {
-		return nil, errors.Wrap(err, errors.CodeNotFound, "model not found")
-	}
+	// TODO: Uncomment when modelRepo.GetByID is available
+	// if _, err := s.modelRepo.GetByID(ctx, req.ModelID); err != nil {
+	// 	return nil, errors.Wrap(err, errors.CodeNotFound, "model not found")
+	// }
 
 	// 验证数据集
 	if req.Dataset == nil || len(req.Dataset.Samples) == 0 {

@@ -976,8 +976,7 @@ func (pr *PluginRegistry) Backup() error {
 	defer pr.mu.RUnlock()
 
 	// 简化实现：实际应该序列化到文件
-	pr.// logger.Debug("registry backup completed",
-		"plugin_count", len(pr.plugins))
+	// logger.Debug("registry backup completed", "plugin_count", len(pr.plugins))
 
 	return nil
 }
@@ -993,10 +992,9 @@ func matchesQuery(text, query string) bool {
 }
 
 // NewVersionControl 创建版本控制
-func NewVersionControl(logger // logger.Logger) *VersionControl {
+func NewVersionControl() *VersionControl {
 	return &VersionControl{
 		versions: make(map[string][]*VersionEntry),
-		logger:   logger,
 	}
 }
 
@@ -1017,9 +1015,7 @@ func (vc *VersionControl) AddVersion(pluginName string, entry *VersionEntry) {
 	// 添加新版本
 	vc.versions[pluginName] = append(vc.versions[pluginName], entry)
 
-	vc.// logger.Debug("version added",
-		"plugin_name", pluginName,
-		"version", entry.Version.String())
+	// logger.Debug("version added", "plugin_name", pluginName, "version", entry.Version.String())
 }
 
 // GetVersions 获取版本列表
@@ -1105,9 +1101,8 @@ func (v *Version) Equal(other *Version) bool {
 }
 
 // NewHealthChecker 创建健康检查器
-func NewHealthChecker(logger // logger.Logger, checkInterval time.Duration) *HealthChecker {
+func NewHealthChecker(checkInterval time.Duration) *HealthChecker {
 	return &HealthChecker{
-		logger:        logger,
 		checkInterval: checkInterval,
 		results:       make(map[string]*PluginHealthStatus),
 		stopChan:      make(chan struct{}),
@@ -1212,27 +1207,20 @@ func (hc *HealthChecker) GetHealthStatus(pluginID string) *PluginHealthStatus {
 
 // SimpleEventHandler 简单事件处理器
 type SimpleEventHandler struct {
-	logger // logger.Logger
+	// logger // logger.Logger
 }
 
 // NewSimpleEventHandler 创建简单事件处理器
-func NewSimpleEventHandler(logger // logger.Logger) *SimpleEventHandler {
-	return &SimpleEventHandler{
-		logger: logger,
-	}
+func NewSimpleEventHandler() *SimpleEventHandler {
+	return &SimpleEventHandler{}
 }
 
 // HandleEvent 处理事件
 func (seh *SimpleEventHandler) HandleEvent(event *PluginEvent) error {
-	seh.// logger.Info("plugin event",
-		"type", event.Type,
-		"plugin_id", event.PluginID,
-		"timestamp", event.Timestamp)
+	// logger.Info("plugin event", "type", event.Type, "plugin_id", event.PluginID, "timestamp", event.Timestamp)
 
 	if event.Error != nil {
-		seh.// logger.Error("plugin error event",
-			"plugin_id", event.PluginID,
-			"error", event.Error)
+		// logger.Error("plugin error event", "plugin_id", event.PluginID, "error", event.Error)
 	}
 
 	return nil
@@ -1269,14 +1257,12 @@ func ValidatePluginConfig(plugin *runtime.Plugin) error {
 
 // BasicPluginValidator 基础插件验证器
 type BasicPluginValidator struct {
-	logger // logger.Logger
+	// logger // logger.Logger
 }
 
 // NewBasicPluginValidator 创建基础插件验证器
-func NewBasicPluginValidator(logger // logger.Logger) *BasicPluginValidator {
-	return &BasicPluginValidator{
-		logger: logger,
-	}
+func NewBasicPluginValidator() *BasicPluginValidator {
+	return &BasicPluginValidator{}
 }
 
 // Validate 验证插件
@@ -1298,7 +1284,7 @@ func (bpv *BasicPluginValidator) Validate(ctx context.Context, plugin *runtime.P
 		}
 	}
 
-	bpv.// logger.Debug("plugin validation passed", "plugin_id", plugin.ID)
+	// logger.Debug("plugin validation passed", "plugin_id", plugin.ID)
 	return nil
 }
 

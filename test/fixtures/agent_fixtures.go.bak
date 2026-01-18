@@ -18,14 +18,14 @@ func NewAgentFixtures() *AgentFixtures {
 }
 
 // DefaultAgent 返回默认的 Agent 实体
-func (f *AgentFixtures) DefaultAgent() *agent.Entity {
+func (f *AgentFixtures) DefaultAgent() *agent.Agent {
 	now := time.Now()
-	return &agent.Entity{
+	return &agent.Agent{
 		ID:          uuid.New().String(),
 		Name:        "test-security-analyst",
 		Description: "测试用安全分析 Agent",
 		RuntimeType: types.RuntimeTypeNative,
-		Config: agent.Config{
+		Config: agent.AgentConfig{
 			Model: agent.ModelConfig{
 				Provider:    "openai",
 				Name:        "gpt-4",
@@ -62,14 +62,14 @@ func (f *AgentFixtures) DefaultAgent() *agent.Entity {
 }
 
 // MinimalAgent 返回最小配置的 Agent
-func (f *AgentFixtures) MinimalAgent() *agent.Entity {
+func (f *AgentFixtures) MinimalAgent() *agent.Agent {
 	now := time.Now()
-	return &agent.Entity{
+	return &agent.Agent{
 		ID:          uuid.New().String(),
 		Name:        "minimal-agent",
 		Description: "最小配置 Agent",
 		RuntimeType: types.RuntimeTypeNative,
-		Config: agent.Config{
+		Config: agent.AgentConfig{
 			Model: agent.ModelConfig{
 				Provider: "openai",
 				Name:     "gpt-3.5-turbo",
@@ -87,14 +87,14 @@ func (f *AgentFixtures) MinimalAgent() *agent.Entity {
 }
 
 // LangChainAgent 返回使用 LangChain 运行时的 Agent
-func (f *AgentFixtures) LangChainAgent() *agent.Entity {
+func (f *AgentFixtures) LangChainAgent() *agent.Agent {
 	now := time.Now()
-	return &agent.Entity{
+	return &agent.Agent{
 		ID:          uuid.New().String(),
 		Name:        "langchain-analyst",
 		Description: "基于 LangChain 的分析 Agent",
 		RuntimeType: types.RuntimeTypeLangChain,
-		Config: agent.Config{
+		Config: agent.AgentConfig{
 			Model: agent.ModelConfig{
 				Provider:    "anthropic",
 				Name:        "claude-3-opus",
@@ -129,14 +129,14 @@ func (f *AgentFixtures) LangChainAgent() *agent.Entity {
 }
 
 // RAGAgent 返回启用 RAG 的 Agent
-func (f *AgentFixtures) RAGAgent() *agent.Entity {
+func (f *AgentFixtures) RAGAgent() *agent.Agent {
 	now := time.Now()
-	return &agent.Entity{
+	return &agent.Agent{
 		ID:          uuid.New().String(),
 		Name:        "rag-knowledge-agent",
 		Description: "启用 RAG 的知识库 Agent",
 		RuntimeType: types.RuntimeTypeNative,
-		Config: agent.Config{
+		Config: agent.AgentConfig{
 			Model: agent.ModelConfig{
 				Provider:    "openai",
 				Name:        "gpt-4-turbo",
@@ -179,14 +179,14 @@ func (f *AgentFixtures) RAGAgent() *agent.Entity {
 }
 
 // MultiToolAgent 返回多工具 Agent
-func (f *AgentFixtures) MultiToolAgent() *agent.Entity {
+func (f *AgentFixtures) MultiToolAgent() *agent.Agent {
 	now := time.Now()
-	return &agent.Entity{
+	return &agent.Agent{
 		ID:          uuid.New().String(),
 		Name:        "multi-tool-agent",
 		Description: "集成多种工具的 Agent",
 		RuntimeType: types.RuntimeTypeNative,
-		Config: agent.Config{
+		Config: agent.AgentConfig{
 			Model: agent.ModelConfig{
 				Provider:    "openai",
 				Name:        "gpt-4",
@@ -239,14 +239,14 @@ func (f *AgentFixtures) MultiToolAgent() *agent.Entity {
 }
 
 // InactiveAgent 返回未激活的 Agent
-func (f *AgentFixtures) InactiveAgent() *agent.Entity {
+func (f *AgentFixtures) InactiveAgent() *agent.Agent {
 	now := time.Now()
-	return &agent.Entity{
+	return &agent.Agent{
 		ID:          uuid.New().String(),
 		Name:        "inactive-agent",
 		Description: "未激活的 Agent",
 		RuntimeType: types.RuntimeTypeNative,
-		Config: agent.Config{
+		Config: agent.AgentConfig{
 			Model: agent.ModelConfig{
 				Provider: "openai",
 				Name:     "gpt-3.5-turbo",
@@ -264,9 +264,9 @@ func (f *AgentFixtures) InactiveAgent() *agent.Entity {
 }
 
 // AgentWithCustomConfig 返回自定义配置的 Agent
-func (f *AgentFixtures) AgentWithCustomConfig(config agent.Config) *agent.Entity {
+func (f *AgentFixtures) AgentWithCustomConfig(config agent.AgentConfig) *agent.Agent {
 	now := time.Now()
-	return &agent.Entity{
+	return &agent.Agent{
 		ID:          uuid.New().String(),
 		Name:        "custom-agent",
 		Description: "自定义配置 Agent",
@@ -280,17 +280,17 @@ func (f *AgentFixtures) AgentWithCustomConfig(config agent.Config) *agent.Entity
 }
 
 // BatchAgents 返回一批测试 Agent
-func (f *AgentFixtures) BatchAgents(count int) []*agent.Entity {
-	agents := make([]*agent.Entity, count)
+func (f *AgentFixtures) BatchAgents(count int) []*agent.Agent {
+	agents := make([]*agent.Agent, count)
 	now := time.Now()
 
 	for i := 0; i < count; i++ {
-		agents[i] = &agent.Entity{
+		agents[i] = &agent.Agent{
 			ID:          uuid.New().String(),
 			Name:        uuid.New().String()[:8] + "-agent",
 			Description: "批量测试 Agent",
 			RuntimeType: types.RuntimeTypeNative,
-			Config: agent.Config{
+			Config: agent.AgentConfig{
 				Model: agent.ModelConfig{
 					Provider: "openai",
 					Name:     "gpt-3.5-turbo",
@@ -396,16 +396,16 @@ func (f *AgentFixtures) InvalidAgentRequest() map[string]interface{} {
 
 // AgentValueObjects 返回测试用值对象
 func (f *AgentFixtures) AgentValueObjects() struct {
-	ValidConfig   agent.Config
-	InvalidConfig agent.Config
-	MinimalConfig agent.Config
+	ValidConfig   agent.AgentConfig
+	InvalidConfig agent.AgentConfig
+	MinimalConfig agent.AgentConfig
 } {
 	return struct {
-		ValidConfig   agent.Config
-		InvalidConfig agent.Config
-		MinimalConfig agent.Config
+		ValidConfig   agent.AgentConfig
+		InvalidConfig agent.AgentConfig
+		MinimalConfig agent.AgentConfig
 	}{
-		ValidConfig: agent.Config{
+		ValidConfig: agent.AgentConfig{
 			Model: agent.ModelConfig{
 				Provider:    "openai",
 				Name:        "gpt-4",
@@ -422,13 +422,13 @@ func (f *AgentFixtures) AgentValueObjects() struct {
 				TimeoutSeconds:   30,
 			},
 		},
-		InvalidConfig: agent.Config{
+		InvalidConfig: agent.AgentConfig{
 			Model: agent.ModelConfig{
 				Provider:    "",  // 无效：空提供商
 				Temperature: 2.0, // 无效：温度超出范围
 			},
 		},
-		MinimalConfig: agent.Config{
+		MinimalConfig: agent.AgentConfig{
 			Model: agent.ModelConfig{
 				Provider: "openai",
 				Name:     "gpt-3.5-turbo",

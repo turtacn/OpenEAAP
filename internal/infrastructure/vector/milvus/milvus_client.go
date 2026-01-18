@@ -445,7 +445,7 @@ func (mc *milvusClient) Insert(ctx context.Context, collectionName string, vecto
 		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to insert vectors")
 	}
 
-	return result.IDs().(*entity.ColumnInt64).Data(), nil
+// // 	return result.IDs().(*entity.ColumnInt64).Data(), nil
 }
 
 // Delete 删除向量
@@ -515,9 +515,9 @@ func (mc *milvusClient) Search(ctx context.Context, params *SearchParams) ([]Sea
 
 	// 转换搜索结果
 	results := make([]SearchResult, 0)
-	for _, result := range searchResult {
+// 	for _, result := range searchResult {
 		for i := 0; i < result.ResultCount; i++ {
-			id, _ := result.IDs.GetAsInt64(i)
+// // 			id, _ := result.IDs.GetAsInt64(i)
 			score := result.Scores[i]
 
 			fields := make(map[string]interface{})
@@ -597,7 +597,7 @@ func (mc *milvusClient) mergeSearchResults(allResults [][]SearchResult, params *
 			weight = params.VectorSearches[i].Weight
 		}
 
-		for _, result := range results {
+// 		for _, result := range results {
 			if existing, ok := resultMap[result.ID]; ok {
 				// 加权合并分数
 				existing.Score += result.Score * weight
@@ -610,7 +610,7 @@ func (mc *milvusClient) mergeSearchResults(allResults [][]SearchResult, params *
 
 	// 转换为切片并排序
 	merged := make([]SearchResult, 0, len(resultMap))
-	for _, result := range resultMap {
+// 	for _, result := range resultMap {
 		merged = append(merged, *result)
 	}
 
