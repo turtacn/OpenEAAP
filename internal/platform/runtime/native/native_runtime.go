@@ -20,8 +20,8 @@ type NativeRuntime struct {
 	name           string
 	version        string
 	config         *runtime.RuntimeConfig
-	logger         logger.Logger
-	llmClient      llm.LLMClient
+	logger         logging.Logger
+	// llmClient      llm.LLMClient
 	toolManager    ToolManager
 	memoryManager  MemoryManager
 	status         runtime.RuntimeStatus
@@ -513,7 +513,7 @@ func (nr *NativeRuntime) executeReAct(ctx context.Context, req *runtime.ExecuteR
 		// 添加之前的步骤到上下文
 		for _, s := range result.Steps {
 			messages = append(messages,
-				llm.Message{
+				// llm.Message{
 					Role:    "assistant",
 					Content: nr.formatStepForContext(s),
 				},

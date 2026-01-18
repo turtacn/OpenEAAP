@@ -997,3 +997,16 @@ func (r *modelRepo) Count(ctx context.Context, filter model.ModelFilter) (int64,
 }
 
 //Personal.AI order the ending
+
+// Exists checks if a model exists by ID
+func (r *modelRepo) Exists(ctx context.Context, id string) (bool, error) {
+var count int64
+err := r.db.WithContext(ctx).
+Model(&ModelModel{}).
+Where("id = ?", id).
+Count(&count).Error
+if err != nil {
+return false, errors.Wrap(err, errors.CodeDatabaseError, "failed to check model existence")
+}
+return count > 0, nil
+}

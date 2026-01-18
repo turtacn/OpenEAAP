@@ -135,9 +135,9 @@ func DefaultLoaderConfig() *LoaderConfig {
 }
 
 // NewPluginLoader 创建插件加载器
-func NewPluginLoader(logger logger.Logger, config *LoaderConfig) (*PluginLoader, error) {
+func NewPluginLoader(logger logging.Logger, config *LoaderConfig) (*PluginLoader, error) {
 	if logger == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "logger cannot be nil")
+		return nil, errors.New("ERR_INVALID_PARAMETER", errors.ErrorTypeValidation, "logger cannot be nil", 400)
 	}
 
 	if config == nil {

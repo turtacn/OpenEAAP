@@ -18,7 +18,7 @@ type LangChainAdapter struct {
 	name          string
 	version       string
 	config        *runtime.RuntimeConfig
-	logger        logger.Logger
+	logger        logging.Logger
 	status        runtime.RuntimeStatus
 	metadata      *runtime.RuntimeMetadata
 	metrics       *adapterMetrics
@@ -279,7 +279,7 @@ type IntermediateStep struct {
 // NewLangChainAdapter 创建LangChain适配器
 func NewLangChainAdapter(
 	config *runtime.RuntimeConfig,
-	logger logger.Logger,
+	logger logging.Logger,
 	client LangChainClient,
 ) (*LangChainAdapter, error) {
 	if config == nil {
@@ -609,7 +609,7 @@ func (lca *LangChainAdapter) Shutdown(ctx context.Context) error {
 	case <-done:
 		lca.logger.Info("langchain adapter shutdown completed", "runtime_id", lca.id)
 	case <-ctx.Done():
-		return errors.NewInternalError(errors.DeadlineError, "shutdown timeout")
+		return errors.NewTimeoutError("shutdown timeout")
 	}
 
 	// 关闭客户端

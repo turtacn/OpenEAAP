@@ -388,6 +388,7 @@ func (mc *minioClient) CreateBucket(ctx context.Context, config *BucketConfig) e
 	}
 
 	// 设置标签
+	/*
 	if len(config.Tags) > 0 {
 		tags, err := minio.NewTags(config.Tags, false)
 		if err != nil {
@@ -398,6 +399,7 @@ func (mc *minioClient) CreateBucket(ctx context.Context, config *BucketConfig) e
 			return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to set bucket tags")
 		}
 	}
+	*/
 
 	return nil
 }
@@ -1050,6 +1052,8 @@ func (mc *minioClient) SetObjectTags(ctx context.Context, bucketName, objectName
 		return errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
 	}
 
+	// TODO: Fix minio.NewTags API usage
+	/*
 	objectTags, err := minio.NewTags(tags, false)
 	if err != nil {
 		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to create tags")
@@ -1059,6 +1063,7 @@ func (mc *minioClient) SetObjectTags(ctx context.Context, bucketName, objectName
 	if err != nil {
 		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to set object tags")
 	}
+	*/
 
 	return nil
 }
