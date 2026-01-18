@@ -328,20 +328,21 @@ func (c *L1LocalCache) Warmup(ctx context.Context, entries []*CacheEntry) error 
 // }
 
 // Snapshot returns a snapshot of all current cache entries
-func (c *L1LocalCache) Snapshot() []*CacheEntry {
-	c.entryMu.RLock()
-	defer c.entryMu.RUnlock()
+// func (c *L1LocalCache) Snapshot() []*CacheEntry {
+// 	c.entryMu.RLock()
+// 	defer c.entryMu.RUnlock()
 
-	snapshot := make([]*CacheEntry, 0, len(c.entries))
+// 	snapshot := make([]*CacheEntry, 0, len(c.entries))
 
-	current := c.head.next
-	for current != c.tail {
-		entryCopy := *current.entry
-		snapshot = append(snapshot, &entryCopy)
-		current = current.next
-	}
-
-	return snapshot
-}
+// 	current := c.head.next
+// 	for current != c.tail {
+// 		entryCopy := *current.entry
+// 		snapshot = append(snapshot, &entryCopy)
+// 		current = current.next
+// 	}
+//
+// 	return snapshot
+// }
 
 //Personal.AI order the ending
+}

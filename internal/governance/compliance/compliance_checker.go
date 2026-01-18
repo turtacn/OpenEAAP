@@ -737,16 +737,16 @@ func (c *complianceChecker) BatchCheck(ctx context.Context, requests []*Complian
 				return
 			}
 
-			mu.Lock()
-			results[idx] = result
-			mu.Unlock()
-		}(i, request)
-	}
+// 			mu.Lock()
+// 			results[idx] = result
+// 			mu.Unlock()
+// 		}(i, request)
+// 	}
 
-	wg.Wait()
+// 	wg.Wait()
 
-	return results, nil
-}
+// 	return results, nil
+// }
 
 // GetComplianceStatus 获取合规状态
 func (c *complianceChecker) GetComplianceStatus(ctx context.Context, filter *ComplianceFilter) (*ComplianceStatus, error) {

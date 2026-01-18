@@ -157,7 +157,7 @@ Important:
 
 // NewNativeRuntime 创建原生运行时
 func NewNativeRuntime(
-	config *runtime.RuntimeConfig,
+// 	config *runtime.RuntimeConfig,
 // 	logger logger.Logger,
 // 	llmClient llm.LLMClient,
 // 	toolManager ToolManager,
@@ -198,16 +198,16 @@ func NewNativeRuntime(
 // 		License:     "MIT",
 // 		Capabilities: []string{
 // 			"reasoning",
-			"tool_use",
-			"memory",
-			"streaming",
-		},
-		Features: &runtime.RuntimeFeatures{
-			SupportsStreaming:    config.EnableStreaming,
-			SupportsPlugins:      false,
-			SupportsMemory:       memoryManager != nil,
-			SupportsRetrieval:    false,
-			SupportsFunctionCall: true,
+// 			"tool_use",
+// 			"memory",
+// 			"streaming",
+// 		},
+// 		Features: &runtime.RuntimeFeatures{
+// 			SupportsStreaming:    config.EnableStreaming,
+// 			SupportsPlugins:      false,
+// 			SupportsMemory:       memoryManager != nil,
+// 			SupportsRetrieval:    false,
+// 			SupportsFunctionCall: true,
 			SupportsAsync:        true,
 		},
 		CreatedAt: time.Now(),

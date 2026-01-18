@@ -347,17 +347,17 @@ func (cm *CacheManager) Invalidate(ctx context.Context, req interface{}) error {
 
 	// This would require cache implementations to support pattern matching
 	// For now, just clear all caches
-	return cm.ClearAll(ctx)
-}
+// 	return cm.ClearAll(ctx)
+// }
 
 // ClearAll clears all cache levels
-func (cm *CacheManager) ClearAll(ctx context.Context) error {
-	var errs []error
+// func (cm *CacheManager) ClearAll(ctx context.Context) error {
+// 	var errs []error
 
-	if cm.config.L1Enabled && cm.l1Cache != nil {
-		if err := cm.l1Cache.Clear(ctx); err != nil {
-			errs = append(errs, err)
-		}
+// 	if cm.config.L1Enabled && cm.l1Cache != nil {
+// 		if err := cm.l1Cache.Clear(ctx); err != nil {
+// 			errs = append(errs, err)
+// 		}
 	}
 
 	if cm.config.L2Enabled && cm.l2Cache != nil {

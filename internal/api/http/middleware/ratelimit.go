@@ -169,54 +169,54 @@ func (m *RateLimitMiddleware) Handler() gin.HandlerFunc {
 // }
 
 // getClientIP extracts client IP from request
-func (m *RateLimitMiddleware) getClientIP(c *gin.Context) string {
-	// Check X-Forwarded-For header first
-	if xff := c.GetHeader("X-Forwarded-For"); xff != "" {
-		return xff
-	}
+// func (m *RateLimitMiddleware) getClientIP(c *gin.Context) string {
+// 	// Check X-Forwarded-For header first
+// 	if xff := c.GetHeader("X-Forwarded-For"); xff != "" {
+// 		return xff
+// 	}
 
-	// Check X-Real-IP header
-	if xri := c.GetHeader("X-Real-IP"); xri != "" {
-		return xri
-	}
+// 	// Check X-Real-IP header
+// 	if xri := c.GetHeader("X-Real-IP"); xri != "" {
+// 		return xri
+// 	}
 
-	// Fall back to RemoteAddr
-	return c.ClientIP()
-}
+// 	// Fall back to RemoteAddr
+// 	return c.ClientIP()
+// }
 
 // checkRateLimit checks if request is allowed under rate limit
-func (m *RateLimitMiddleware) checkRateLimit(ctx context.Context, key string) (allowed bool, remaining int, resetTime time.Time, err error) {
-	// Use distributed store if available
-	if m.config.Store != nil {
-		return m.checkDistributedRateLimit(ctx, key)
-	}
-
-	// Use in-memory rate limiter
-	return m.checkLocalRateLimit(ctx, key)
-}
+// func (m *RateLimitMiddleware) checkRateLimit(ctx context.Context, key string) (allowed bool, remaining int, resetTime time.Time, err error) {
+// 	// Use distributed store if available
+// 	if m.config.Store != nil {
+// 		return m.checkDistributedRateLimit(ctx, key)
+// 	}
+//
+// 	// Use in-memory rate limiter
+// 	return m.checkLocalRateLimit(ctx, key)
+// }
 
 // checkDistributedRateLimit uses Redis-backed store for rate limiting
-func (m *RateLimitMiddleware) checkDistributedRateLimit(ctx context.Context, key string) (allowed bool, remaining int, resetTime time.Time, err error) {
-	allowed, err = m.config.Store.Allow(ctx, key, m.config.RequestsLimit, m.config.WindowDuration)
-	if err != nil {
-		return false, 0, time.Time{}, err
-	}
+// func (m *RateLimitMiddleware) checkDistributedRateLimit(ctx context.Context, key string) (allowed bool, remaining int, resetTime time.Time, err error) {
+// 	allowed, err = m.config.Store.Allow(ctx, key, m.config.RequestsLimit, m.config.WindowDuration)
+// 	if err != nil {
+// 		return false, 0, time.Time{}, err
+// 	}
 
-	remaining, err = m.config.Store.GetRemaining(ctx, key)
-	if err != nil {
-		return allowed, 0, time.Time{}, err
-	}
+// 	remaining, err = m.config.Store.GetRemaining(ctx, key)
+// 	if err != nil {
+// 		return allowed, 0, time.Time{}, err
+// 	}
 
-	resetTime = time.Now().Add(m.config.WindowDuration)
-	return allowed, remaining, resetTime, nil
-}
+// 	resetTime = time.Now().Add(m.config.WindowDuration)
+// 	return allowed, remaining, resetTime, nil
+// }
 
 // checkLocalRateLimit uses in-memory rate limiter
-func (m *RateLimitMiddleware) checkLocalRateLimit(ctx context.Context, key string) (allowed bool, remaining int, resetTime time.Time, err error) {
+// func (m *RateLimitMiddleware) checkLocalRateLimit(ctx context.Context, key string) (allowed bool, remaining int, resetTime time.Time, err error) {
 // 	limiter := m.getLimiter(key)
 
-	// Clean up old limiters periodically
-	go m.cleanupLimiters()
+// 	// Clean up old limiters periodically
+// 	go m.cleanupLimiters()
 
 	// Update last access time
 	limiter.mu.Lock()
@@ -248,16 +248,16 @@ func (m *RateLimitMiddleware) checkLocalRateLimit(ctx context.Context, key strin
 }
 
 // getLimiter retrieves or creates a rate limiter for the given key
-func (m *RateLimitMiddleware) getLimiter(key string) *rateLimiter {
-	if val, ok := m.limiters.Load(key); ok {
-		return val.(*rateLimiter)
-	}
+// func (m *RateLimitMiddleware) getLimiter(key string) *rateLimiter {
+// 	if val, ok := m.limiters.Load(key); ok {
+// 		return val.(*rateLimiter)
+// 	}
 
-	// Create new limiter based on strategy
-	var limiter *rate.Limiter
-	switch m.config.Strategy {
-	case StrategyTokenBucket:
-		// Token bucket: requests per second, with burst
+// 	// Create new limiter based on strategy
+// 	var limiter *rate.Limiter
+// 	switch m.config.Strategy {
+// 	case StrategyTokenBucket:
+// 		// Token bucket: requests per second, with burst
 		rps := float64(m.config.RequestsLimit) / m.config.WindowDuration.Seconds()
 		limiter = rate.NewLimiter(rate.Limit(rps), m.config.BurstSize)
 

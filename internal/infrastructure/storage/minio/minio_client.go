@@ -597,10 +597,10 @@ func (mc *minioClient) DeleteObject(ctx context.Context, req *DeleteObjectReques
 	}
 	if req.ObjectName == "" {
 		return errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
-	}
+// 	}
 
 // 	opts := minio.RemoveObjectOptions{
-		VersionID: req.VersionID,
+// 		VersionID: req.VersionID,
 // 	}
 // 
 // 	err := mc.client.RemoveObject(ctx, req.BucketName, req.ObjectName, opts)
@@ -658,16 +658,16 @@ func (mc *minioClient) DeleteObject(ctx context.Context, req *DeleteObjectReques
 // }
 
 // CopyObject 复制对象
-func (mc *minioClient) CopyObject(ctx context.Context, req *CopyObjectRequest) error {
-	if req == nil {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "copy object request cannot be nil")
-	}
-	if req.SourceBucket == "" || req.SourceObject == "" {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "source bucket and object cannot be empty")
-	}
-	if req.DestBucket == "" || req.DestObject == "" {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "destination bucket and object cannot be empty")
-	}
+// func (mc *minioClient) CopyObject(ctx context.Context, req *CopyObjectRequest) error {
+// 	if req == nil {
+// 		return errors.NewValidationError(errors.CodeInvalidParameter, "copy object request cannot be nil")
+// 	}
+// 	if req.SourceBucket == "" || req.SourceObject == "" {
+// 		return errors.NewValidationError(errors.CodeInvalidParameter, "source bucket and object cannot be empty")
+// 	}
+// 	if req.DestBucket == "" || req.DestObject == "" {
+// 		return errors.NewValidationError(errors.CodeInvalidParameter, "destination bucket and object cannot be empty")
+// 	}
 
 	// 构建源信息
 	src := minio.CopySrcOptions{
@@ -692,22 +692,22 @@ func (mc *minioClient) CopyObject(ctx context.Context, req *CopyObjectRequest) e
 		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to copy object")
 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // StatObject 获取对象统计信息
-func (mc *minioClient) StatObject(ctx context.Context, bucketName, objectName string) (*ObjectInfo, error) {
-	if bucketName == "" {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "bucket name cannot be empty")
-	}
-	if objectName == "" {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
-	}
+// func (mc *minioClient) StatObject(ctx context.Context, bucketName, objectName string) (*ObjectInfo, error) {
+// 	if bucketName == "" {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "bucket name cannot be empty")
+// 	}
+// 	if objectName == "" {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
+// 	}
 
-	info, err := mc.client.StatObject(ctx, bucketName, objectName, minio.StatObjectOptions{})
-	if err != nil {
-		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to stat object")
-	}
+// 	info, err := mc.client.StatObject(ctx, bucketName, objectName, minio.StatObjectOptions{})
+// 	if err != nil {
+// 		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to stat object")
+// 	}
 
 	return &ObjectInfo{
 		Key:          info.Key,
@@ -775,59 +775,59 @@ func (mc *minioClient) ListObjects(ctx context.Context, req *ListObjectsRequest)
 // }
 
 // PresignedGetObject 生成预签名获取URL
-func (mc *minioClient) PresignedGetObject(ctx context.Context, bucketName string, objectName string, expiry time.Duration) (string, error) {
-	if bucketName == "" {
-		return "", errors.NewValidationError(errors.CodeInvalidParameter, "bucket name cannot be empty")
-	}
-	if objectName == "" {
-		return "", errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
-	}
-	if expiry <= 0 {
-		expiry = 7 * 24 * time.Hour // 默认7天
-	}
+// func (mc *minioClient) PresignedGetObject(ctx context.Context, bucketName string, objectName string, expiry time.Duration) (string, error) {
+// 	if bucketName == "" {
+// 		return "", errors.NewValidationError(errors.CodeInvalidParameter, "bucket name cannot be empty")
+// 	}
+// 	if objectName == "" {
+// 		return "", errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
+// 	}
+// 	if expiry <= 0 {
+// 		expiry = 7 * 24 * time.Hour // 默认7天
+// 	}
 
-	presignedURL, err := mc.client.PresignedGetObject(ctx, bucketName, objectName, expiry, nil)
-	if err != nil {
-		return "", errors.WrapInternalError(err, "ERR_INTERNAL", "failed to generate presigned get url")
-	}
+// 	presignedURL, err := mc.client.PresignedGetObject(ctx, bucketName, objectName, expiry, nil)
+// 	if err != nil {
+// 		return "", errors.WrapInternalError(err, "ERR_INTERNAL", "failed to generate presigned get url")
+// 	}
 
-	return presignedURL.String(), nil
-}
+// 	return presignedURL.String(), nil
+// }
 
 // PresignedPutObject 生成预签名上传URL
-func (mc *minioClient) PresignedPutObject(ctx context.Context, bucketName string, objectName string, expiry time.Duration) (string, error) {
-	if bucketName == "" {
-		return "", errors.NewValidationError(errors.CodeInvalidParameter, "bucket name cannot be empty")
-	}
-	if objectName == "" {
-		return "", errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
-	}
-	if expiry <= 0 {
-		expiry = 7 * 24 * time.Hour // 默认7天
-	}
-	presignedURL, err := mc.client.PresignedPutObject(ctx, bucketName, objectName, expiry)
-	if err != nil {
-		return "", errors.WrapInternalError(err, "ERR_INTERNAL", "failed to generate presigned put url")
-	}
-	return presignedURL.String(), nil
-}
+// func (mc *minioClient) PresignedPutObject(ctx context.Context, bucketName string, objectName string, expiry time.Duration) (string, error) {
+// 	if bucketName == "" {
+// 		return "", errors.NewValidationError(errors.CodeInvalidParameter, "bucket name cannot be empty")
+// 	}
+// 	if objectName == "" {
+// 		return "", errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
+// 	}
+// 	if expiry <= 0 {
+// 		expiry = 7 * 24 * time.Hour // 默认7天
+// 	}
+// 	presignedURL, err := mc.client.PresignedPutObject(ctx, bucketName, objectName, expiry)
+// 	if err != nil {
+// 		return "", errors.WrapInternalError(err, "ERR_INTERNAL", "failed to generate presigned put url")
+// 	}
+// 	return presignedURL.String(), nil
+// }
 
 // PresignedPostPolicy 生成预签名POST策略
-func (mc *minioClient) PresignedPostPolicy(ctx context.Context, policy *PostPolicy) (*PresignedPostPolicyResponse, error) {
-	if policy == nil {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "post policy cannot be nil")
-	}
-	if policy.BucketName == "" {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "bucket name cannot be empty")
-	}
+// func (mc *minioClient) PresignedPostPolicy(ctx context.Context, policy *PostPolicy) (*PresignedPostPolicyResponse, error) {
+// 	if policy == nil {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "post policy cannot be nil")
+// 	}
+// 	if policy.BucketName == "" {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "bucket name cannot be empty")
+// 	}
 
-	// 创建 MinIO POST 策略
-	minioPolicy := minio.NewPostPolicy()
-	minioPolicy.SetBucket(policy.BucketName)
-	minioPolicy.SetKey(policy.ObjectName)
-	minioPolicy.SetExpires(policy.Expiration)
+// 	// 创建 MinIO POST 策略
+// 	minioPolicy := minio.NewPostPolicy()
+// 	minioPolicy.SetBucket(policy.BucketName)
+// 	minioPolicy.SetKey(policy.ObjectName)
+// 	minioPolicy.SetExpires(policy.Expiration)
 
-	// 添加条件
+// 	// 添加条件
 	for _, cond := range policy.Conditions {
 		switch cond.Type {
 		case "eq":
@@ -1107,10 +1107,10 @@ func (mc *minioClient) GetBucketSize(ctx context.Context, bucketName string) (in
 // }
 
 // CountObjects 统计对象数量
-func (mc *minioClient) CountObjects(ctx context.Context, bucketName string, prefix string) (int64, error) {
-	if bucketName == "" {
-		return 0, errors.NewValidationError(errors.CodeInvalidParameter, "bucket name cannot be empty")
-	}
+// func (mc *minioClient) CountObjects(ctx context.Context, bucketName string, prefix string) (int64, error) {
+// 	if bucketName == "" {
+// 		return 0, errors.NewValidationError(errors.CodeInvalidParameter, "bucket name cannot be empty")
+// 	}
 
 // 	var count int64
 // 	opts := minio.ListObjectsOptions{
@@ -1126,68 +1126,68 @@ func (mc *minioClient) CountObjects(ctx context.Context, bucketName string, pref
 // 	}
 //
 // 	return count, nil
-	return 0, errors.NewInternalError(errors.CodeNotImplemented, "not implemented")
-}
+// 	return 0, errors.NewInternalError(errors.CodeNotImplemented, "not implemented")
+// }
 
 // ValidateObjectName 验证对象名称
-func ValidateObjectName(name string) error {
-	if name == "" {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
-	}
-	if len(name) > 1024 {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "object name too long")
-	}
-	if strings.HasPrefix(name, "/") || strings.HasSuffix(name, "/") {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot start or end with /")
-	}
-	return nil
-}
+// func ValidateObjectName(name string) error {
+// 	if name == "" {
+// 		return errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
+// 	}
+// 	if len(name) > 1024 {
+// 		return errors.NewValidationError(errors.CodeInvalidParameter, "object name too long")
+// 	}
+// 	if strings.HasPrefix(name, "/") || strings.HasSuffix(name, "/") {
+// 		return errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot start or end with /")
+// 	}
+// 	return nil
+// }
 
 // ValidateBucketName 验证存储桶名称
-func ValidateBucketName(name string) error {
-	if name == "" {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "bucket name cannot be empty")
-	}
-	if len(name) < 3 || len(name) > 63 {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "bucket name length must be between 3 and 63")
-	}
-	// 更多验证规则...
-	return nil
-}
+// func ValidateBucketName(name string) error {
+// 	if name == "" {
+// 		return errors.NewValidationError(errors.CodeInvalidParameter, "bucket name cannot be empty")
+// 	}
+// 	if len(name) < 3 || len(name) > 63 {
+// 		return errors.NewValidationError(errors.CodeInvalidParameter, "bucket name length must be between 3 and 63")
+// 	}
+// 	// 更多验证规则...
+// 	return nil
+// }
 
 // SanitizeObjectName 清理对象名称
-func SanitizeObjectName(name string) string {
-	// 移除前导和尾随斜杠
-	name = strings.Trim(name, "/")
-	// 替换多个连续斜杠
-	name = filepath.Clean(name)
-	return name
-}
+// func SanitizeObjectName(name string) string {
+// 	// 移除前导和尾随斜杠
+// 	name = strings.Trim(name, "/")
+// 	// 替换多个连续斜杠
+// 	name = filepath.Clean(name)
+// 	return name
+// }
 
 // ParseS3URI 解析 S3 URI
-func ParseS3URI(uri string) (bucket, key string, err error) {
-	if !strings.HasPrefix(uri, "s3://") {
-		return "", "", errors.NewValidationError(errors.CodeInvalidParameter, "invalid s3 uri")
-	}
+// func ParseS3URI(uri string) (bucket, key string, err error) {
+// 	if !strings.HasPrefix(uri, "s3://") {
+// 		return "", "", errors.NewValidationError(errors.CodeInvalidParameter, "invalid s3 uri")
+// 	}
 
-	uri = strings.TrimPrefix(uri, "s3://")
-	parts := strings.SplitN(uri, "/", 2)
+// 	uri = strings.TrimPrefix(uri, "s3://")
+// 	parts := strings.SplitN(uri, "/", 2)
 
-	if len(parts) < 1 {
-		return "", "", errors.NewValidationError(errors.CodeInvalidParameter, "invalid s3 uri format")
-	}
+// 	if len(parts) < 1 {
+// 		return "", "", errors.NewValidationError(errors.CodeInvalidParameter, "invalid s3 uri format")
+// 	}
 
-	bucket = parts[0]
-	if len(parts) > 1 {
-		key = parts[1]
-	}
+// 	bucket = parts[0]
+// 	if len(parts) > 1 {
+// 		key = parts[1]
+// 	}
 
-	return bucket, key, nil
-}
+// 	return bucket, key, nil
+// }
 
 // BuildS3URI 构建 S3 URI
-func BuildS3URI(bucket, key string) string {
-	return fmt.Sprintf("s3://%s/%s", bucket, key)
-}
+// func BuildS3URI(bucket, key string) string {
+// 	return fmt.Sprintf("s3://%s/%s", bucket, key)
+// }
 
 //Personal.AI order the ending
