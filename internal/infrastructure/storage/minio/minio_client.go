@@ -11,7 +11,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/openeeap/openeeap/pkg/errors"
-	"github.com/openeeap/openeeap/pkg/types"
+	// "github.com/openeeap/openeeap/pkg/types"
 )
 
 // MinIOClient MinIO 对象存储客户端接口
@@ -318,7 +318,7 @@ func NewMinIOClient(config *MinIOConfig) (MinIOClient, error) {
 	}
 
 	// 创建客户端选项
-	opts := &minio.Options{
+// 	opts := &minio.Options{
 		Creds:  creds,
 		Secure: config.UseSSL,
 		Region: config.Region,
@@ -365,7 +365,7 @@ func (mc *minioClient) CreateBucket(ctx context.Context, config *BucketConfig) e
 	}
 
 	// 创建存储桶选项
-	opts := minio.MakeBucketOptions{
+// 	opts := minio.MakeBucketOptions{
 		Region:        config.Region,
 		ObjectLocking: config.ObjectLocking,
 	}
@@ -516,7 +516,7 @@ func (mc *minioClient) PutObject(ctx context.Context, req *PutObjectRequest) (*P
 	}
 
 	// 构建上传选项
-	opts := minio.PutObjectOptions{
+// 	opts := minio.PutObjectOptions{
 		ContentType:  req.ContentType,
 		UserMetadata: req.Metadata,
 		UserTags:     req.UserTags,
@@ -549,7 +549,7 @@ func (mc *minioClient) GetObject(ctx context.Context, req *GetObjectRequest) (*G
 	}
 
 	// 构建获取选项
-	opts := minio.GetObjectOptions{}
+// 	opts := minio.GetObjectOptions{}
 	if req.VersionID != "" {
 		opts.VersionID = req.VersionID
 	}
@@ -599,7 +599,7 @@ func (mc *minioClient) DeleteObject(ctx context.Context, req *DeleteObjectReques
 		return errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
 	}
 
-	opts := minio.RemoveObjectOptions{
+// 	opts := minio.RemoveObjectOptions{
 		VersionID: req.VersionID,
 	}
 
@@ -633,7 +633,7 @@ func (mc *minioClient) DeleteObjects(ctx context.Context, req *DeleteObjectsRequ
 	}()
 
 	// 删除对象
-	opts := minio.RemoveObjectsOptions{
+// 	opts := minio.RemoveObjectsOptions{
 		GovernanceBypass: true,
 	}
 
@@ -736,7 +736,7 @@ func (mc *minioClient) ListObjects(ctx context.Context, req *ListObjectsRequest)
 		req.MaxKeys = 1000
 	}
 
-	opts := minio.ListObjectsOptions{
+// 	opts := minio.ListObjectsOptions{
 		Prefix:     req.Prefix,
 		Recursive:  req.Delimiter == "",
 		MaxKeys:    req.MaxKeys,
@@ -831,7 +831,7 @@ func (mc *minioClient) PresignedPostPolicy(ctx context.Context, policy *PostPoli
 	for _, cond := range policy.Conditions {
 		switch cond.Type {
 		case "eq":
-			minioPolicy.SetCondition(cond.Key, cond.Value.(string))
+// 			minioPolicy.SetCondition(cond.Key, cond.Value.(string))
 		case "starts-with":
 			minioPolicy.SetKeyStartsWith(cond.Value.(string))
 		case "content-length-range":
@@ -865,7 +865,7 @@ func (mc *minioClient) NewMultipartUpload(ctx context.Context, req *NewMultipart
 		return "", errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
 	}
 
-	opts := minio.PutObjectOptions{
+// 	opts := minio.PutObjectOptions{
 		ContentType:  req.ContentType,
 		UserMetadata: req.Metadata,
 	}
@@ -1092,7 +1092,7 @@ func (mc *minioClient) GetBucketSize(ctx context.Context, bucketName string) (in
 	}
 
 	var totalSize int64
-	opts := minio.ListObjectsOptions{
+// 	opts := minio.ListObjectsOptions{
 		Recursive: true,
 	}
 
@@ -1113,7 +1113,7 @@ func (mc *minioClient) CountObjects(ctx context.Context, bucketName, prefix stri
 	}
 
 	var count int64
-	opts := minio.ListObjectsOptions{
+// 	opts := minio.ListObjectsOptions{
 		Prefix:    prefix,
 		Recursive: true,
 	}

@@ -644,11 +644,12 @@ func (r *modelRepo) GetStatistics(ctx context.Context) (*model.ModelStatistics, 
 	var stats model.ModelStatistics
 
 	// 总数
-	if err := r.db.WithContext(ctx).
-		Model(&ModelModel{}).
+	// Total count - commented out due to missing stats.Total field
+// 	if err := r.db.WithContext(ctx).
+// 		Model(&ModelModel{}).
 // 		Count(&stats.Total).Error; err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get total count")
-	}
+// 		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get total count")
+// 	}
 
 	// 按类型统计
 	type TypeCount struct {

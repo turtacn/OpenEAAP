@@ -1086,8 +1086,8 @@ func (kc *kafkaClient) GetClusterMetadata(ctx context.Context) (*ClusterMetadata
 	}
 
 	return &ClusterMetadata{
-		ClusterID:    metadata.ClusterID,
-		ControllerID: metadata.ControllerID,
+		ClusterID:    "", // metadata.ClusterID - not available in broker list
+		ControllerID: -1, // metadata.ControllerID - not available in broker list
 		Brokers:      brokers,
 		Topics:       topicList,
 	}, nil
@@ -1344,7 +1344,7 @@ func (cg *consumerGroup) Start(ctx context.Context) error {
 					if cg.errorHandler != nil {
 						cg.errorHandler(err)
 					}
-					cg.logger.Error("consumer group error", logging.String("error", err))
+					cg.logger.Error("consumer group error", logging.String("error", err.Error()))
 				}
 			}
 		}

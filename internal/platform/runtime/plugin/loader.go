@@ -158,8 +158,8 @@ func NewPluginLoader(logger logging.Logger, config *LoaderConfig) (*PluginLoader
 	for _, path := range loader.searchPaths {
 		if err := os.MkdirAll(path, 0755); err != nil {
 			loader.logger.Warn("failed to create search path",
-				"path", path,
-				"error", err)
+				logging.String("path", path),
+				logging.String("error", err.Error()))
 		}
 	}
 
@@ -170,8 +170,8 @@ func NewPluginLoader(logger logging.Logger, config *LoaderConfig) (*PluginLoader
 	}
 
 	loader.logger.Info("plugin loader initialized",
-		"search_paths", loader.searchPaths,
-		"max_plugins", config.MaxPlugins)
+		logging.String("search_paths", loader.searchPaths),
+		logging.String("max_plugins", config.MaxPlugins))
 
 	return loader, nil
 }
@@ -184,7 +184,7 @@ func (pl *PluginLoader) LoadPlugin(ctx context.Context, pluginPath string) (*Loa
 	pl.pluginsMu.RUnlock()
 
 	if pluginCount >= pl.config.MaxPlugins {
-		return nil, errors.New(errors.CodeResourceExhausted, "max plugins limit reached")
+		return nil, errors.NewResourceError(errors.CodeResourceLimitExceeded, "max plugins limit reached")
 	}
 
 	// 执行加载前钩子
@@ -250,9 +250,9 @@ func (pl *PluginLoader) LoadPlugin(ctx context.Context, pluginPath string) (*Loa
 	}
 
 	// 验证插件类型
-	if !pl.isPluginTypeAllowed(loadedPlugin.Plugin.Type) {
+	if !pl.isPluginTypeAllowed(string(loadedPlugin.Plugin.Type)) {
 		return nil, errors.New(errors.CodeInvalidParameter,
-			fmt.Sprintf("plugin type not allowed: %s", loadedPlugin.Plugin.Type))
+			fmt.Sprintf("plugin type not allowed: %s", string(loadedPlugin.Plugin.Type)))
 	}
 
 	// 验证插件
@@ -275,15 +275,15 @@ func (pl *PluginLoader) LoadPlugin(ctx context.Context, pluginPath string) (*Loa
 	// 执行加载后钩子
 	if pl.hooks.AfterLoad != nil {
 		if err := pl.hooks.AfterLoad(ctx, loadedPlugin); err != nil {
-			pl.logger.Warn("after load hook failed", "error", err)
+			pl.logger.Warn("after load hook failed", logging.String("error", err.Error()))
 		}
 	}
 
 	pl.logger.Info("plugin loaded",
-		"plugin_id", loadedPlugin.Plugin.ID,
-		"plugin_name", loadedPlugin.Plugin.Name,
-		"plugin_type", loadedPlugin.Plugin.Type,
-		"version", loadedPlugin.Version)
+		logging.String("plugin_id", loadedPlugin.Plugin.ID),
+		logging.String("plugin_name", loadedPlugin.Plugin.Name),
+		logging.String("plugin_type", string(loadedPlugin.Plugin.Type)),
+		logging.String("version", loadedPlugin.Version))
 
 	return loadedPlugin, nil
 }
@@ -291,7 +291,7 @@ func (pl *PluginLoader) LoadPlugin(ctx context.Context, pluginPath string) (*Loa
 // LoadPluginFromConfig 从配置加载插件
 func (pl *PluginLoader) LoadPluginFromConfig(ctx context.Context, config *runtime.PluginConfig) (*LoadedPlugin, error) {
 	if config == nil {
-		return nil, errors.New(errors.CodeInvalidParameter, "config cannot be nil")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "config cannot be nil")
 	}
 
 	// 查找插件文件
@@ -308,7 +308,7 @@ func (pl *PluginLoader) LoadPluginFromConfig(ctx context.Context, config *runtim
 			}
 		}
 		if !found {
-			return nil, errors.New(errors.CodeNotFound,
+			return nil, errors.NewNotFoundError(errors.CodeNotFound,
 				fmt.Sprintf("plugin file not found: %s", pluginPath))
 		}
 	}
@@ -337,7 +337,7 @@ func (pl *PluginLoader) UnloadPlugin(ctx context.Context, pluginID string) error
 	loadedPlugin, exists := pl.plugins[pluginID]
 	if !exists {
 		pl.pluginsMu.Unlock()
-		return errors.New(errors.CodeNotFound, "plugin not found")
+		return errors.NewNotFoundError(errors.CodeNotFound, "plugin not found")
 	}
 	delete(pl.plugins, pluginID)
 	pl.pluginsMu.Unlock()
@@ -345,7 +345,7 @@ func (pl *PluginLoader) UnloadPlugin(ctx context.Context, pluginID string) error
 	// 执行关闭前钩子
 	if pl.hooks.BeforeShutdown != nil {
 		if err := pl.hooks.BeforeShutdown(ctx, loadedPlugin); err != nil {
-			pl.logger.Warn("before shutdown hook failed", "error", err)
+			pl.logger.Warn("before shutdown hook failed", logging.String("error", err.Error()))
 		}
 	}
 
@@ -355,8 +355,8 @@ func (pl *PluginLoader) UnloadPlugin(ctx context.Context, pluginID string) error
 
 	if err := loadedPlugin.Instance.Shutdown(shutdownCtx); err != nil {
 		pl.logger.Warn("plugin shutdown failed",
-			"plugin_id", pluginID,
-			"error", err)
+			logging.String("plugin_id", pluginID),
+			logging.String("error", err.Error()))
 	}
 
 	// 更新状态
@@ -368,11 +368,11 @@ func (pl *PluginLoader) UnloadPlugin(ctx context.Context, pluginID string) error
 	// 执行关闭后钩子
 	if pl.hooks.AfterShutdown != nil {
 		if err := pl.hooks.AfterShutdown(ctx, loadedPlugin); err != nil {
-			pl.logger.Warn("after shutdown hook failed", "error", err)
+			pl.logger.Warn("after shutdown hook failed", logging.String("error", err.Error()))
 		}
 	}
 
-	pl.logger.Info("plugin unloaded", "plugin_id", pluginID)
+	pl.logger.Info("plugin unloaded", logging.String("plugin_id", pluginID))
 	return nil
 }
 
@@ -383,7 +383,7 @@ func (pl *PluginLoader) GetPlugin(pluginID string) (*LoadedPlugin, error) {
 
 	loadedPlugin, exists := pl.plugins[pluginID]
 	if !exists {
-		return nil, errors.New(errors.CodeNotFound, "plugin not found")
+		return nil, errors.NewNotFoundError(errors.CodeNotFound, "plugin not found")
 	}
 
 	return loadedPlugin, nil
@@ -415,7 +415,7 @@ func (pl *PluginLoader) ExecutePlugin(ctx context.Context, pluginID string, inpu
 	loadedPlugin.mu.RUnlock()
 
 	if status != runtime.PluginStatusActive && status != runtime.PluginStatusLoaded {
-		return nil, errors.New(errors.CodeInvalidParameter, "plugin not active")
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "plugin not active")
 	}
 
 	// 更新访问信息
@@ -449,7 +449,7 @@ func (pl *PluginLoader) ExecutePlugin(ctx context.Context, pluginID string, inpu
 	// 执行后钩子
 	if pl.hooks.AfterExecute != nil {
 		if err := pl.hooks.AfterExecute(ctx, loadedPlugin, output, execErr); err != nil {
-			pl.logger.Warn("after execute hook failed", "error", err)
+			pl.logger.Warn("after execute hook failed", logging.String("error", err.Error()))
 		}
 	}
 
@@ -476,7 +476,7 @@ func (pl *PluginLoader) ReloadPlugin(ctx context.Context, pluginID string) error
 		return errors.Wrap(err, "ERR_INTERNAL", "failed to reload plugin")
 	}
 
-	pl.logger.Info("plugin reloaded", "plugin_id", pluginID)
+	pl.logger.Info("plugin reloaded", logging.String("plugin_id", pluginID))
 	return nil
 }
 
@@ -500,8 +500,8 @@ func (pl *PluginLoader) DiscoverPlugins(ctx context.Context) ([]*LoadedPlugin, e
 			loadedPlugin, loadErr := pl.LoadPlugin(ctx, path)
 			if loadErr != nil {
 				pl.logger.Warn("failed to load discovered plugin",
-					"path", path,
-					"error", loadErr)
+					logging.String("path", path),
+					logging.String("error", loadErr))
 				return nil
 			}
 
@@ -511,13 +511,13 @@ func (pl *PluginLoader) DiscoverPlugins(ctx context.Context) ([]*LoadedPlugin, e
 
 		if err != nil {
 			pl.logger.Warn("failed to walk search path",
-				"path", searchPath,
-				"error", err)
+				logging.String("path", searchPath),
+				logging.String("error", err.Error()))
 		}
 	}
 
 	pl.logger.Info("plugin discovery completed",
-		"discovered_count", len(loadedPlugins))
+		logging.String("discovered_count", len(loadedPlugins)))
 
 	return loadedPlugins, nil
 }
@@ -553,7 +553,7 @@ func (pl *PluginLoader) Shutdown(ctx context.Context) error {
 	select {
 	case <-done:
 	case <-ctx.Done():
-		return errors.New(errors.DeadlineError, "shutdown timeout")
+		return errors.NewTimeoutError(errors.CodeTimeout, "shutdown timeout")
 	}
 
 	// 卸载所有插件
@@ -567,8 +567,8 @@ func (pl *PluginLoader) Shutdown(ctx context.Context) error {
 	for _, pluginID := range pluginIDs {
 		if err := pl.UnloadPlugin(ctx, pluginID); err != nil {
 			pl.logger.Warn("failed to unload plugin during shutdown",
-				"plugin_id", pluginID,
-				"error", err)
+				logging.String("plugin_id", pluginID),
+				logging.String("error", err.Error()))
 		}
 	}
 
@@ -605,7 +605,7 @@ func (pl *PluginLoader) initializePlugin(ctx context.Context, loadedPlugin *Load
 	// 执行初始化后钩子
 	if pl.hooks.AfterInit != nil {
 		if err := pl.hooks.AfterInit(ctx, loadedPlugin); err != nil {
-			pl.logger.Warn("after init hook failed", "error", err)
+			pl.logger.Warn("after init hook failed", logging.String("error", err.Error()))
 		}
 	}
 
@@ -663,9 +663,9 @@ func (pl *PluginLoader) checkAndReloadPlugins() {
 		fileInfo, err := os.Stat(plugin.Plugin.Path)
 		if err != nil {
 			pl.logger.Warn("failed to stat plugin file",
-				"plugin_id", plugin.Plugin.ID,
-				"path", plugin.Plugin.Path,
-				"error", err)
+				logging.String("plugin_id", plugin.Plugin.ID),
+				logging.String("path", plugin.Plugin.Path),
+				logging.String("error", err.Error()))
 			continue
 		}
 
@@ -674,8 +674,8 @@ func (pl *PluginLoader) checkAndReloadPlugins() {
 			ctx, cancel := context.WithTimeout(context.Background(), pl.config.LoadTimeout)
 			if err := pl.ReloadPlugin(ctx, plugin.Plugin.ID); err != nil {
 				pl.logger.Warn("failed to reload plugin",
-					"plugin_id", plugin.Plugin.ID,
-					"error", err)
+					logging.String("plugin_id", plugin.Plugin.ID),
+					logging.String("error", err.Error()))
 			}
 			cancel()
 		}
@@ -695,7 +695,7 @@ func (pl *PluginLoader) GetPluginStats(pluginID string) (map[string]interface{},
 	return map[string]interface{}{
 		"plugin_id":        loadedPlugin.Plugin.ID,
 		"name":             loadedPlugin.Plugin.Name,
-		"type":             loadedPlugin.Plugin.Type,
+		"type":             string(loadedPlugin.Plugin.Type),
 		"version":          loadedPlugin.Version,
 		"status":           loadedPlugin.Status,
 		"load_time":        loadedPlugin.LoadTime,

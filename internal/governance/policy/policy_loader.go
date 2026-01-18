@@ -246,9 +246,9 @@ func (l *policyLoader) Load(ctx context.Context) ([]*Policy, error) {
 
 	l.logger.WithContext(ctx).Info("Policies loaded successfully", logging.Any("count", len(allPolicies)))
 
-	// l.metricsCollector.Gauge("loaded_policies_total",
-		float64(len(allPolicies)),
-		map[string]string{})
+// 	// l.metricsCollector.Gauge("loaded_policies_total",
+// 		float64(len(allPolicies)),
+// 		map[string]string{})
 
 	return allPolicies, nil
 }

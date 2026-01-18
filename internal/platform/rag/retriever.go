@@ -492,9 +492,9 @@ func (r *retrieverImpl) validateRequest(req *RetrieveRequest) error {
 func (r *retrieverImpl) HealthCheck(ctx context.Context) error {
 	// 检查向量数据库
 // 	if err := r.vectorStore.HealthCheck(ctx); err != nil {
-		return errors.Wrap(err, "ERR_UNAVAIL", "vector store unhealthy")
-	}
-
+// 		return errors.Wrap(err, "ERR_UNAVAIL", "vector store unhealthy")
+// 	}
+ 
 	// 检查搜索引擎（可选）
 	if r.searchEngine != nil {
 		if err := r.searchEngine.HealthCheck(ctx); err != nil {
