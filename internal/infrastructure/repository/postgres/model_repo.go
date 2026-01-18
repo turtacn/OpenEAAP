@@ -723,7 +723,7 @@ func (r *modelRepo) toModel(mdl *model.Model) (*ModelModel, error) {
 		return nil, fmt.Errorf("failed to marshal capabilities: %w", err)
 	}
 
-	limitsJSON, err := json.Marshal(mdl.Limits)
+// // 	limitsJSON, err := json.Marshal(mdl.Limits)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal limits: %w", err)
 	}
@@ -746,21 +746,21 @@ func (r *modelRepo) toModel(mdl *model.Model) (*ModelModel, error) {
 	return &ModelModel{
 		ID:           mdl.ID,
 		Name:         mdl.Name,
-		Type:         mdl.Type.String(),
+// 		Type:         mdl.Type.String(),
 		Provider:     mdl.Provider,
 		Version:      mdl.Version,
 		Endpoint:     mdl.Endpoint,
 		Config:       string(configJSON),
 		Capabilities: string(capabilitiesJSON),
-		Limits:       string(limitsJSON),
+// 		Limits:       string(limitsJSON),
 		Pricing:      string(pricingJSON),
-		Status:       mdl.Status.String(),
-		IsDefault:    mdl.IsDefault,
-		Priority:     mdl.Priority,
+// 		Status:       mdl.Status.String(),
+// 		IsDefault:    mdl.IsDefault,
+// 		Priority:     mdl.Priority,
 		Tags:         string(tagsJSON),
 		Metadata:     string(metadataJSON),
-		CreatedBy:    mdl.CreatedBy,
-		UpdatedBy:    mdl.UpdatedBy,
+// 		CreatedBy:    mdl.CreatedBy,
+// 		UpdatedBy:    mdl.UpdatedBy,
 		CreatedAt:    mdl.CreatedAt,
 		UpdatedAt:    mdl.UpdatedAt,
 	}, nil
@@ -778,12 +778,12 @@ func (r *modelRepo) toEntity(dbModel *ModelModel) (*model.Model, error) {
 		return nil, fmt.Errorf("failed to unmarshal capabilities: %w", err)
 	}
 
-	var limits model.ModelLimits
+// 	var limits model.ModelLimits
 	if err := json.Unmarshal([]byte(dbModel.Limits), &limits); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal limits: %w", err)
 	}
 
-	var pricing model.ModelPricing
+// 	var pricing model.ModelPricing
 	if err := json.Unmarshal([]byte(dbModel.Pricing), &pricing); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal pricing: %w", err)
 	}
@@ -798,12 +798,12 @@ func (r *modelRepo) toEntity(dbModel *ModelModel) (*model.Model, error) {
 		return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
 	}
 
-	modelType, err := model.ModelTypeFromString(dbModel.Type)
+// 	modelType, err := model.ModelTypeFromString(dbModel.Type)
 	if err != nil {
 		return nil, fmt.Errorf("invalid model type: %w", err)
 	}
 
-	status, err := model.ModelStatusFromString(dbModel.Status)
+// 	status, err := model.ModelStatusFromString(dbModel.Status)
 	if err != nil {
 		return nil, fmt.Errorf("invalid model status: %w", err)
 	}
@@ -1030,6 +1030,93 @@ Find(&models).Error
 
 if err != nil {
 return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get available models")
+}
+
+result := make([]*model.Model, 0, len(models))
+for i := range models {
+m, err := r.toEntity(&models[i])
+if err != nil {
+return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert model")
+}
+result = append(result, m)
+}
+
+return result, nil
+}
+
+// GetByCapability retrieves models by capability
+func (r *modelRepo) GetByCapability(ctx context.Context, capability string) ([]*model.Model, error) {
+if capability == "" {
+return nil, errors.NewValidationError(errors.CodeInvalidParameter, "capability cannot be empty")
+}
+
+var models []ModelModel
+// Search in capabilities JSON field
+err := r.db.WithContext(ctx).
+Where("capabilities::jsonb ? ?", capability).
+Find(&models).Error
+
+if err != nil {
+return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get models by capability")
+}
+
+result := make([]*model.Model, 0, len(models))
+for i := range models {
+m, err := r.toEntity(&models[i])
+if err != nil {
+return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert model")
+}
+result = append(result, m)
+}
+
+return result, nil
+}
+
+// GetByPriceRange retrieves models within price range
+func (r *modelRepo) GetByPriceRange(ctx context.Context, minCost, maxCost float64) ([]*model.Model, error) {
+var models []ModelModel
+// Query models where input_cost or output_cost is in range
+err := r.db.WithContext(ctx).
+Where("(pricing->>'input_cost')::float >= ? AND (pricing->>'input_cost')::float <= ?", minCost, maxCost).
+Or("(pricing->>'output_cost')::float >= ? AND (pricing->>'output_cost')::float <= ?", minCost, maxCost).
+Find(&models).Error
+
+if err != nil {
+return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get models by price range")
+}
+
+result := make([]*model.Model, 0, len(models))
+for i := range models {
+m, err := r.toEntity(&models[i])
+if err != nil {
+return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert model")
+}
+result = append(result, m)
+}
+
+return result, nil
+}
+
+// GetByProvider retrieves models by provider
+func (r *modelRepo) GetByProvider(ctx context.Context, provider string, filter model.ModelFilter) ([]*model.Model, error) {
+if provider == "" {
+return nil, errors.NewValidationError(errors.CodeInvalidParameter, "provider cannot be empty")
+}
+
+query := r.db.WithContext(ctx).Where("provider = ?", provider)
+
+// Apply filter
+if filter.Status != "" {
+query = query.Where("status = ?", filter.Status)
+}
+if filter.Type != "" {
+query = query.Where("type = ?", filter.Type)
+}
+
+var models []ModelModel
+err := query.Find(&models).Error
+if err != nil {
+return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get models by provider")
 }
 
 result := make([]*model.Model, 0, len(models))

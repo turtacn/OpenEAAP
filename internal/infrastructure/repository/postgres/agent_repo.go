@@ -749,7 +749,7 @@ func (r *agentRepo) IncrementExecutionCount(ctx context.Context, id string, succ
 	}
 	
 	if success {
-		updates["last_executed_at"] = time.Now()
+// 		updates["last_executed_at"] = time.Now()
 	}
 	
 	result := r.db.WithContext(ctx).
@@ -851,6 +851,33 @@ Update("deleted_at", time.Now())
 
 if result.Error != nil {
 return errors.WrapDatabaseError(result.Error, errors.CodeDatabaseError, "failed to soft delete agent")
+}
+if result.RowsAffected == 0 {
+return errors.NewNotFoundError(errors.CodeNotFound, "agent not found")
+}
+
+return nil
+}
+
+// UpdateStats updates agent execution statistics
+func (r *agentRepo) UpdateStats(ctx context.Context, id string, stats agent.ExecutionStats) error {
+if id == "" {
+return errors.NewValidationError(errors.CodeInvalidParameter, "agent ID cannot be empty")
+}
+
+result := r.db.WithContext(ctx).Model(&AgentModel{}).
+Where("id = ?", id).
+Updates(map[string]interface{}{
+"total_executions":    stats.TotalExecutions,
+"successful_executions": stats.SuccessfulExecutions,
+"failed_executions":   stats.FailedExecutions,
+"avg_execution_time_ms":  stats.AvgExecutionTimeMs,
+// "last_executed_at":    stats.LastExecution,
+"updated_at":          time.Now(),
+})
+
+if result.Error != nil {
+return errors.WrapDatabaseError(result.Error, errors.CodeDatabaseError, "failed to update agent stats")
 }
 if result.RowsAffected == 0 {
 return errors.NewNotFoundError(errors.CodeNotFound, "agent not found")

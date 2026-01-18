@@ -320,13 +320,13 @@ func NewMinIOClient(config *MinIOConfig) (MinIOClient, error) {
 	// 创建客户端选项
 // 	opts := &minio.Options{
 		Creds:  creds,
-		Secure: config.UseSSL,
-		Region: config.Region,
-	}
-
-	// 创建客户端
-	client, err := minio.New(config.Endpoint, opts)
-	if err != nil {
+// 		Secure: config.UseSSL,
+// 		Region: config.Region,
+// 	}
+// 
+// 	// 创建客户端
+// 	client, err := minio.New(config.Endpoint, opts)
+// 	if err != nil {
 		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to create minio client")
 	}
 
@@ -367,12 +367,12 @@ func (mc *minioClient) CreateBucket(ctx context.Context, config *BucketConfig) e
 	// 创建存储桶选项
 // 	opts := minio.MakeBucketOptions{
 		Region:        config.Region,
-		ObjectLocking: config.ObjectLocking,
-	}
-
-	// 创建存储桶
-	err = mc.client.MakeBucket(ctx, config.Name, opts)
-	if err != nil {
+// 		ObjectLocking: config.ObjectLocking,
+// 	}
+// 
+// 	// 创建存储桶
+// 	err = mc.client.MakeBucket(ctx, config.Name, opts)
+// 	if err != nil {
 		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to create bucket")
 	}
 
@@ -518,13 +518,13 @@ func (mc *minioClient) PutObject(ctx context.Context, req *PutObjectRequest) (*P
 	// 构建上传选项
 // 	opts := minio.PutObjectOptions{
 		ContentType:  req.ContentType,
-		UserMetadata: req.Metadata,
-		UserTags:     req.UserTags,
-	}
-
-	// 上传对象
-	info, err := mc.client.PutObject(ctx, req.BucketName, req.ObjectName, req.Reader, req.Size, opts)
-	if err != nil {
+// 		UserMetadata: req.Metadata,
+// 		UserTags:     req.UserTags,
+// 	}
+// 
+// 	// 上传对象
+// 	info, err := mc.client.PutObject(ctx, req.BucketName, req.ObjectName, req.Reader, req.Size, opts)
+// 	if err != nil {
 		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to put object")
 	}
 
@@ -601,10 +601,10 @@ func (mc *minioClient) DeleteObject(ctx context.Context, req *DeleteObjectReques
 
 // 	opts := minio.RemoveObjectOptions{
 		VersionID: req.VersionID,
-	}
-
-	err := mc.client.RemoveObject(ctx, req.BucketName, req.ObjectName, opts)
-	if err != nil {
+// 	}
+// 
+// 	err := mc.client.RemoveObject(ctx, req.BucketName, req.ObjectName, opts)
+// 	if err != nil {
 		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to delete object")
 	}
 
@@ -635,10 +635,10 @@ func (mc *minioClient) DeleteObjects(ctx context.Context, req *DeleteObjectsRequ
 	// 删除对象
 // 	opts := minio.RemoveObjectsOptions{
 		GovernanceBypass: true,
-	}
-
-	deletedObjects := make([]string, 0)
-	deleteErrors := make([]DeleteError, 0)
+// 	}
+// 
+// 	deletedObjects := make([]string, 0)
+// 	deleteErrors := make([]DeleteError, 0)
 
 	for rErr := range mc.client.RemoveObjects(ctx, req.BucketName, objectsCh, opts) {
 		if rErr.Err != nil {

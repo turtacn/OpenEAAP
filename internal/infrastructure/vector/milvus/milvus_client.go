@@ -537,9 +537,9 @@ func (mc *milvusClient) Search(ctx context.Context, params *SearchParams) ([]Sea
 		}
 	}
 
-	return results, nil
-}
-
+// 	return results, nil
+// }
+// 
 // HybridSearch 混合检索
 func (mc *milvusClient) HybridSearch(ctx context.Context, params *HybridSearchParams) ([]SearchResult, error) {
 	if params == nil {
@@ -609,10 +609,10 @@ func (mc *milvusClient) mergeSearchResults(allResults [][]SearchResult, params *
 	}
 
 	// 转换为切片并排序
-	merged := make([]SearchResult, 0, len(resultMap))
+// 	merged := make([]SearchResult, 0, len(resultMap))
 // 	for _, result := range resultMap {
-		merged = append(merged, *result)
-	}
+// 		merged = append(merged, *result)
+// 	}
 
 	// 按分数降序排序
 	for i := 0; i < len(merged)-1; i++ {

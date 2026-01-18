@@ -2,6 +2,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -104,30 +105,21 @@ func buildCORSConfig(cfg *config.Config) *CORSConfig {
 // handlePreflightRequest handles CORS preflight (OPTIONS) requests
 func handlePreflightRequest(c *gin.Context, origin string, cfg *CORSConfig, logger logging.Logger) {
 	if !isOriginAllowed(origin, cfg.AllowedOrigins) {
-		logger.Debug(c.Request.Context(), "CORS preflight rejected: origin not allowed",
-			"origin", origin,
-			"allowed_origins", cfg.AllowedOrigins,
-		)
+		logger.Debug("CORS preflight rejected: origin not allowed", logging.String("origin", fmt.Sprint(origin)), logging.String("allowed_origins", fmt.Sprint(cfg.AllowedOrigins)))
 		c.AbortWithStatus(http.StatusForbidden)
 		return
 	}
 
 	requestMethod := c.Request.Header.Get("Access-Control-Request-Method")
 	if !isMethodAllowed(requestMethod, cfg.AllowedMethods) {
-		logger.Debug(c.Request.Context(), "CORS preflight rejected: method not allowed",
-			"method", requestMethod,
-			"allowed_methods", cfg.AllowedMethods,
-		)
+		logger.Debug("CORS preflight rejected: method not allowed", logging.String("method", fmt.Sprint(requestMethod)), logging.String("allowed_methods", fmt.Sprint(cfg.AllowedMethods)))
 		c.AbortWithStatus(http.StatusForbidden)
 		return
 	}
 
 	requestHeaders := parseHeaderList(c.Request.Header.Get("Access-Control-Request-Headers"))
 	if !areHeadersAllowed(requestHeaders, cfg.AllowedHeaders) {
-		logger.Debug(c.Request.Context(), "CORS preflight rejected: headers not allowed",
-			"headers", requestHeaders,
-			"allowed_headers", cfg.AllowedHeaders,
-		)
+		logger.Debug("CORS preflight rejected: headers not allowed", logging.String("headers", fmt.Sprint(requestHeaders)), logging.String("allowed_headers", fmt.Sprint(cfg.AllowedHeaders)))
 		c.AbortWithStatus(http.StatusForbidden)
 		return
 	}
@@ -145,10 +137,7 @@ func handlePreflightRequest(c *gin.Context, origin string, cfg *CORSConfig, logg
 		c.Header("Access-Control-Max-Age", string(rune(cfg.MaxAge)))
 	}
 
-	logger.Debug(c.Request.Context(), "CORS preflight accepted",
-		"origin", origin,
-		"method", requestMethod,
-	)
+	logger.Debug("CORS preflight accepted", logging.String("origin", fmt.Sprint(origin)), logging.String("method", fmt.Sprint(requestMethod)))
 
 	c.AbortWithStatus(http.StatusNoContent)
 }
@@ -161,10 +150,7 @@ func handleActualRequest(c *gin.Context, origin string, cfg *CORSConfig, logger 
 	}
 
 	if !isOriginAllowed(origin, cfg.AllowedOrigins) {
-		logger.Debug(c.Request.Context(), "CORS request rejected: origin not allowed",
-			"origin", origin,
-			"allowed_origins", cfg.AllowedOrigins,
-		)
+		logger.Debug("CORS request rejected: origin not allowed", logging.String("origin", fmt.Sprint(origin)), logging.String("allowed_origins", fmt.Sprint(cfg.AllowedOrigins)))
 		c.AbortWithStatus(http.StatusForbidden)
 		return
 	}
@@ -180,10 +166,7 @@ func handleActualRequest(c *gin.Context, origin string, cfg *CORSConfig, logger 
 		c.Header("Access-Control-Allow-Credentials", "true")
 	}
 
-	logger.Debug(c.Request.Context(), "CORS request accepted",
-		"origin", origin,
-		"method", c.Request.Method,
-	)
+	logger.Debug("CORS request accepted", logging.String("origin", fmt.Sprint(origin)), logging.String("method", fmt.Sprint(c.Request.Method)))
 }
 
 // isOriginAllowed checks if the origin is allowed
