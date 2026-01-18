@@ -158,46 +158,46 @@ Important:
 // NewNativeRuntime 创建原生运行时
 func NewNativeRuntime(
 	config *runtime.RuntimeConfig,
-	logger logger.Logger,
-	llmClient llm.LLMClient,
-	toolManager ToolManager,
-	memoryManager MemoryManager,
-) (*NativeRuntime, error) {
-	if config == nil {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "config cannot be nil")
-	}
-	if logger == nil {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "logger cannot be nil")
-	}
-	if llmClient == nil {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "llm client cannot be nil")
-	}
+// 	logger logger.Logger,
+// 	llmClient llm.LLMClient,
+// 	toolManager ToolManager,
+// 	memoryManager MemoryManager,
+// ) (*NativeRuntime, error) {
+// 	if config == nil {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "config cannot be nil")
+// 	}
+// 	if logger == nil {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "logger cannot be nil")
+// 	}
+// 	if llmClient == nil {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "llm client cannot be nil")
+// 	}
 
-	nr := &NativeRuntime{
-		id:            config.ID,
-		name:          config.Name,
-		version:       config.Version,
-		config:        config,
-		logger:        logger,
-		llmClient:     llmClient,
-		toolManager:   toolManager,
-		memoryManager: memoryManager,
-		status:        runtime.RuntimeStatusInitializing,
-		metrics:       &runtimeMetrics{},
-		shutdownChan:  make(chan struct{}),
-	}
+// 	nr := &NativeRuntime{
+// 		id:            config.ID,
+// 		name:          config.Name,
+// 		version:       config.Version,
+// 		config:        config,
+// 		logger:        logger,
+// 		llmClient:     llmClient,
+// 		toolManager:   toolManager,
+// 		memoryManager: memoryManager,
+// 		status:        runtime.RuntimeStatusInitializing,
+// 		metrics:       &runtimeMetrics{},
+// 		shutdownChan:  make(chan struct{}),
+// 	}
 
-	// 初始化元数据
-	nr.metadata = &runtime.RuntimeMetadata{
-		ID:          config.ID,
-		Type:        runtime.RuntimeTypeNative,
-		Name:        config.Name,
-		Version:     config.Version,
-		Description: "Native ReAct-based Agent Runtime",
-		Author:      "OpenEEAP",
-		License:     "MIT",
-		Capabilities: []string{
-			"reasoning",
+// 	// 初始化元数据
+// 	nr.metadata = &runtime.RuntimeMetadata{
+// 		ID:          config.ID,
+// 		Type:        runtime.RuntimeTypeNative,
+// 		Name:        config.Name,
+// 		Version:     config.Version,
+// 		Description: "Native ReAct-based Agent Runtime",
+// 		Author:      "OpenEEAP",
+// 		License:     "MIT",
+// 		Capabilities: []string{
+// 			"reasoning",
 			"tool_use",
 			"memory",
 			"streaming",
@@ -505,29 +505,29 @@ func (nr *NativeRuntime) executeReAct(ctx context.Context, req *runtime.ExecuteR
 	// ReAct循环
 	for step := 1; step <= maxReActSteps; step++ {
 		// 构建消息
-		messages := []llm.Message{
-			{Role: "system", Content: systemPrompt},
-			{Role: "user", Content: userPrompt},
-		}
+// 		messages := []llm.Message{
+// 			{Role: "system", Content: systemPrompt},
+// 			{Role: "user", Content: userPrompt},
+// 		}
 
-		// 添加之前的步骤到上下文
-		/*
-		for _, s := range result.Steps {
-			messages = append(messages,
-				llm.Message{
-					Role:    "assistant",
-					Content: nr.formatStepForContext(s),
-				},
-			)
-		}
-		*/
+// 		// 添加之前的步骤到上下文
+// 		/*
+// 		for _, s := range result.Steps {
+// 			messages = append(messages,
+// 				llm.Message{
+// 					Role:    "assistant",
+// 					Content: nr.formatStepForContext(s),
+// 				},
+// 			)
+// 		}
+// 		*/
 
-		// 调用LLM
-		llmResp, err := nr.llmClient.Chat(ctx, &llm.ChatRequest{
-			Messages:    messages,
-			MaxTokens:   1000,
-			Temperature: 0.7,
-		})
+// 		// 调用LLM
+// 		llmResp, err := nr.llmClient.Chat(ctx, &llm.ChatRequest{
+// 			Messages:    messages,
+// 			MaxTokens:   1000,
+// 			Temperature: 0.7,
+// 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "ERR_INTERNAL", "llm call failed")
 		}

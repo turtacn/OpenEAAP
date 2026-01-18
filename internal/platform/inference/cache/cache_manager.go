@@ -333,16 +333,16 @@ func (cm *CacheManager) Invalidate(ctx context.Context, req interface{}) error {
 	}
 
 	if len(errs) > 0 {
-  cm.logger.WithContext(ctx).Warn("cache invalidation had errors", logging.Any("key", key), logging.Any("error_count", len(errs)))
-	}
+//   cm.logger.WithContext(ctx).Warn("cache invalidation had errors", logging.Any("key", key), logging.Any("error_count", len(errs)))
+// 	}
 
-	cm.logger.WithContext(ctx).Info("cache invalidated", logging.Any("key", key))
+// 	cm.logger.WithContext(ctx).Info("cache invalidated", logging.Any("key", key))
 
-	return nil
-}
+// 	return nil
+// }
 
 // InvalidatePattern invalidates all entries matching a pattern
-func (cm *CacheManager) InvalidatePattern(ctx context.Context, pattern string) error {
+// func (cm *CacheManager) InvalidatePattern(ctx context.Context, pattern string) error {
 	cm.logger.WithContext(ctx).Info("invalidating cache pattern", logging.Any("pattern", pattern))
 
 	// This would require cache implementations to support pattern matching

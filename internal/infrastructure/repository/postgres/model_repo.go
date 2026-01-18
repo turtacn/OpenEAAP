@@ -808,45 +808,17 @@ func (r *modelRepo) toEntity(dbModel *ModelModel) (*model.Model, error) {
 // 		return nil, fmt.Errorf("invalid model status: %w", err)
 // 	}
 
-// 	return &model.Model{
-// 		ID:           dbModel.ID,
-// 		Name:         dbModel.Name,
-// 		Type:         modelType,
-// 		Provider:     dbModel.Provider,
-// 		Version:      dbModel.Version,
-// 		Endpoint:     dbModel.Endpoint,
-// 		Config:       config,
-// 		Capabilities: capabilities,
-// 		Limits:       limits,
-// 		Pricing:      pricing,
-// 		Status:       status,
-// 		IsDefault:    dbModel.IsDefault,
-// 		Priority:     dbModel.Priority,
-// 		Tags:         tags,
-// 		Metadata:     metadata,
-// 		CreatedBy:    dbModel.CreatedBy,
-// 		UpdatedBy:    dbModel.UpdatedBy,
-// 		CreatedAt:    dbModel.CreatedAt,
-// 		UpdatedAt:    dbModel.UpdatedAt,
-	}, nil
-}
-
-// versionToModel 将版本实体转换为数据库模型
-func (r *modelRepo) versionToModel(version *model.ModelVersion) (*ModelVersionModel, error) {
-	configJSON, _ := json.Marshal(version.Config)
-	metricsJSON, _ := json.Marshal(version.PerformanceMetrics)
-
-	return &ModelVersionModel{
-		ID:                 version.ID,
-		ModelID:            version.ModelID,
-		Version:            version.Version,
-		Changelog:          version.Changelog,
-		Config:             string(configJSON),
-		PerformanceMetrics: string(metricsJSON),
-		IsActive:           version.IsActive,
-		ReleasedAt:         version.ReleasedAt,
-		CreatedAt:          time.Now(),
-		UpdatedAt:          time.Now(),
+	return &model.Model{
+		ID:           dbModel.ID,
+		Name:         dbModel.Name,
+		Provider:     dbModel.Provider,
+		Version:      dbModel.Version,
+		Endpoint:     dbModel.Endpoint,
+		Description:  dbModel.Description,
+		Config:       config,
+		Capabilities: capabilities,
+		CreatedAt:    dbModel.CreatedAt,
+		UpdatedAt:    dbModel.UpdatedAt,
 	}, nil
 }
 

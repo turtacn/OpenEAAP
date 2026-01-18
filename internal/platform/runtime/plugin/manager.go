@@ -195,7 +195,7 @@ func NewPluginManager(logger logging.Logger, loader *PluginLoader, config *Manag
 
 	// 初始化版本控制
 	if config.EnableVersionControl {
-		manager.versionControl = NewVersionControl(logger)
+		manager.versionControl = NewVersionControl()
 	}
 
 	// 初始化健康检查器

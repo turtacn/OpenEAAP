@@ -123,50 +123,50 @@ func (m *RateLimitMiddleware) Handler() gin.HandlerFunc {
 // 			span.SetAttribute("ratelimit.exceeded", true)
 
 // 			retryAfter := time.Until(resetTime).Seconds()
-			c.Header("Retry-After", fmt.Sprintf("%.0f", retryAfter))
+// 			c.Header("Retry-After", fmt.Sprintf("%.0f", retryAfter))
 
-			c.JSON(http.StatusTooManyRequests, gin.H{
-				"code":        errors.ErrRateLimitExceeded,
-				"message":     "Rate limit exceeded",
-				"retry_after": retryAfter,
-			})
-			c.Abort()
-			return
-		}
+// 			c.JSON(http.StatusTooManyRequests, gin.H{
+// 				"code":        errors.ErrRateLimitExceeded,
+// 				"message":     "Rate limit exceeded",
+// 				"retry_after": retryAfter,
+// 			})
+// 			c.Abort()
+// 			return
+// 		}
 
 // 		span.SetAttribute("ratelimit.remaining", remaining)
-		c.Next()
-	}
+// 		c.Next()
+// 	}
 // }
 
 // extractKey extracts the rate limit key from the request
-func (m *RateLimitMiddleware) extractKey(c *gin.Context) string {
-	switch m.config.KeyType {
-	case KeyByUserID:
-		userID, exists := GetUserID(c)
-		if !exists {
-			// Fall back to IP if user ID not available
-			return m.getClientIP(c)
-		}
-		return fmt.Sprintf("user:%s", userID)
-
-	case KeyByAPIKey:
-		apiKey := c.GetHeader("X-API-Key")
-		if apiKey == "" {
-			return m.getClientIP(c)
-		}
-		return fmt.Sprintf("apikey:%s", apiKey)
-
-	case KeyByIP:
-		return fmt.Sprintf("ip:%s", m.getClientIP(c))
-
-	case KeyGlobal:
-		return "global"
-
-	default:
-		return m.getClientIP(c)
-	}
-}
+// func (m *RateLimitMiddleware) extractKey(c *gin.Context) string {
+// 	switch m.config.KeyType {
+// 	case KeyByUserID:
+// 		userID, exists := GetUserID(c)
+// 		if !exists {
+// 			// Fall back to IP if user ID not available
+// 			return m.getClientIP(c)
+// 		}
+// 		return fmt.Sprintf("user:%s", userID)
+//
+// 	case KeyByAPIKey:
+// 		apiKey := c.GetHeader("X-API-Key")
+// 		if apiKey == "" {
+// 			return m.getClientIP(c)
+// 		}
+// 		return fmt.Sprintf("apikey:%s", apiKey)
+//
+// 	case KeyByIP:
+// 		return fmt.Sprintf("ip:%s", m.getClientIP(c))
+//
+// 	case KeyGlobal:
+// 		return "global"
+//
+// 	default:
+// 		return m.getClientIP(c)
+// 	}
+// }
 
 // getClientIP extracts client IP from request
 func (m *RateLimitMiddleware) getClientIP(c *gin.Context) string {
@@ -213,7 +213,7 @@ func (m *RateLimitMiddleware) checkDistributedRateLimit(ctx context.Context, key
 
 // checkLocalRateLimit uses in-memory rate limiter
 func (m *RateLimitMiddleware) checkLocalRateLimit(ctx context.Context, key string) (allowed bool, remaining int, resetTime time.Time, err error) {
-	limiter := m.getLimiter(key)
+// 	limiter := m.getLimiter(key)
 
 	// Clean up old limiters periodically
 	go m.cleanupLimiters()
@@ -289,7 +289,7 @@ func (m *RateLimitMiddleware) cleanupLimiters() {
 	for range ticker.C {
 		now := time.Now()
 		m.limiters.Range(func(key, value interface{}) bool {
-			limiter := value.(*rateLimiter)
+// 			limiter := value.(*rateLimiter)
 			limiter.mu.Lock()
 			inactive := now.Sub(limiter.lastAccess) > 10*time.Minute
 			limiter.mu.Unlock()
@@ -367,7 +367,7 @@ func (m *AdaptiveRateLimitMiddleware) AdjustLimit(newLimit int) {
 
 	m.baseConfig.RequestsLimit = newLimit
 	m.middleware = NewRateLimitMiddleware(m.baseConfig)
-	m.logger.Info("Rate limit adjusted", logging.String("new_limit", newLimit))
+	m.logger.Info("Rate limit adjusted", logging.String("new_limit", fmt.Sprint(newLimit)))
 }
 
 //Personal.AI order the ending

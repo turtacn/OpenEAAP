@@ -133,10 +133,10 @@ type StrategyUpdate struct {
 type optimizer struct {
 	feedbackCollector FeedbackCollector
 	autoEvaluator     AutoEvaluator
-	modelRepo         model.Repository
-	agentRepo         agent.Repository
+	modelRepo         model.ModelRepository
+	agentRepo         agent.AgentRepository
 	logger            logging.Logger
-	metricsCollector  metrics.Collector
+	metricsCollector  metrics.MetricsCollector
 	tracer            trace.Tracer
 	config            *OptimizerConfig
 }
@@ -170,8 +170,8 @@ type OptimizerConfig struct {
 func NewOptimizer(
 	feedbackCollector FeedbackCollector,
 	autoEvaluator AutoEvaluator,
-	modelRepo model.Repository,
-	agentRepo agent.Repository,
+	modelRepo model.ModelRepository,
+	agentRepo agent.AgentRepository,
 	logger logging.Logger,
 	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,

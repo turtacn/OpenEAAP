@@ -113,7 +113,7 @@ type LangChainConfig struct {
 	MaxTokens       int                    // 最大令牌数
 	Timeout         time.Duration          // 超时时间
 	EnableCaching   bool                   // 启用缓存
-	EnableTracing   bool                   // 启用追踪
+// 	EnableTracing   bool                   // 启用追踪
 	Verbose         bool                   // 详细模式
 	Metadata        map[string]interface{} // 元数据
 }
@@ -389,7 +389,7 @@ func (lca *LangChainAdapter) Initialize(ctx context.Context, config *runtime.Run
 			if err := lca.LoadPlugin(ctx, plugin); err != nil {
 				lca.logger.Warn("failed to load plugin",
 					logging.String("plugin_id", plugin.ID),
-					logging.String("error", err))
+					logging.Error(err))
 			}
 		}
 	}
@@ -457,7 +457,7 @@ func (lca *LangChainAdapter) Execute(ctx context.Context, req *runtime.ExecuteRe
 
 	lca.logger.Debug("langchain execution completed",
 		logging.String("request_id", req.AgentID),
-		logging.String("duration", duration),
+		logging.String("duration", duration.String()),
 		logging.String("tokens_used", output.TokensUsed))
 
 	return resp, nil
@@ -614,7 +614,7 @@ func (lca *LangChainAdapter) Shutdown(ctx context.Context) error {
 
 	// 关闭客户端
 	if err := lca.client.Close(); err != nil {
-		lca.logger.Warn("failed to close langchain client", logging.String("error", err))
+		lca.logger.Warn("failed to close langchain client", logging.Error(err))
 	}
 
 	lca.status = runtime.RuntimeStatusShutdown
@@ -768,7 +768,7 @@ func (lca *LangChainAdapter) ExecutePlugin(ctx context.Context, pluginID string,
 
 	lca.logger.Debug("plugin executed",
 		logging.String("plugin_id", pluginID),
-		logging.String("duration", duration))
+		logging.String("duration", duration.String()))
 
 	return resp, nil
 }
@@ -840,8 +840,8 @@ func (lca *LangChainAdapter) buildLangChainConfig() *LangChainConfig {
 		APIKey:        lca.config.Environment["LANGCHAIN_API_KEY"],
 		BaseURL:       lca.config.Endpoint,
 		Timeout:       lca.config.Timeout,
-		EnableCaching: lca.config.EnableResultCaching,
-		EnableTracing: lca.config.EnableTracing,
+// 		EnableCaching: lca.config.EnableResultCaching,
+// 		EnableTracing: lca.config.EnableTracing,
 		Verbose:       false,
 		Metadata:      lca.config.Metadata,
 	}
@@ -962,7 +962,7 @@ func (lca *LangChainAdapter) healthCheckLoop() {
 			cancel()
 
 			if err != nil {
-				lca.logger.Warn("health check failed", logging.String("error", err))
+				lca.logger.Warn("health check failed", logging.Error(err))
 			}
 		case <-lca.shutdownChan:
 			return
