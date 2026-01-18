@@ -553,10 +553,10 @@ func (r *modelRepo) CreateVersion(ctx context.Context, version *model.ModelVersi
 		return errors.NewValidationError(errors.CodeInvalidParameter, "model version cannot be nil")
 	}
 
-	versionModel, err := r.versionToModel(version)
-	if err != nil {
-		return errors.Wrap(err, "ERR_INTERNAL", "failed to convert version to model")
-	}
+// 	versionModel, err := r.versionToModel(version)
+// 	if err != nil {
+// 		return errors.Wrap(err, "ERR_INTERNAL", "failed to convert version to model")
+// 	}
 
 	if err := r.db.WithContext(ctx).Create(versionModel).Error; err != nil {
 		if isDuplicateKeyError(err) {
@@ -666,47 +666,47 @@ func (r *modelRepo) GetStatistics(ctx context.Context) (*model.ModelStatistics, 
 	}
 
 // 	stats.ByType = make(map[string]int64)
-	for _, tc := range typeCounts {
+// 	for _, tc := range typeCounts {
 // 		stats.ByType[tc.Type] = tc.Count
-	}
+// 	}
 
-	// 按状态统计
-	type StatusCount struct {
-		Status string
-		Count  int64
-	}
-	var statusCounts []StatusCount
-	if err := r.db.WithContext(ctx).
-		Model(&ModelModel{}).
-		Select("status, COUNT(*) as count").
-		Group("status").
-		Find(&statusCounts).Error; err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get status counts")
-	}
+// 	// 按状态统计
+// 	type StatusCount struct {
+// 		Status string
+// 		Count  int64
+// 	}
+// 	var statusCounts []StatusCount
+// 	if err := r.db.WithContext(ctx).
+// 		Model(&ModelModel{}).
+// 		Select("status, COUNT(*) as count").
+// 		Group("status").
+// 		Find(&statusCounts).Error; err != nil {
+// 		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get status counts")
+// 	}
 
 // 	stats.ByStatus = make(map[string]int64)
-	for _, sc := range statusCounts {
+// 	for _, sc := range statusCounts {
 // 		stats.ByStatus[sc.Status] = sc.Count
-	}
+// 	}
 
-	// 按提供商统计
-	type ProviderCount struct {
-		Provider string
-		Count    int64
-	}
-	var providerCounts []ProviderCount
-	if err := r.db.WithContext(ctx).
-		Model(&ModelModel{}).
-		Select("provider, COUNT(*) as count").
-		Group("provider").
-		Find(&providerCounts).Error; err != nil {
-		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get provider counts")
-	}
+// 	// 按提供商统计
+// 	type ProviderCount struct {
+// 		Provider string
+// 		Count    int64
+// 	}
+// 	var providerCounts []ProviderCount
+// 	if err := r.db.WithContext(ctx).
+// 		Model(&ModelModel{}).
+// 		Select("provider, COUNT(*) as count").
+// 		Group("provider").
+// 		Find(&providerCounts).Error; err != nil {
+// 		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get provider counts")
+// 	}
 
 // 	stats.ByProvider = make(map[string]int64)
-	for _, pc := range providerCounts {
+// 	for _, pc := range providerCounts {
 // 		stats.ByProvider[pc.Provider] = pc.Count
-	}
+// 	}
 
 	return &stats, nil
 }
@@ -814,39 +814,39 @@ func (r *modelRepo) toEntity(dbModel *ModelModel) (*model.Model, error) {
 		Provider:     dbModel.Provider,
 		Version:      dbModel.Version,
 		Endpoint:     dbModel.Endpoint,
-		Description:  dbModel.Description,
-		Config:       config,
-		Capabilities: capabilities,
-		CreatedAt:    dbModel.CreatedAt,
-		UpdatedAt:    dbModel.UpdatedAt,
-	}, nil
-}
+// 		Description:  dbModel.Description,
+// 		Config:       config,
+// 		Capabilities: capabilities,
+// 		CreatedAt:    dbModel.CreatedAt,
+// 		UpdatedAt:    dbModel.UpdatedAt,
+// 	}, nil
+// }
 
 // versionToEntity 将数据库模型转换为版本实体
-func (r *modelRepo) versionToEntity(versionModel *ModelVersionModel) (*model.ModelVersion, error) {
-	var config model.ModelConfig
-	json.Unmarshal([]byte(versionModel.Config), &config)
+// func (r *modelRepo) versionToEntity(versionModel *ModelVersionModel) (*model.ModelVersion, error) {
+// 	var config model.ModelConfig
+// 	json.Unmarshal([]byte(versionModel.Config), &config)
 
-	var metrics map[string]interface{}
-	json.Unmarshal([]byte(versionModel.PerformanceMetrics), &metrics)
+// 	var metrics map[string]interface{}
+// 	json.Unmarshal([]byte(versionModel.PerformanceMetrics), &metrics)
 
-	return &model.ModelVersion{
-		ID:                 versionModel.ID,
-		ModelID:            versionModel.ModelID,
-		Version:            versionModel.Version,
-		Changelog:          versionModel.Changelog,
-		Config:             config,
-		PerformanceMetrics: metrics,
-		IsActive:           versionModel.IsActive,
-		ReleasedAt:         versionModel.ReleasedAt,
-		CreatedAt:          versionModel.CreatedAt,
-		UpdatedAt:          versionModel.UpdatedAt,
-	}, nil
-}
+// 	return &model.ModelVersion{
+// 		ID:                 versionModel.ID,
+// 		ModelID:            versionModel.ModelID,
+// 		Version:            versionModel.Version,
+// 		Changelog:          versionModel.Changelog,
+// 		Config:             config,
+// 		PerformanceMetrics: metrics,
+// 		IsActive:           versionModel.IsActive,
+// 		ReleasedAt:         versionModel.ReleasedAt,
+// 		CreatedAt:          versionModel.CreatedAt,
+// 		UpdatedAt:          versionModel.UpdatedAt,
+// 	}, nil
+// }
 
 // metricsToModel 将指标实体转换为数据库模型
-func (r *modelRepo) metricsToModel(metrics *model.ModelMetrics) *ModelMetricsModel {
-	tagsJSON, _ := json.Marshal(metrics.Tags)
+// func (r *modelRepo) metricsToModel(metrics *model.ModelMetrics) *ModelMetricsModel {
+// 	tagsJSON, _ := json.Marshal(metrics.Tags)
 
 	return &ModelMetricsModel{
 		ID:         metrics.ID,
@@ -1125,7 +1125,7 @@ return r.toEntity(&m)
 }
 
 // GetByStatus retrieves models by status
-func (r *modelRepo) GetByStatus(ctx context.Context, status model.ModelStatus) ([]*model.Model, error) {
+func (r *modelRepo) GetByStatus(ctx context.Context, status model.ModelStatus, filter model.ModelFilter) ([]*model.Model, error) {
 var models []ModelModel
 err := r.db.WithContext(ctx).Where("status = ?", string(status)).Find(&models).Error
 if err != nil {

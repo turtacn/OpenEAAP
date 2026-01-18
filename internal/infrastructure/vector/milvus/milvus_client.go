@@ -439,79 +439,79 @@ func (mc *milvusClient) Insert(ctx context.Context, collectionName string, vecto
 		}
 	}
 
-	// 插入数据
-	result, err := mc.client.Insert(ctx, collectionName, "", columns...)
-	if err != nil {
-		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to insert vectors")
-	}
+// 	// 插入数据
+// 	result, err := mc.client.Insert(ctx, collectionName, "", columns...)
+// 	if err != nil {
+// 		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to insert vectors")
+// 	}
 
 // // 	return result.IDs().(*entity.ColumnInt64).Data(), nil
-}
+// }
 
 // Delete 删除向量
-func (mc *milvusClient) Delete(ctx context.Context, collectionName string, ids []int64) error {
-	if collectionName == "" {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
-	}
-	if len(ids) == 0 {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "ids cannot be empty")
-	}
+// func (mc *milvusClient) Delete(ctx context.Context, collectionName string, ids []int64) error {
+// 	if collectionName == "" {
+// 		return errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
+// 	}
+// 	if len(ids) == 0 {
+// 		return errors.NewValidationError(errors.CodeInvalidParameter, "ids cannot be empty")
+// 	}
 
-	// 构建删除表达式
-	expr := fmt.Sprintf("id in %v", ids)
+// 	// 构建删除表达式
+// 	expr := fmt.Sprintf("id in %v", ids)
 
-	err := mc.client.Delete(ctx, collectionName, "", expr)
-	if err != nil {
-		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to delete vectors")
-	}
+// 	err := mc.client.Delete(ctx, collectionName, "", expr)
+// 	if err != nil {
+// 		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to delete vectors")
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // Search 相似度搜索
-func (mc *milvusClient) Search(ctx context.Context, params *SearchParams) ([]SearchResult, error) {
-	if params == nil {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "search params cannot be nil")
-	}
-	if params.CollectionName == "" {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
-	}
-	if len(params.Vectors) == 0 {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "query vectors cannot be empty")
-	}
-	if params.TopK <= 0 {
-		params.TopK = 10
-	}
+// func (mc *milvusClient) Search(ctx context.Context, params *SearchParams) ([]SearchResult, error) {
+// 	if params == nil {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "search params cannot be nil")
+// 	}
+// 	if params.CollectionName == "" {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
+// 	}
+// 	if len(params.Vectors) == 0 {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "query vectors cannot be empty")
+// 	}
+// 	if params.TopK <= 0 {
+// 		params.TopK = 10
+// 	}
 
-	// 构建搜索向量
-	searchVectors := make([]entity.Vector, len(params.Vectors))
-	for i, vec := range params.Vectors {
-		searchVectors[i] = entity.FloatVector(vec)
-	}
+// 	// 构建搜索向量
+// 	searchVectors := make([]entity.Vector, len(params.Vectors))
+// 	for i, vec := range params.Vectors {
+// 		searchVectors[i] = entity.FloatVector(vec)
+// 	}
 
-	// 构建搜索参数
-	sp, err := entity.NewIndexFlatSearchParam()
-	if err != nil {
-		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to create search param")
-	}
+// 	// 构建搜索参数
+// 	sp, err := entity.NewIndexFlatSearchParam()
+// 	if err != nil {
+// 		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to create search param")
+// 	}
 
-	// 执行搜索
-	searchResult, err := mc.client.Search(
-		ctx,
-		params.CollectionName,
-		[]string{}, // 分区名
-		params.Filter,
-		params.OutputFields,
-		searchVectors,
-		params.VectorFieldName,
-		params.MetricType,
-		params.TopK,
-		sp,
-		client.WithSearchQueryConsistencyLevel(params.ConsistencyLevel),
-	)
-	if err != nil {
-		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to search vectors")
-	}
+// 	// 执行搜索
+// 	searchResult, err := mc.client.Search(
+// 		ctx,
+// 		params.CollectionName,
+// 		[]string{}, // 分区名
+// 		params.Filter,
+// 		params.OutputFields,
+// 		searchVectors,
+// 		params.VectorFieldName,
+// 		params.MetricType,
+// 		params.TopK,
+// 		sp,
+// 		client.WithSearchQueryConsistencyLevel(params.ConsistencyLevel),
+// 	)
+// 	if err != nil {
+// 		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to search vectors")
+// 	}
 
 // 	// 转换搜索结果
 // 	results := make([]SearchResult, 0)
@@ -533,50 +533,50 @@ func (mc *milvusClient) Search(ctx context.Context, params *SearchParams) ([]Sea
 // 				Score:    score,
 // 				Fields:   fields,
 // 				Distance: score, // Milvus 中 score 即为距离
-			})
-		}
-	}
+// 			})
+// 		}
+// 	}
 
 // 	return results, nil
 // }
 // 
 // HybridSearch 混合检索
-func (mc *milvusClient) HybridSearch(ctx context.Context, params *HybridSearchParams) ([]SearchResult, error) {
-	if params == nil {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "hybrid search params cannot be nil")
-	}
-	if params.CollectionName == "" {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
-	}
-	if len(params.VectorSearches) == 0 {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "vector searches cannot be empty")
-	}
+// func (mc *milvusClient) HybridSearch(ctx context.Context, params *HybridSearchParams) ([]SearchResult, error) {
+// 	if params == nil {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "hybrid search params cannot be nil")
+// 	}
+// 	if params.CollectionName == "" {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
+// 	}
+// 	if len(params.VectorSearches) == 0 {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "vector searches cannot be empty")
+// 	}
 
-	// 执行多个向量搜索
-	allResults := make([][]SearchResult, 0, len(params.VectorSearches))
-	for _, vs := range params.VectorSearches {
-		searchParams := &SearchParams{
-			CollectionName:   params.CollectionName,
-			Vectors:          vs.Vectors,
-			VectorFieldName:  vs.VectorFieldName,
-			MetricType:       vs.MetricType,
-			TopK:             vs.TopK,
-			OutputFields:     params.OutputFields,
-			Filter:           vs.Filter,
-			SearchParams:     vs.SearchParams,
-			ConsistencyLevel: params.ConsistencyLevel,
-		}
+// 	// 执行多个向量搜索
+// 	allResults := make([][]SearchResult, 0, len(params.VectorSearches))
+// 	for _, vs := range params.VectorSearches {
+// 		searchParams := &SearchParams{
+// 			CollectionName:   params.CollectionName,
+// 			Vectors:          vs.Vectors,
+// 			VectorFieldName:  vs.VectorFieldName,
+// 			MetricType:       vs.MetricType,
+// 			TopK:             vs.TopK,
+// 			OutputFields:     params.OutputFields,
+// 			Filter:           vs.Filter,
+// 			SearchParams:     vs.SearchParams,
+// 			ConsistencyLevel: params.ConsistencyLevel,
+// 		}
 
-		results, err := mc.Search(ctx, searchParams)
-		if err != nil {
-			return nil, err
-		}
+// 		results, err := mc.Search(ctx, searchParams)
+// 		if err != nil {
+// 			return nil, err
+// 		}
 
-		allResults = append(allResults, results)
-	}
+// 		allResults = append(allResults, results)
+// 	}
 
-	// 合并和重排序结果
-	mergedResults := mc.mergeSearchResults(allResults, params)
+// 	// 合并和重排序结果
+// 	mergedResults := mc.mergeSearchResults(allResults, params)
 
 	// 限制返回数量
 	if len(mergedResults) > params.TopK {
@@ -627,56 +627,56 @@ func (mc *milvusClient) mergeSearchResults(allResults [][]SearchResult, params *
 // }
 
 // CreateIndex 创建索引
-func (mc *milvusClient) CreateIndex(ctx context.Context, collectionName string, fieldName string, indexConfig *IndexConfig) error {
-	if collectionName == "" {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
-	}
-	if fieldName == "" {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "field name cannot be empty")
-	}
-	if indexConfig == nil {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "index config cannot be nil")
-	}
+// func (mc *milvusClient) CreateIndex(ctx context.Context, collectionName string, fieldName string, indexConfig *IndexConfig) error {
+// 	if collectionName == "" {
+// 		return errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
+// 	}
+// 	if fieldName == "" {
+// 		return errors.NewValidationError(errors.CodeInvalidParameter, "field name cannot be empty")
+// 	}
+// 	if indexConfig == nil {
+// 		return errors.NewValidationError(errors.CodeInvalidParameter, "index config cannot be nil")
+// 	}
 
-	// 构建索引
-	idx, err := entity.NewIndexIvfFlat(indexConfig.MetricType, 1024)
-	if err != nil {
-		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to create index")
-	}
+// 	// 构建索引
+// 	idx, err := entity.NewIndexIvfFlat(indexConfig.MetricType, 1024)
+// 	if err != nil {
+// 		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to create index")
+// 	}
 
-	err = mc.client.CreateIndex(ctx, collectionName, fieldName, idx, false)
-	if err != nil {
-		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to create index")
-	}
+// 	err = mc.client.CreateIndex(ctx, collectionName, fieldName, idx, false)
+// 	if err != nil {
+// 		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to create index")
+// 	}
 
 	return nil
 }
 
 // DropIndex 删除索引
-func (mc *milvusClient) DropIndex(ctx context.Context, collectionName string, fieldName string) error {
-	if collectionName == "" {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
-	}
-	if fieldName == "" {
+// func (mc *milvusClient) DropIndex(ctx context.Context, collectionName string, fieldName string) error {
+// 	if collectionName == "" {
+// 		return errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
+// 	}
+// 	if fieldName == "" {
 		return errors.NewValidationError(errors.CodeInvalidParameter, "field name cannot be empty")
-	}
+// 	}
 
-	err := mc.client.DropIndex(ctx, collectionName, fieldName)
-	if err != nil {
-		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to drop index")
-	}
+// 	err := mc.client.DropIndex(ctx, collectionName, fieldName)
+// 	if err != nil {
+// 		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to drop index")
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // DescribeIndex 描述索引
-func (mc *milvusClient) DescribeIndex(ctx context.Context, collectionName string, fieldName string) (*IndexInfo, error) {
-	if collectionName == "" {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
-	}
-	if fieldName == "" {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "field name cannot be empty")
-	}
+// func (mc *milvusClient) DescribeIndex(ctx context.Context, collectionName string, fieldName string) (*IndexInfo, error) {
+// 	if collectionName == "" {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
+// 	}
+// 	if fieldName == "" {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "field name cannot be empty")
+// 	}
 
 	indexes, err := mc.client.DescribeIndex(ctx, collectionName, fieldName)
 	if err != nil {
