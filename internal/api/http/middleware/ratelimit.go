@@ -92,37 +92,37 @@ func (m *RateLimitMiddleware) Handler() gin.HandlerFunc {
 // 		ctx, span := m.tracer.StartSpan(c.Request.Context(), "RateLimitMiddleware.Handler")
 // 		defer span.End()
 
-		// Extract rate limit key based on strategy
-		key := m.extractKey(c)
-		if key == "" {
-			m.logger.WithContext(ctx).Warn("Failed to extract rate limit key", logging.Any(logging.String("key_type", m.config.KeyType)))
-			c.Next()
-			return
-		}
+// 		// Extract rate limit key based on strategy
+// 		key := m.extractKey(c)
+// 		if key == "" {
+// 			m.logger.WithContext(ctx).Warn("Failed to extract rate limit key", logging.Any(logging.String("key_type", m.config.KeyType)))
+// 			c.Next()
+// 			return
+// 		}
 
 // 		span.SetAttribute("ratelimit.key", key)
 // 		span.SetAttribute("ratelimit.strategy", string(m.config.Strategy))
 
-		// Check rate limit
-		allowed, remaining, resetTime, err := m.checkRateLimit(ctx, key)
-		if err != nil {
-			m.logger.WithContext(ctx).Error("Rate limit check failed", logging.Error(err), logging.Any(logging.String("key", key)))
+// 		// Check rate limit
+// 		allowed, remaining, resetTime, err := m.checkRateLimit(ctx, key)
+// 		if err != nil {
+// 			m.logger.WithContext(ctx).Error("Rate limit check failed", logging.Error(err), logging.Any(logging.String("key", key)))
 // 			span.RecordError(err)
-			// On error, allow request to proceed (fail open)
-			c.Next()
-			return
-		}
+// 			// On error, allow request to proceed (fail open)
+// 			c.Next()
+// 			return
+// 		}
 
-		// Add rate limit headers
-		c.Header("X-RateLimit-Limit", fmt.Sprintf("%d", m.config.RequestsLimit))
-		c.Header("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
-		c.Header("X-RateLimit-Reset", fmt.Sprintf("%d", resetTime.Unix()))
+// 		// Add rate limit headers
+// 		c.Header("X-RateLimit-Limit", fmt.Sprintf("%d", m.config.RequestsLimit))
+// 		c.Header("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
+// 		c.Header("X-RateLimit-Reset", fmt.Sprintf("%d", resetTime.Unix()))
 
-		if !allowed {
-			m.logger.WithContext(ctx).Warn("Rate limit exceeded", logging.Any(logging.String("key", key)), logging.Any(logging.String("limit", m.config.RequestsLimit)))
+// 		if !allowed {
+// 			m.logger.WithContext(ctx).Warn("Rate limit exceeded", logging.Any(logging.String("key", key)), logging.Any(logging.String("limit", m.config.RequestsLimit)))
 // 			span.SetAttribute("ratelimit.exceeded", true)
 
-			retryAfter := time.Until(resetTime).Seconds()
+// 			retryAfter := time.Until(resetTime).Seconds()
 			c.Header("Retry-After", fmt.Sprintf("%.0f", retryAfter))
 
 			c.JSON(http.StatusTooManyRequests, gin.H{
@@ -137,7 +137,7 @@ func (m *RateLimitMiddleware) Handler() gin.HandlerFunc {
 // 		span.SetAttribute("ratelimit.remaining", remaining)
 		c.Next()
 	}
-}
+// }
 
 // extractKey extracts the rate limit key from the request
 func (m *RateLimitMiddleware) extractKey(c *gin.Context) string {

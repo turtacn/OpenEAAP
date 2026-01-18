@@ -317,9 +317,9 @@ func NewMinIOClient(config *MinIOConfig) (MinIOClient, error) {
 		creds = credentials.NewStaticV4(config.AccessKeyID, config.SecretAccessKey, "")
 	}
 
-	// 创建客户端选项
+// 	// 创建客户端选项
 // 	opts := &minio.Options{
-		Creds:  creds,
+// 		Creds:  creds,
 // 		Secure: config.UseSSL,
 // 		Region: config.Region,
 // 	}
@@ -327,17 +327,17 @@ func NewMinIOClient(config *MinIOConfig) (MinIOClient, error) {
 // 	// 创建客户端
 // 	client, err := minio.New(config.Endpoint, opts)
 // 	if err != nil {
-		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to create minio client")
-	}
+// 		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to create minio client")
+// 	}
 
-	mc := &minioClient{
-		client: client,
-		config: config,
-	}
+// 	mc := &minioClient{
+// 		client: client,
+// 		config: config,
+// 	}
 
-	// 测试连接
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+// 	// 测试连接
+// 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+// 	defer cancel()
 
 	if err := mc.Ping(ctx); err != nil {
 		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to ping minio")
@@ -366,23 +366,23 @@ func (mc *minioClient) CreateBucket(ctx context.Context, config *BucketConfig) e
 
 	// 创建存储桶选项
 // 	opts := minio.MakeBucketOptions{
-		Region:        config.Region,
+// 		Region:        config.Region,
 // 		ObjectLocking: config.ObjectLocking,
 // 	}
 // 
 // 	// 创建存储桶
 // 	err = mc.client.MakeBucket(ctx, config.Name, opts)
 // 	if err != nil {
-		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to create bucket")
-	}
+// 		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to create bucket")
+// 	}
 
-	// 设置版本控制
-	if config.Versioning {
-		versionConfig := minio.BucketVersioningConfiguration{
-			Status: "Enabled",
-		}
-		err = mc.client.SetBucketVersioning(ctx, config.Name, versionConfig)
-		if err != nil {
+// 	// 设置版本控制
+// 	if config.Versioning {
+// 		versionConfig := minio.BucketVersioningConfiguration{
+// 			Status: "Enabled",
+// 		}
+// 		err = mc.client.SetBucketVersioning(ctx, config.Name, versionConfig)
+// 		if err != nil {
 			return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to enable versioning")
 		}
 	}
@@ -517,7 +517,7 @@ func (mc *minioClient) PutObject(ctx context.Context, req *PutObjectRequest) (*P
 
 	// 构建上传选项
 // 	opts := minio.PutObjectOptions{
-		ContentType:  req.ContentType,
+// 		ContentType:  req.ContentType,
 // 		UserMetadata: req.Metadata,
 // 		UserTags:     req.UserTags,
 // 	}
@@ -525,8 +525,8 @@ func (mc *minioClient) PutObject(ctx context.Context, req *PutObjectRequest) (*P
 // 	// 上传对象
 // 	info, err := mc.client.PutObject(ctx, req.BucketName, req.ObjectName, req.Reader, req.Size, opts)
 // 	if err != nil {
-		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to put object")
-	}
+// 		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to put object")
+// 	}
 
 	return &PutObjectResponse{
 		ETag:         info.ETag,
@@ -605,11 +605,11 @@ func (mc *minioClient) DeleteObject(ctx context.Context, req *DeleteObjectReques
 // 
 // 	err := mc.client.RemoveObject(ctx, req.BucketName, req.ObjectName, opts)
 // 	if err != nil {
-		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to delete object")
-	}
+// 		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to delete object")
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // DeleteObjects 批量删除对象
 func (mc *minioClient) DeleteObjects(ctx context.Context, req *DeleteObjectsRequest) (*DeleteObjectsResponse, error) {
@@ -640,14 +640,14 @@ func (mc *minioClient) DeleteObjects(ctx context.Context, req *DeleteObjectsRequ
 // 	deletedObjects := make([]string, 0)
 // 	deleteErrors := make([]DeleteError, 0)
 
-	for rErr := range mc.client.RemoveObjects(ctx, req.BucketName, objectsCh, opts) {
-		if rErr.Err != nil {
-			deleteErrors = append(deleteErrors, DeleteError{
-				ObjectName: rErr.ObjectName,
-				Message:    rErr.Err.Error(),
-			})
-		} else {
-			deletedObjects = append(deletedObjects, rErr.ObjectName)
+// 	for rErr := range mc.client.RemoveObjects(ctx, req.BucketName, objectsCh, opts) {
+// 		if rErr.Err != nil {
+// 			deleteErrors = append(deleteErrors, DeleteError{
+// 				ObjectName: rErr.ObjectName,
+// 				Message:    rErr.Err.Error(),
+// 			})
+// 		} else {
+// 			deletedObjects = append(deletedObjects, rErr.ObjectName)
 		}
 	}
 
@@ -737,17 +737,17 @@ func (mc *minioClient) ListObjects(ctx context.Context, req *ListObjectsRequest)
 	}
 
 // 	opts := minio.ListObjectsOptions{
-		Prefix:     req.Prefix,
-		Recursive:  req.Delimiter == "",
-		MaxKeys:    req.MaxKeys,
-		StartAfter: req.StartAfter,
-		WithVersions: req.Versions,
-	}
+// 		Prefix:     req.Prefix,
+// 		Recursive:  req.Delimiter == "",
+// 		MaxKeys:    req.MaxKeys,
+// 		StartAfter: req.StartAfter,
+// 		WithVersions: req.Versions,
+// 	}
 
-	objects := make([]*ObjectInfo, 0)
-	commonPrefixes := make([]string, 0)
+// 	objects := make([]*ObjectInfo, 0)
+// 	commonPrefixes := make([]string, 0)
 
-	for object := range mc.client.ListObjects(ctx, req.BucketName, opts) {
+// 	for object := range mc.client.ListObjects(ctx, req.BucketName, opts) {
 		if object.Err != nil {
 			return nil, errors.WrapInternalError(object.Err, "ERR_INTERNAL", "failed to list objects")
 		}
@@ -863,26 +863,26 @@ func (mc *minioClient) NewMultipartUpload(ctx context.Context, req *NewMultipart
 	}
 	if req.ObjectName == "" {
 		return "", errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
-	}
+// 	}
 
 // 	opts := minio.PutObjectOptions{
-		ContentType:  req.ContentType,
-		UserMetadata: req.Metadata,
-	}
+// 		ContentType:  req.ContentType,
+// 		UserMetadata: req.Metadata,
+// 	}
 
-	// MinIO SDK 没有直接的 NewMultipartUpload 方法
-	// 这里使用内部方法或者返回一个自定义的 uploadID
-	// 实际使用时，MinIO 会在第一次 PutObjectPart 时自动创建 multipart upload
+// 	// MinIO SDK 没有直接的 NewMultipartUpload 方法
+// 	// 这里使用内部方法或者返回一个自定义的 uploadID
+// 	// 实际使用时，MinIO 会在第一次 PutObjectPart 时自动创建 multipart upload
 	uploadID := fmt.Sprintf("%s-%d", req.ObjectName, time.Now().UnixNano())
 
 	return uploadID, nil
 }
 
 // PutObjectPart 上传分片
-func (mc *minioClient) PutObjectPart(ctx context.Context, req *PutObjectPartRequest) (*PutObjectPartResponse, error) {
-	if req == nil {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "put object part request cannot be nil")
-	}
+// func (mc *minioClient) PutObjectPart(ctx context.Context, req *PutObjectPartRequest) (*PutObjectPartResponse, error) {
+// 	if req == nil {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "put object part request cannot be nil")
+// 	}
 	if req.BucketName == "" {
 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "bucket name cannot be empty")
 	}

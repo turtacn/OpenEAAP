@@ -279,7 +279,7 @@ func (o *optimizer) Analyze(ctx context.Context, modelID string) (*OptimizationP
 	o.metricsCollector.IncrementCounter("optimizer_plan_generated",
 		map[string]string{"model_id": modelID, "type": string(plan.Type)})
 
- o.logger.WithContext(ctx).Info("Optimization plan generated", logging.String("plan_id", fmt.Sprint(plan.ID)), logging.String("recommendations", fmt.Sprint(len(recommendations)))
+ o.logger.WithContext(ctx).Info("Optimization plan generated", logging.String("plan_id", fmt.Sprint(plan.ID)), logging.String("recommendations", fmt.Sprint(len(recommendations))))
 
 	return plan, nil
 }
@@ -369,7 +369,7 @@ func (o *optimizer) PrepareTrainingData(ctx context.Context, modelID string) (*T
 		float64(len(samples)),
 		map[string]string{"model_id": modelID})
 
- o.logger.WithContext(ctx).Info("Training data prepared", logging.String("dataset_id", fmt.Sprint(dataset.ID)), logging.String("sample_count", fmt.Sprint(len(samples)))
+ o.logger.WithContext(ctx).Info("Training data prepared", logging.String("dataset_id", fmt.Sprint(dataset.ID)), logging.String("sample_count", fmt.Sprint(len(samples))))
 
 	return dataset, nil
 }
@@ -442,7 +442,7 @@ func (o *optimizer) GeneratePromptSuggestions(ctx context.Context, modelID strin
 	o.metricsCollector.IncrementCounter("optimizer_prompt_suggestions_generated",
 		map[string]string{"model_id": modelID, "count": fmt.Sprintf("%d", len(suggestions))})
 
- o.logger.WithContext(ctx).Info("Prompt suggestions generated", logging.String("model_id", fmt.Sprint(modelID)), logging.String("count", fmt.Sprint(len(suggestions)))
+ o.logger.WithContext(ctx).Info("Prompt suggestions generated", logging.String("model_id", fmt.Sprint(modelID)), logging.String("count", fmt.Sprint(len(suggestions))))
 
 	return suggestions, nil
 }
@@ -518,7 +518,7 @@ func (o *optimizer) OptimizeStrategy(ctx context.Context, agentID string) (*Stra
 	o.metricsCollector.IncrementCounter("optimizer_strategy_updated",
 		map[string]string{"agent_id": agentID})
 
- o.logger.WithContext(ctx).Info("Strategy optimization completed", logging.String("agent_id", fmt.Sprint(agentID)), logging.String("updates", fmt.Sprint(len(updates)))
+ o.logger.WithContext(ctx).Info("Strategy optimization completed", logging.String("agent_id", fmt.Sprint(agentID)), logging.String("updates", fmt.Sprint(len(updates))))
 
 	return strategyUpdate, nil
 }

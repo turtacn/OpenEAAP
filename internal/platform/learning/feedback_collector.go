@@ -199,9 +199,9 @@ func (c *feedbackCollector) Collect(ctx context.Context, feedback *Feedback) err
 
 	startTime := time.Now()
 	defer func() {
-		c.metricsCollector.ObserveDuration("feedback_collect_duration_ms",
-			float64(time.Since(startTime).Milliseconds()),
-			map[string]string{"model_id": feedback.ModelID})
+// 		c.metricsCollector.ObserveDuration("feedback_collect_duration_ms",
+// 			float64(time.Since(startTime).Milliseconds()),
+// 			map[string]string{"model_id": feedback.ModelID})
 	}()
 
 	// 设置创建时间
@@ -217,7 +217,7 @@ func (c *feedbackCollector) Collect(ctx context.Context, feedback *Feedback) err
 	// 异步处理
 	if c.config.EnableAsync {
 		if c.buffer.Add(feedback) {
-   c.logger.WithContext(ctx).Debug("Feedback added to buffer", logging.Any(logging.String("feedback_id", feedback.ID)), logging.Any(logging.String("buffer_size", c.buffer.Size())))
+		c.logger.WithContext(ctx).Debug("Feedback added to buffer", logging.String("feedback_id", feedback.ID), logging.String("buffer_size", fmt.Sprint(c.buffer.Size())))
 
 			// 检查是否需要刷新
 			if c.buffer.IsFull() || c.buffer.Size() >= c.config.BatchSize {
@@ -256,7 +256,7 @@ func (c *feedbackCollector) Collect(ctx context.Context, feedback *Feedback) err
 			"type":     string(feedback.FeedbackType),
 		})
 
- c.logger.WithContext(ctx).Info("Feedback collected successfully", logging.Any(logging.String("feedback_id", feedback.ID)), logging.Any(logging.String("model_id", feedback.ModelID)), logging.Any(logging.String("rating", feedback.Rating)))
+ c.logger.WithContext(ctx).Info("Feedback collected successfully", logging.String(logging.String("feedback_id", feedback.ID)), logging.String(logging.String("model_id", feedback.ModelID)), logging.String(logging.String("rating", fmt.Sprint(feedback.Rating))))
 
 	return nil
 }

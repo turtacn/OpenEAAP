@@ -615,9 +615,9 @@ func (mc *milvusClient) mergeSearchResults(allResults [][]SearchResult, params *
 // 	}
 
 	// 按分数降序排序
-	for i := 0; i < len(merged)-1; i++ {
-		for j := i + 1; j < len(merged); j++ {
-			if merged[j].Score > merged[i].Score {
+// 	for i := 0; i < len(merged)-1; i++ {
+// 		for j := i + 1; j < len(merged); j++ {
+// 			if merged[j].Score > merged[i].Score {
 				merged[i], merged[j] = merged[j], merged[i]
 			}
 		}

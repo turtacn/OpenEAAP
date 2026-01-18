@@ -779,55 +779,55 @@ func (r *modelRepo) toEntity(dbModel *ModelModel) (*model.Model, error) {
 	}
 
 // 	var limits model.ModelLimits
-	if err := json.Unmarshal([]byte(dbModel.Limits), &limits); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal limits: %w", err)
-	}
+// 	if err := json.Unmarshal([]byte(dbModel.Limits), &limits); err != nil {
+// 		return nil, fmt.Errorf("failed to unmarshal limits: %w", err)
+// 	}
 
 // 	var pricing model.ModelPricing
-	if err := json.Unmarshal([]byte(dbModel.Pricing), &pricing); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal pricing: %w", err)
-	}
+// 	if err := json.Unmarshal([]byte(dbModel.Pricing), &pricing); err != nil {
+// 		return nil, fmt.Errorf("failed to unmarshal pricing: %w", err)
+// 	}
 
-	var tags []string
-	if err := json.Unmarshal([]byte(dbModel.Tags), &tags); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal tags: %w", err)
-	}
+// 	var tags []string
+// 	if err := json.Unmarshal([]byte(dbModel.Tags), &tags); err != nil {
+// 		return nil, fmt.Errorf("failed to unmarshal tags: %w", err)
+// 	}
 
-	var metadata map[string]interface{}
-	if err := json.Unmarshal([]byte(dbModel.Metadata), &metadata); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
-	}
+// 	var metadata map[string]interface{}
+// 	if err := json.Unmarshal([]byte(dbModel.Metadata), &metadata); err != nil {
+// 		return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+// 	}
 
 // 	modelType, err := model.ModelTypeFromString(dbModel.Type)
-	if err != nil {
-		return nil, fmt.Errorf("invalid model type: %w", err)
-	}
+// 	if err != nil {
+// 		return nil, fmt.Errorf("invalid model type: %w", err)
+// 	}
 
 // 	status, err := model.ModelStatusFromString(dbModel.Status)
-	if err != nil {
-		return nil, fmt.Errorf("invalid model status: %w", err)
-	}
+// 	if err != nil {
+// 		return nil, fmt.Errorf("invalid model status: %w", err)
+// 	}
 
-	return &model.Model{
-		ID:           dbModel.ID,
-		Name:         dbModel.Name,
-		Type:         modelType,
-		Provider:     dbModel.Provider,
-		Version:      dbModel.Version,
-		Endpoint:     dbModel.Endpoint,
-		Config:       config,
-		Capabilities: capabilities,
-		Limits:       limits,
-		Pricing:      pricing,
-		Status:       status,
-		IsDefault:    dbModel.IsDefault,
-		Priority:     dbModel.Priority,
-		Tags:         tags,
-		Metadata:     metadata,
-		CreatedBy:    dbModel.CreatedBy,
-		UpdatedBy:    dbModel.UpdatedBy,
-		CreatedAt:    dbModel.CreatedAt,
-		UpdatedAt:    dbModel.UpdatedAt,
+// 	return &model.Model{
+// 		ID:           dbModel.ID,
+// 		Name:         dbModel.Name,
+// 		Type:         modelType,
+// 		Provider:     dbModel.Provider,
+// 		Version:      dbModel.Version,
+// 		Endpoint:     dbModel.Endpoint,
+// 		Config:       config,
+// 		Capabilities: capabilities,
+// 		Limits:       limits,
+// 		Pricing:      pricing,
+// 		Status:       status,
+// 		IsDefault:    dbModel.IsDefault,
+// 		Priority:     dbModel.Priority,
+// 		Tags:         tags,
+// 		Metadata:     metadata,
+// 		CreatedBy:    dbModel.CreatedBy,
+// 		UpdatedBy:    dbModel.UpdatedBy,
+// 		CreatedAt:    dbModel.CreatedAt,
+// 		UpdatedAt:    dbModel.UpdatedAt,
 	}, nil
 }
 
@@ -1128,5 +1128,44 @@ return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert mod
 result = append(result, m)
 }
 
+return result, nil
+}
+
+// GetByProviderAndVersion retrieves a model by provider and version
+func (r *modelRepo) GetByProviderAndVersion(ctx context.Context, provider, version string) (*model.Model, error) {
+if provider == "" || version == "" {
+return nil, errors.NewValidationError(errors.CodeInvalidParameter, "provider and version cannot be empty")
+}
+
+var m ModelModel
+err := r.db.WithContext(ctx).
+Where("provider = ? AND version = ?", provider, version).
+First(&m).Error
+
+if err != nil {
+if errors.IsNotFound(err) {
+return nil, errors.NewNotFoundError(errors.CodeNotFound, "model not found")
+}
+return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get model")
+}
+
+return r.toEntity(&m)
+}
+
+// GetByStatus retrieves models by status
+func (r *modelRepo) GetByStatus(ctx context.Context, status model.ModelStatus) ([]*model.Model, error) {
+var models []ModelModel
+err := r.db.WithContext(ctx).Where("status = ?", string(status)).Find(&models).Error
+if err != nil {
+return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get models by status")
+}
+result := make([]*model.Model, 0, len(models))
+for i := range models {
+m, err := r.toEntity(&models[i])
+if err != nil {
+continue // Skip invalid models
+}
+result = append(result, m)
+}
 return result, nil
 }

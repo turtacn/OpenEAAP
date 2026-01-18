@@ -470,15 +470,15 @@ func (c *L3VectorCache) searchSimilar(ctx context.Context, embedding []float32) 
 
 	results := make([]*vectorCacheEntry, 0)
 
-	for _, result := range searchResult[0].Fields {
+// 	for _, result := range searchResult[0].Fields {
 // 		entries := c.parseSearchResult(result)
-		for i, entry := range entries {
-			if i < len(searchResult[0].Scores) {
+// 		for i, entry := range entries {
+// 			if i < len(searchResult[0].Scores) {
 				score := float64(searchResult[0].Scores[i])
 				entry.Similarity = score
 				entry.Score = score
 			}
-			results = append(results, entry)
+// 			results = append(results, entry)
 		}
 	}
 
