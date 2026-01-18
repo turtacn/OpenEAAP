@@ -1066,8 +1066,8 @@ func (kc *kafkaClient) GetClusterMetadata(ctx context.Context) (*ClusterMetadata
 		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to describe cluster")
 	}
 
-	brokers := make([]*BrokerInfo, 0, len(metadata.Brokers))
-	for _, broker := range metadata.Brokers {
+	brokers := make([]*BrokerInfo, 0, len(metadata))
+	for _, broker := range metadata {
 		brokers = append(brokers, &BrokerInfo{
 			ID:   broker.ID(),
 			Host: broker.Addr(),
@@ -1104,8 +1104,8 @@ func (kc *kafkaClient) GetBrokers(ctx context.Context) ([]*BrokerInfo, error) {
 		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to describe cluster")
 	}
 
-	brokers := make([]*BrokerInfo, 0, len(metadata.Brokers))
-	for _, broker := range metadata.Brokers {
+	brokers := make([]*BrokerInfo, 0, len(metadata))
+	for _, broker := range metadata {
 		brokers = append(brokers, &BrokerInfo{
 			ID:   broker.ID(),
 			Host: broker.Addr(),

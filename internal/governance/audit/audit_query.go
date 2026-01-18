@@ -2,6 +2,7 @@
 package audit
 
 import (
+"strings"
 	"context"
 	"encoding/csv"
 	"encoding/json"
@@ -961,7 +962,7 @@ func (s *auditQueryService) evaluateCondition(entry *AuditEntry, cond *Condition
 	case OpNotEquals:
 		return fieldValue != fmt.Sprintf("%v", cond.Value)
 	case OpContains:
-		return contains(fieldValue, fmt.Sprintf("%v", cond.Value))
+		return strings.Contains(fieldValue, fmt.Sprintf("%v", cond.Value))
 	case OpIn:
 		for _, v := range cond.Values {
 			if fieldValue == fmt.Sprintf("%v", v) {
