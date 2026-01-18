@@ -87,6 +87,31 @@ func (r *agentRepo) Create(ctx context.Context, agt *agent.Agent) error {
 	return nil
 }
 
+// Update updates an existing agent
+func (r *agentRepo) Update(ctx context.Context, agt *agent.Agent) error {
+	if agt == nil {
+		return errors.NewValidationError(errors.CodeInvalidParameter, "agent cannot be nil")
+	}
+	if agt.ID == "" {
+		return errors.NewValidationError(errors.CodeInvalidParameter, "agent ID cannot be empty")
+	}
+
+	model := &AgentModel{
+		ID:          agt.ID,
+		Name:        agt.Name,
+		Description: agt.Description,
+		Version:     agt.Version,
+		UpdatedAt:   time.Now(),
+	}
+
+	if err := r.db.WithContext(ctx).Save(model).Error; err != nil {
+		return errors.WrapDatabaseError(err, "ERR_DB", "failed to update agent")
+	}
+
+	agt.UpdatedAt = model.UpdatedAt
+	return nil
+}
+
 // GetByID 根据 ID 获取 Agent
 func (r *agentRepo) GetByID(ctx context.Context, id string) (*agent.Agent, error) {
 	if id == "" {
@@ -219,10 +244,10 @@ func (r *agentRepo) GetByTags(ctx context.Context, tags []string, filter agent.A
 	}
 	
 	return agents, nil
-}
+// }
 
 // Update 更新 Agent
-func (r *agentRepo) Update(ctx context.Context, agt *agent.Agent) error {
+// func (r *agentRepo) Update(ctx context.Context, agt *agent.Agent) error {
 	if agt == nil {
 		return errors.NewValidationError(errors.CodeInvalidParameter, "agent cannot be nil")
 	}

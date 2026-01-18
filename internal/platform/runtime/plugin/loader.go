@@ -170,8 +170,8 @@ func NewPluginLoader(logger logging.Logger, config *LoaderConfig) (*PluginLoader
 	}
 
 	loader.logger.Info("plugin loader initialized",
-		logging.String("search_paths", loader.searchPaths),
-		logging.String("max_plugins", config.MaxPlugins))
+		logging.Any("search_paths", loader.searchPaths),
+		logging.String("max_plugins", fmt.Sprintf("%d", config.MaxPlugins)))
 
 	return loader, nil
 }
@@ -184,7 +184,7 @@ func (pl *PluginLoader) LoadPlugin(ctx context.Context, pluginPath string) (*Loa
 	pl.pluginsMu.RUnlock()
 
 	if pluginCount >= pl.config.MaxPlugins {
-		return nil, errors.NewResourceError(errors.CodeResourceLimitExceeded, "max plugins limit reached")
+		return nil, errors.NewInternalError(errors.CodeInternalError, "max plugins limit reached")
 	}
 
 	// 执行加载前钩子
@@ -250,7 +250,7 @@ func (pl *PluginLoader) LoadPlugin(ctx context.Context, pluginPath string) (*Loa
 	}
 
 	// 验证插件类型
-	if !pl.isPluginTypeAllowed(string(loadedPlugin.Plugin.Type)) {
+	if !pl.isPluginTypeAllowed(loadedPlugin.Plugin.Type) {
 		return nil, errors.New(errors.CodeInvalidParameter,
 			fmt.Sprintf("plugin type not allowed: %s", string(loadedPlugin.Plugin.Type)))
 	}
@@ -492,7 +492,7 @@ func (pl *PluginLoader) DiscoverPlugins(ctx context.Context) ([]*LoadedPlugin, e
 			}
 
 			// 只处理.so文件（Linux）或.dylib文件（macOS）
-			if info.IsDir() || (!filepath.Ext(path) == ".so" && !filepath.Ext(path) == ".dylib") {
+			if info.IsDir() || (filepath.Ext(path) == "" == ".so" && filepath.Ext(path) == "" == ".dylib") {
 				return nil
 			}
 
@@ -501,7 +501,7 @@ func (pl *PluginLoader) DiscoverPlugins(ctx context.Context) ([]*LoadedPlugin, e
 			if loadErr != nil {
 				pl.logger.Warn("failed to load discovered plugin",
 					logging.String("path", path),
-					logging.String("error", loadErr))
+					logging.Error(loadErr))
 				return nil
 			}
 

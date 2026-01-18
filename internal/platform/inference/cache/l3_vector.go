@@ -474,15 +474,15 @@ func (c *L3VectorCache) searchSimilar(ctx context.Context, embedding []float32) 
 // 		entries := c.parseSearchResult(result)
 // 		for i, entry := range entries {
 // 			if i < len(searchResult[0].Scores) {
-				score := float64(searchResult[0].Scores[i])
-				entry.Similarity = score
-				entry.Score = score
-			}
+// 				score := float64(searchResult[0].Scores[i])
+// 				entry.Similarity = score
+// 				entry.Score = score
+// 			}
 // 			results = append(results, entry)
-		}
-	}
+// 		}
+// 	}
 
-	return results, nil
+// 	return results, nil
 }
 
 // parseSearchResult parses Milvus search &results

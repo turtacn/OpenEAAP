@@ -117,12 +117,12 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 		latency := time.Since(startTime)
   c.logger.WithContext(ctx).Debug("L2 cache exact hit", logging.Any("key", key), logging.Any("latency_ms", latency.Milliseconds()))
 
-		return entry, nil
-	}
+// 		return entry, nil
+// 	}
 
-	if err != redis.Nil {
-		c.logger.WithContext(ctx).Warn("Redis GET error", logging.Error(err))
-	}
+// 	if err != redis.Nil {
+// 		c.logger.WithContext(ctx).Warn("Redis GET error", logging.Error(err))
+// 	}
 
 	// Try SimHash fuzzy matching
 	entry, err := c.findBySimilarity(ctx, key)
@@ -138,21 +138,21 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 		latency := time.Since(startTime)
   c.logger.WithContext(ctx).Debug("L2 cache SimHash hit", logging.Any("key", key), logging.Any("latency_ms", latency.Milliseconds()))
 
-		return entry, nil
-	}
+// 		return entry, nil
+// 	}
 
-	c.missCount++
+// 	c.missCount++
 
 	latency := time.Since(startTime)
 	if latency > 10*time.Millisecond {
   c.logger.WithContext(ctx).Warn("L2 cache GET latency exceeded 10ms", logging.Any("latency_ms", latency.Milliseconds()))
-	}
+// 	}
 
-	return nil, nil
-}
+// 	return nil, nil
+// }
 
 // Set stores an entry in L2 Redis cache
-func (c *L2RedisCache) Set(ctx context.Context, entry *CacheEntry) error {
+// func (c *L2RedisCache) Set(ctx context.Context, entry *CacheEntry) error {
 	if entry == nil {
 		return errors.NewValidationError(errors.CodeInvalidArgument, "cache entry cannot be nil")
 	}
@@ -198,16 +198,16 @@ func (c *L2RedisCache) Set(ctx context.Context, entry *CacheEntry) error {
 	latency := time.Since(startTime)
 	if latency > 10*time.Millisecond {
   c.logger.WithContext(ctx).Warn("L2 cache SET latency exceeded 10ms", logging.Any("latency_ms", latency.Milliseconds()))
-	}
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // Delete removes an entry from L2 Redis cache
-func (c *L2RedisCache) Delete(ctx context.Context, key string) error {
-	redisKey := c.buildRedisKey(key)
+// func (c *L2RedisCache) Delete(ctx context.Context, key string) error {
+// 	redisKey := c.buildRedisKey(key)
 
-	// Delete exact match
+// 	// Delete exact match
 	if err := c.client.Del(ctx, redisKey).Err(); err != nil {
 		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to delete from Redis")
 	}
@@ -242,12 +242,12 @@ func (c *L2RedisCache) Clear(ctx context.Context) error {
 
 	c.logger.WithContext(ctx).Info("L2 cache cleared", logging.Any("deleted_keys", len(keys)))
 
-	return nil
-}
+// 	return nil
+// }
 
 // Stats returns cache statistics
-func (c *L2RedisCache) Stats(ctx context.Context) (*CacheStats, error) {
-	stats := &CacheStats{
+// func (c *L2RedisCache) Stats(ctx context.Context) (*CacheStats, error) {
+// 	stats := &CacheStats{
 		L2Hits:   c.hitCount,
 		L2Misses: c.missCount,
 	}

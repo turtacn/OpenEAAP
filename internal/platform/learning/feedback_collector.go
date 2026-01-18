@@ -197,12 +197,6 @@ func (c *feedbackCollector) Collect(ctx context.Context, feedback *Feedback) err
 	ctx, span := c.tracer.Start(ctx, "FeedbackCollector.Collect")
 	defer span.End()
 
-	startTime := time.Now()
-	defer func() {
-// 		c.metricsCollector.ObserveDuration("feedback_collect_duration_ms",
-// 			float64(time.Since(startTime).Milliseconds()),
-// 			map[string]string{"model_id": feedback.ModelID})
-	}()
 
 	// 设置创建时间
 	if feedback.CreatedAt.IsZero() {
@@ -256,7 +250,7 @@ func (c *feedbackCollector) Collect(ctx context.Context, feedback *Feedback) err
 			"type":     string(feedback.FeedbackType),
 		})
 
- c.logger.WithContext(ctx).Info("Feedback collected successfully", logging.String(logging.String("feedback_id", feedback.ID)), logging.String(logging.String("model_id", feedback.ModelID)), logging.String(logging.String("rating", fmt.Sprint(feedback.Rating))))
+	c.logger.WithContext(ctx).Info("Feedback collected successfully", logging.String("feedback_id", feedback.ID), logging.String("model_id", feedback.ModelID), logging.String("rating", fmt.Sprint(feedback.Rating)))
 
 	return nil
 }
@@ -270,12 +264,6 @@ func (c *feedbackCollector) CollectBatch(ctx context.Context, feedbacks []*Feedb
 		return nil
 	}
 
-	startTime := time.Now()
-	defer func() {
-		c.metricsCollector.ObserveDuration("feedback_collect_batch_duration_ms",
-			float64(time.Since(startTime).Milliseconds()),
-			map[string]string{"batch_size": fmt.Sprintf("%d", len(feedbacks))})
-	}()
 
 	// 预处理反馈
 	for _, feedback := range feedbacks {
@@ -295,7 +283,7 @@ func (c *feedbackCollector) CollectBatch(ctx context.Context, feedbacks []*Feedb
 	// 批量发布到消息队列
 	for _, feedback := range feedbacks {
 		if err := c.publishFeedback(ctx, feedback); err != nil {
-   c.logger.WithContext(ctx).Warn("Failed to publish feedback", logging.Any(logging.String("feedback_id", feedback.ID)), logging.Error(err))
+			c.logger.WithContext(ctx).Warn("Failed to publish feedback", logging.String("feedback_id", feedback.ID), logging.Error(err))
 		}
 	}
 
@@ -330,7 +318,7 @@ func (c *feedbackCollector) Flush(ctx context.Context) error {
 	// 发布到消息队列
 	for _, feedback := range feedbacks {
 		if err := c.publishFeedback(ctx, feedback); err != nil {
-   c.logger.WithContext(ctx).Warn("Failed to publish feedback", logging.Any(logging.String("feedback_id", feedback.ID)), logging.Error(err))
+   c.logger.WithContext(ctx).Warn("Failed to publish feedback", logging.String("feedback_id", feedback.ID)), logging.Error(err))
 		}
 	}
 
@@ -375,7 +363,7 @@ func (c *feedbackCollector) Archive(ctx context.Context, beforeTime time.Time) e
 	ctx, span := c.tracer.Start(ctx, "FeedbackCollector.Archive")
 	defer span.End()
 
-	c.logger.WithContext(ctx).Info("Archiving old feedbacks", logging.Any(logging.String("before_time", beforeTime)))
+	c.logger.WithContext(ctx).Info("Archiving old feedbacks", logging.Any(logging.String("before_time", beforeTime.String())))
 
 	if err := c.repo.Archive(ctx, beforeTime); err != nil {
 		return errors.Wrap(err, "ERR_INTERNAL", "failed to archive feedbacks")
@@ -448,7 +436,7 @@ func (c *feedbackCollector) publishFeedback(ctx context.Context, feedback *Feedb
 func (c *feedbackCollector) classifyFeedback(feedback *Feedback) types.FeedbackType {
 	// 基于评分分类
 	if feedback.Rating >= 4.0 {
-		return types.FeedbackTypePositive
+		return "positive"
 	} else if feedback.Rating <= 2.0 {
 		return types.FeedbackTypeNegative
 	}

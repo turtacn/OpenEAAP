@@ -651,13 +651,13 @@ func (c *complianceChecker) CheckCompliance(ctx context.Context, request *Compli
 	// 记录指标
 	c.recordMetrics(result)
 
- c.logger.WithContext(ctx).Info("Compliance check completed", logging.Any("request_id", request.RequestID), logging.Any("status", result.Status), logging.Any("score", result.Score), logging.Any("violations", len(result.Violations))
+//  c.logger.WithContext(ctx).Info("Compliance check completed", logging.Any("request_id", request.RequestID), logging.Any("status", result.Status), logging.Any("score", result.Score), logging.Any("violations", len(result.Violations))
 
-	return result, nil
-}
+// 	return result, nil
+// }
 
 // ValidateOperation 验证操作合规性
-func (c *complianceChecker) ValidateOperation(ctx context.Context, operation *Operation) (*ValidationResult, error) {
+// func (c *complianceChecker) ValidateOperation(ctx context.Context, operation *Operation) (*ValidationResult, error) {
 	ctx, span := c.tracer.Start(ctx, "ComplianceChecker.ValidateOperation")
 	defer span.End()
 
@@ -720,14 +720,14 @@ func (c *complianceChecker) BatchCheck(ctx context.Context, requests []*Complian
 	ctx, span := c.tracer.Start(ctx, "ComplianceChecker.BatchCheck")
 	defer span.End()
 
-	c.logger.WithContext(ctx).Info("Batch compliance check", logging.Any("count", len(requests))
+// 	c.logger.WithContext(ctx).Info("Batch compliance check", logging.Any("count", len(requests))
 
-	results := make([]*ComplianceCheckResult, len(requests))
-	var wg sync.WaitGroup
-	var mu sync.Mutex
+// 	results := make([]*ComplianceCheckResult, len(requests))
+// 	var wg sync.WaitGroup
+// 	var mu sync.Mutex
 
-	for i, request := range requests {
-		wg.Add(1)
+// 	for i, request := range requests {
+// 		wg.Add(1)
 		go func(idx int, req *ComplianceCheckRequest) {
 			defer wg.Done()
 

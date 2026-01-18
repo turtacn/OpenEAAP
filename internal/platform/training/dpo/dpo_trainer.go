@@ -267,12 +267,12 @@ func (t *dpoTrainer) PreparePreferenceData(ctx context.Context, feedbacks []*Fee
 	ctx, span := t.tracer.Start(ctx, "DPOTrainer.PreparePreferenceData")
 	defer span.End()
 
-	t.logger.WithContext(ctx).Info("Preparing preference pairs", logging.Any("feedback_count", len(feedbacks))
+// 	t.logger.WithContext(ctx).Info("Preparing preference pairs", logging.Any("feedback_count", len(feedbacks))
 
-	pairs := []*PreferencePair{}
+// 	pairs := []*PreferencePair{}
 
-	// 策略 1: 从评分差异生成偏好对
-	pairs = append(pairs, t.generatePairsFromRatings(ctx, feedbacks)...)
+// 	// 策略 1: 从评分差异生成偏好对
+// 	pairs = append(pairs, t.generatePairsFromRatings(ctx, feedbacks)...)
 
 	// 策略 2: 从修正建议生成偏好对
 	pairs = append(pairs, t.generatePairsFromCorrections(ctx, feedbacks)...)
@@ -543,11 +543,11 @@ func (t *dpoTrainer) EvaluatePreferences(ctx context.Context, dataset *Preferenc
 	ctx, span := t.tracer.Start(ctx, "DPOTrainer.EvaluatePreferences")
 	defer span.End()
 
-	t.logger.WithContext(ctx).Info("Evaluating preferences", logging.Any("test_samples", len(dataset.TestSplit))
+// 	t.logger.WithContext(ctx).Info("Evaluating preferences", logging.Any("test_samples", len(dataset.TestSplit))
 
-	policyModel := NewSimplePolicyModel(t.logger)
-	if err := policyModel.Load(ctx, fmt.Sprintf("%s/final_model", t.trainingConfig.OutputPath)); err != nil {
-		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to load final model")
+// 	policyModel := NewSimplePolicyModel(t.logger)
+// 	if err := policyModel.Load(ctx, fmt.Sprintf("%s/final_model", t.trainingConfig.OutputPath)); err != nil {
+// 		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to load final model")
 	}
 
 	correct := 0
@@ -726,12 +726,12 @@ func (t *dpoTrainer) generatePairsFromRatings(ctx context.Context, feedbacks []*
 		}
 	}
 
-	t.logger.WithContext(ctx).Debug("Generated pairs from ratings", logging.Any("count", len(pairs))
-	return pairs
-}
+// 	t.logger.WithContext(ctx).Debug("Generated pairs from ratings", logging.Any("count", len(pairs))
+// 	return pairs
+// }
 
-func (t *dpoTrainer) generatePairsFromCorrections(ctx context.Context, feedbacks []*Feedback) []*PreferencePair {
-	pairs := []*PreferencePair{}
+// func (t *dpoTrainer) generatePairsFromCorrections(ctx context.Context, feedbacks []*Feedback) []*PreferencePair {
+// 	pairs := []*PreferencePair{}
 
 	for _, fb := range feedbacks {
 		if fb.Correction != "" && fb.Correction != fb.Output {
@@ -751,12 +751,12 @@ func (t *dpoTrainer) generatePairsFromCorrections(ctx context.Context, feedbacks
 		}
 	}
 
-	t.logger.WithContext(ctx).Debug("Generated pairs from corrections", logging.Any("count", len(pairs))
-	return pairs
-}
+// 	t.logger.WithContext(ctx).Debug("Generated pairs from corrections", logging.Any("count", len(pairs))
+// 	return pairs
+// }
 
-func (t *dpoTrainer) generatePairsByComparison(ctx context.Context, feedbacks []*Feedback) []*PreferencePair {
-	pairs := []*PreferencePair{}
+// func (t *dpoTrainer) generatePairsByComparison(ctx context.Context, feedbacks []*Feedback) []*PreferencePair {
+// 	pairs := []*PreferencePair{}
 
 	// 按输入分组
 	groupedFeedbacks := make(map[string][]*Feedback)
@@ -788,11 +788,11 @@ func (t *dpoTrainer) generatePairsByComparison(ctx context.Context, feedbacks []
 		}
 	}
 
-	t.logger.WithContext(ctx).Debug("Generated pairs by comparison", logging.Any("count", len(pairs))
-	return pairs
-}
+// 	t.logger.WithContext(ctx).Debug("Generated pairs by comparison", logging.Any("count", len(pairs))
+// 	return pairs
+// }
 
-func (t *dpoTrainer) computeDatasetStatistics(pairs []*PreferencePair) *DatasetStatistics {
+// func (t *dpoTrainer) computeDatasetStatistics(pairs []*PreferencePair) *DatasetStatistics {
 	if len(pairs) == 0 {
 		return &DatasetStatistics{}
 	}

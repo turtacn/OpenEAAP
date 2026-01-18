@@ -513,26 +513,26 @@ func (mc *milvusClient) Search(ctx context.Context, params *SearchParams) ([]Sea
 		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to search vectors")
 	}
 
-	// 转换搜索结果
-	results := make([]SearchResult, 0)
+// 	// 转换搜索结果
+// 	results := make([]SearchResult, 0)
 // 	for _, result := range searchResult {
-		for i := 0; i < result.ResultCount; i++ {
+// 		for i := 0; i < result.ResultCount; i++ {
 // // 			id, _ := result.IDs.GetAsInt64(i)
-			score := result.Scores[i]
+// 			score := result.Scores[i]
 
-			fields := make(map[string]interface{})
-			for _, field := range result.Fields {
-				val, err := field.Get(i)
-				if err == nil {
-					fields[field.Name()] = val
-				}
-			}
+// 			fields := make(map[string]interface{})
+// 			for _, field := range result.Fields {
+// 				val, err := field.Get(i)
+// 				if err == nil {
+// 					fields[field.Name()] = val
+// 				}
+// 			}
 
-			results = append(results, SearchResult{
-				ID:       id,
-				Score:    score,
-				Fields:   fields,
-				Distance: score, // Milvus 中 score 即为距离
+// 			results = append(results, SearchResult{
+// 				ID:       id,
+// 				Score:    score,
+// 				Fields:   fields,
+// 				Distance: score, // Milvus 中 score 即为距离
 			})
 		}
 	}
@@ -595,18 +595,18 @@ func (mc *milvusClient) mergeSearchResults(allResults [][]SearchResult, params *
 		weight := float32(1.0)
 		if i < len(params.VectorSearches) && params.VectorSearches[i].Weight > 0 {
 			weight = params.VectorSearches[i].Weight
-		}
+// 		}
 
 // 		for _, result := range results {
-			if existing, ok := resultMap[result.ID]; ok {
-				// 加权合并分数
-				existing.Score += result.Score * weight
-			} else {
-				result.Score *= weight
-				resultMap[result.ID] = &result
-			}
-		}
-	}
+// 			if existing, ok := resultMap[result.ID]; ok {
+// 				// 加权合并分数
+// 				existing.Score += result.Score * weight
+// 			} else {
+// 				result.Score *= weight
+// 				resultMap[result.ID] = &result
+// 			}
+// 		}
+// 	}
 
 	// 转换为切片并排序
 // 	merged := make([]SearchResult, 0, len(resultMap))
@@ -614,17 +614,17 @@ func (mc *milvusClient) mergeSearchResults(allResults [][]SearchResult, params *
 // 		merged = append(merged, *result)
 // 	}
 
-	// 按分数降序排序
+// 	// 按分数降序排序
 // 	for i := 0; i < len(merged)-1; i++ {
 // 		for j := i + 1; j < len(merged); j++ {
 // 			if merged[j].Score > merged[i].Score {
-				merged[i], merged[j] = merged[j], merged[i]
-			}
-		}
-	}
-
-	return merged
-}
+// 				merged[i], merged[j] = merged[j], merged[i]
+// 			}
+// 		}
+// 	}
+//
+// 	return merged
+// }
 
 // CreateIndex 创建索引
 func (mc *milvusClient) CreateIndex(ctx context.Context, collectionName string, fieldName string, indexConfig *IndexConfig) error {

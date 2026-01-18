@@ -97,9 +97,9 @@ type learningEngine struct {
 	optimizer         Optimizer
 	trainingService   training.TrainingService
 	messageQueue      message.MessageQueue
-	modelRepo         model.Repository
+	modelRepo         model.ModelRepository
 	logger            logging.Logger
-	metricsCollector  metrics.Collector
+	metricsCollector  metrics.MetricsCollector
 	tracer            trace.Tracer
 
 	config       *LearningConfig
@@ -138,7 +138,7 @@ func NewLearningEngine(
 	optimizer Optimizer,
 	trainingService training.TrainingService,
 	messageQueue message.MessageQueue,
-	modelRepo model.Repository,
+	modelRepo model.ModelRepository,
 	logger logging.Logger,
 	metricsCollector metrics.MetricsCollector,
 	tracer trace.Tracer,
