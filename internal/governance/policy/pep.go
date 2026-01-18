@@ -374,7 +374,7 @@ func (p *pep) PreAuthorize(ctx context.Context, subjectID, resourceID, action st
 	}
 
 	if !result.Allowed {
-		return errors.New(errors.ForbiddenError,
+		return errors.NewAuthorizationError(errors.CodeForbidden,
 			fmt.Sprintf("access denied: %s", result.Decision.Reason))
 	}
 
@@ -395,7 +395,7 @@ func (p *pep) PostAuthorize(ctx context.Context, request *AccessRequest, result 
 	}
 
 	if !enforcementResult.Allowed {
-		return errors.New(errors.ForbiddenError,
+		return errors.NewAuthorizationError(errors.CodeForbidden,
 			fmt.Sprintf("post-authorization denied: %s", enforcementResult.Decision.Reason))
 	}
 

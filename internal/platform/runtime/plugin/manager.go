@@ -829,7 +829,7 @@ func (pm *PluginManager) registryBackupLoop() {
 }
 
 // NewPluginRegistry 创建插件注册表
-func NewPluginRegistry(logger // logger.Logger) *PluginRegistry {
+func NewPluginRegistry(logger logging.Logger) *PluginRegistry {
 	return &PluginRegistry{
 		plugins: make(map[string]*RegistryEntry),
 		index:   make(map[runtime.PluginType][]string),

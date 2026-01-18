@@ -22,7 +22,7 @@ import (
 // VLLMClient provides a client for vLLM inference engine
 type VLLMClient struct {
 	logger           logging.Logger
-	metricsCollector metrics.MetricsCollector
+	metricsCollector *metrics.MetricsCollector
 	baseURL          string
 	httpClient       *http.Client
 	apiKey           string
@@ -127,7 +127,7 @@ type BatchResponse struct {
 }
 
 // NewVLLMClient creates a new vLLM client
-func NewVLLMClient(logger logging.Logger, metricsCollector metrics.MetricsCollector, config *VLLMConfig) *VLLMClient {
+func NewVLLMClient(logger logging.Logger, metricsCollector *metrics.MetricsCollector, config *VLLMConfig) *VLLMClient {
 	if config.Timeout == 0 {
 		config.Timeout = 60 * time.Second
 	}

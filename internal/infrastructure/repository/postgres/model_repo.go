@@ -386,52 +386,64 @@ func (r *modelRepo) List(ctx context.Context, filter *model.ModelFilter) ([]*mod
 		filter = &model.ModelFilter{}
 	}
 
-	// 应用默认值
-	if filter.Page <= 0 {
-		filter.Page = 1
+	// Apply defaults for pagination
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = 20
 	}
-	if filter.PageSize <= 0 {
-		filter.PageSize = 20
+	if limit > 100 {
+		limit = 100
 	}
-	if filter.PageSize > 100 {
-		filter.PageSize = 100
+	
+	offset := filter.Offset
+	if offset < 0 {
+		offset = 0
 	}
 
-	// 构建查询
+	// Build query
 	query := r.db.WithContext(ctx).Model(&ModelModel{})
 
-	// 应用过滤条件
-	if filter.Name != "" {
-		query = query.Where("name ILIKE ?", "%"+filter.Name+"%")
+	// Apply filters
+	if len(filter.Status) > 0 {
+		query = query.Where("status IN ?", filter.Status)
 	}
-	if filter.Type != "" {
-		query = query.Where("type = ?", filter.Type)
+	if len(filter.Type) > 0 {
+		query = query.Where("type IN ?", filter.Type)
 	}
-	if filter.Provider != "" {
-		query = query.Where("provider = ?", filter.Provider)
+	if len(filter.Providers) > 0 {
+		query = query.Where("provider IN ?", filter.Providers)
 	}
-	if filter.Status != "" {
-		query = query.Where("status = ?", filter.Status)
-	}
-	if filter.IsDefault != nil {
-		query = query.Where("is_default = ?", *filter.IsDefault)
+	if len(filter.Versions) > 0 {
+		query = query.Where("version IN ?", filter.Versions)
 	}
 	if len(filter.Tags) > 0 {
 		tagsJSON, _ := json.Marshal(filter.Tags)
 		query = query.Where("tags @> ?", string(tagsJSON))
 	}
+	if filter.CreatedAfter != nil {
+		query = query.Where("created_at >= ?", filter.CreatedAfter)
+	}
+	if filter.CreatedBefore != nil {
+		query = query.Where("created_at <= ?", filter.CreatedBefore)
+	}
+	if filter.UpdatedAfter != nil {
+		query = query.Where("updated_at >= ?", filter.UpdatedAfter)
+	}
+	if filter.UpdatedBefore != nil {
+		query = query.Where("updated_at <= ?", filter.UpdatedBefore)
+	}
 
-	// 获取总数
+	// Get total count
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, errors.Wrap(err, errors.CodeDatabaseError, "failed to count models")
 	}
 
-	// 应用排序
-	orderBy := "priority DESC, created_at DESC"
-	if filter.OrderBy != "" {
-		orderBy = filter.OrderBy
-		if filter.OrderDesc {
+	// Apply sorting
+	orderBy := "created_at DESC"
+	if filter.SortBy != "" {
+		orderBy = filter.SortBy
+		if filter.SortOrder == model.SortOrderDesc {
 			orderBy += " DESC"
 		} else {
 			orderBy += " ASC"
@@ -439,9 +451,8 @@ func (r *modelRepo) List(ctx context.Context, filter *model.ModelFilter) ([]*mod
 	}
 	query = query.Order(orderBy)
 
-	// 应用分页
-	offset := (filter.Page - 1) * filter.PageSize
-	query = query.Offset(offset).Limit(filter.PageSize)
+	// Apply pagination
+	query = query.Offset(offset).Limit(limit)
 
 	// 查询数据
 	var dbModels []ModelModel
@@ -549,7 +560,7 @@ func (r *modelRepo) CreateVersion(ctx context.Context, version *model.ModelVersi
 
 	if err := r.db.WithContext(ctx).Create(versionModel).Error; err != nil {
 		if isDuplicateKeyError(err) {
-			return errors.Wrap(err, errors.ConflictError, "model version already exists")
+			return errors.Wrap(err, errors.CodeConflict, "model version already exists")
 		}
 		return errors.Wrap(err, errors.CodeDatabaseError, "failed to create model version")
 	}
@@ -941,6 +952,48 @@ func (r *modelRepo) metricsToEntity(metricsModel *ModelMetricsModel) *model.Mode
 		Timestamp:  metricsModel.Timestamp,
 		Tags:       tags,
 	}
+}
+
+// Count returns the total count of models matching the filter
+func (r *modelRepo) Count(ctx context.Context, filter model.ModelFilter) (int64, error) {
+	query := r.db.WithContext(ctx).Model(&ModelModel{})
+	
+	// Apply filters
+	if len(filter.Status) > 0 {
+		query = query.Where("status IN ?", filter.Status)
+	}
+	if len(filter.Type) > 0 {
+		query = query.Where("type IN ?", filter.Type)
+	}
+	if len(filter.Providers) > 0 {
+		query = query.Where("provider IN ?", filter.Providers)
+	}
+	if len(filter.Versions) > 0 {
+		query = query.Where("version IN ?", filter.Versions)
+	}
+	if len(filter.Tags) > 0 {
+		tagsJSON, _ := json.Marshal(filter.Tags)
+		query = query.Where("tags @> ?", string(tagsJSON))
+	}
+	if filter.CreatedAfter != nil {
+		query = query.Where("created_at >= ?", filter.CreatedAfter)
+	}
+	if filter.CreatedBefore != nil {
+		query = query.Where("created_at <= ?", filter.CreatedBefore)
+	}
+	if filter.UpdatedAfter != nil {
+		query = query.Where("updated_at >= ?", filter.UpdatedAfter)
+	}
+	if filter.UpdatedBefore != nil {
+		query = query.Where("updated_at <= ?", filter.UpdatedBefore)
+	}
+	
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return 0, errors.Wrap(err, errors.CodeDatabaseError, "failed to count models")
+	}
+	
+	return count, nil
 }
 
 //Personal.AI order the ending

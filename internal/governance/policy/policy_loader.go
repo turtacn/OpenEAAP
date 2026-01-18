@@ -555,7 +555,7 @@ func (l *policyLoader) StartAutoReload(ctx context.Context, interval time.Durati
 	defer l.mu.Unlock()
 
 	if l.autoReloadTicker != nil {
-		return errors.New(errors.ConflictError, "auto-reload already started")
+		return errors.NewConflictError(errors.CodeConflict, "auto-reload already started")
 	}
 
 	l.autoReloadTicker = time.NewTicker(interval)
@@ -566,7 +566,7 @@ func (l *policyLoader) StartAutoReload(ctx context.Context, interval time.Durati
 			select {
 			case <-l.autoReloadTicker.C:
 				if err := l.Reload(context.Background()); err != nil {
-					l.logger.Error("Auto-reload failed", "error", err)
+					l.logger.Error("Auto-reload failed", logging.Error(err))
 				}
 			case <-l.autoReloadStop:
 				l.logger.Info("Auto-reload stopped")
@@ -584,7 +584,7 @@ func (l *policyLoader) StopAutoReload() error {
 	defer l.mu.Unlock()
 
 	if l.autoReloadTicker == nil {
-		return errors.New(errors.CodeNotFound, "auto-reload not started")
+		return errors.NewNotFoundError(errors.CodeNotFound, "auto-reload not started")
 	}
 
 	l.autoReloadTicker.Stop()
@@ -869,7 +869,7 @@ func (m *MockConfigCenter) Get(ctx context.Context, key string) (string, error) 
 	if value, ok := m.configs.Load(key); ok {
 		return value.(string), nil
 	}
-	return "", errors.New(errors.CodeNotFound, fmt.Sprintf("config not found: %s", key))
+	return "", errors.NewNotFoundError(errors.CodeNotFound, fmt.Sprintf("config not found: %s", key))
 }
 
 func (m *MockConfigCenter) GetAll(ctx context.Context, prefix string) (map[string]string, error) {
@@ -965,7 +965,7 @@ func (t *TemplateEngine) LoadTemplate(ctx context.Context, path string) (*Policy
 func (t *TemplateEngine) GeneratePolicy(ctx context.Context, templateName string, variables map[string]interface{}) (*Policy, error) {
 	templateValue, ok := t.templates.Load(templateName)
 	if !ok {
-		return nil, errors.New(errors.CodeNotFound,
+		return nil, errors.NewNotFoundError(errors.CodeNotFound,
 			fmt.Sprintf("template not found: %s", templateName))
 	}
 
