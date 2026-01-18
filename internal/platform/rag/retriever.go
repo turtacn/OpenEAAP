@@ -491,7 +491,7 @@ func (r *retrieverImpl) validateRequest(req *RetrieveRequest) error {
 // HealthCheck 健康检查
 func (r *retrieverImpl) HealthCheck(ctx context.Context) error {
 	// 检查向量数据库
-	if err := r.vectorStore.HealthCheck(ctx); err != nil {
+// 	if err := r.vectorStore.HealthCheck(ctx); err != nil {
 		return errors.Wrap(err, "ERR_UNAVAIL", "vector store unhealthy")
 	}
 

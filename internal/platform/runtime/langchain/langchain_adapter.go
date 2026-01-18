@@ -388,8 +388,8 @@ func (lca *LangChainAdapter) Initialize(ctx context.Context, config *runtime.Run
 			plugin := lca.convertPluginConfig(pluginConfig)
 			if err := lca.LoadPlugin(ctx, plugin); err != nil {
 				lca.logger.Warn("failed to load plugin",
-					"plugin_id", plugin.ID,
-					"error", err)
+					logging.String("plugin_id", plugin.ID),
+					logging.String("error", err))
 			}
 		}
 	}
@@ -402,8 +402,8 @@ func (lca *LangChainAdapter) Initialize(ctx context.Context, config *runtime.Run
 
 	lca.status = runtime.RuntimeStatusReady
 	lca.logger.Info("langchain adapter initialized",
-		"runtime_id", lca.id,
-		"version", lca.version)
+		logging.String("runtime_id", lca.id),
+		logging.String("version", lca.version))
 
 	return nil
 }
@@ -456,9 +456,9 @@ func (lca *LangChainAdapter) Execute(ctx context.Context, req *runtime.ExecuteRe
 	resp := lca.convertFromInvokeOutput(output, duration)
 
 	lca.logger.Debug("langchain execution completed",
-		"request_id", req.AgentID,
-		"duration", duration,
-		"tokens_used", output.TokensUsed)
+		logging.String("request_id", req.AgentID),
+		logging.String("duration", duration),
+		logging.String("tokens_used", output.TokensUsed))
 
 	return resp, nil
 }
@@ -592,7 +592,7 @@ func (lca *LangChainAdapter) Shutdown(ctx context.Context) error {
 		return nil
 	}
 
-	lca.logger.Info("shutting down langchain adapter", "runtime_id", lca.id)
+	lca.logger.Info("shutting down langchain adapter", logging.String("runtime_id", lca.id))
 
 	// 发送关闭信号
 	close(lca.shutdownChan)
@@ -607,14 +607,14 @@ func (lca *LangChainAdapter) Shutdown(ctx context.Context) error {
 	// 等待关闭完成或超时
 	select {
 	case <-done:
-		lca.logger.Info("langchain adapter shutdown completed", "runtime_id", lca.id)
+		lca.logger.Info("langchain adapter shutdown completed", logging.String("runtime_id", lca.id))
 	case <-ctx.Done():
 		return errors.NewTimeoutError("shutdown timeout")
 	}
 
 	// 关闭客户端
 	if err := lca.client.Close(); err != nil {
-		lca.logger.Warn("failed to close langchain client", "error", err)
+		lca.logger.Warn("failed to close langchain client", logging.String("error", err))
 	}
 
 	lca.status = runtime.RuntimeStatusShutdown
@@ -647,7 +647,7 @@ func (lca *LangChainAdapter) UpdateConfig(ctx context.Context, config *runtime.R
 	lca.config = config
 	lca.metadata.UpdatedAt = time.Now()
 
-	lca.logger.Info("langchain adapter configuration updated", "runtime_id", lca.id)
+	lca.logger.Info("langchain adapter configuration updated", logging.String("runtime_id", lca.id))
 	return nil
 }
 
@@ -677,9 +677,9 @@ func (lca *LangChainAdapter) LoadPlugin(ctx context.Context, plugin *runtime.Plu
 	lca.plugins[plugin.ID] = plugin
 
 	lca.logger.Info("plugin loaded",
-		"plugin_id", plugin.ID,
-		"plugin_name", plugin.Name,
-		"plugin_type", plugin.Type)
+		logging.String("plugin_id", plugin.ID),
+		logging.String("plugin_name", plugin.Name),
+		logging.String("plugin_type", plugin.Type))
 
 	return nil
 }
@@ -704,7 +704,7 @@ func (lca *LangChainAdapter) UnloadPlugin(ctx context.Context, pluginID string) 
 
 	delete(lca.plugins, pluginID)
 
-	lca.logger.Info("plugin unloaded", "plugin_id", pluginID)
+	lca.logger.Info("plugin unloaded", logging.String("plugin_id", pluginID))
 	return nil
 }
 
@@ -767,8 +767,8 @@ func (lca *LangChainAdapter) ExecutePlugin(ctx context.Context, pluginID string,
 	}
 
 	lca.logger.Debug("plugin executed",
-		"plugin_id", pluginID,
-		"duration", duration)
+		logging.String("plugin_id", pluginID),
+		logging.String("duration", duration))
 
 	return resp, nil
 }
@@ -962,7 +962,7 @@ func (lca *LangChainAdapter) healthCheckLoop() {
 			cancel()
 
 			if err != nil {
-				lca.logger.Warn("health check failed", "error", err)
+				lca.logger.Warn("health check failed", logging.String("error", err))
 			}
 		case <-lca.shutdownChan:
 			return
@@ -1021,8 +1021,8 @@ func (lca *LangChainAdapter) BuildChainFromConfig(config *ChainConfig) (Chain, e
 	}
 
 	lca.logger.Info("chain created",
-		"chain_type", config.Type,
-		"chain_name", config.Name)
+		logging.String("chain_type", config.Type),
+		logging.String("chain_name", config.Name))
 
 	return chain, nil
 }
@@ -1040,8 +1040,8 @@ func (lca *LangChainAdapter) BuildAgentFromConfig(config *AgentConfig) (Agent, e
 	}
 
 	lca.logger.Info("agent created",
-		"agent_type", config.Type,
-		"agent_name", config.Name)
+		logging.String("agent_type", config.Type),
+		logging.String("agent_name", config.Name))
 
 	return agent, nil
 }
@@ -1124,7 +1124,7 @@ func (lca *LangChainAdapter) ResetMetrics() {
 	lca.metrics.totalCost = 0
 	lca.metrics.totalResponseTime = 0
 
-	lca.logger.Info("metrics reset", "runtime_id", lca.id)
+	lca.logger.Info("metrics reset", logging.String("runtime_id", lca.id))
 }
 
 // GetPluginCount 获取插件数量
@@ -1166,7 +1166,7 @@ func (lca *LangChainAdapter) EnablePlugin(ctx context.Context, pluginID string) 
 	plugin.Enabled = true
 	plugin.UpdatedAt = time.Now()
 
-	lca.logger.Info("plugin enabled", "plugin_id", pluginID)
+	lca.logger.Info("plugin enabled", logging.String("plugin_id", pluginID))
 	return nil
 }
 
@@ -1188,7 +1188,7 @@ func (lca *LangChainAdapter) DisablePlugin(ctx context.Context, pluginID string)
 	plugin.Enabled = false
 	plugin.UpdatedAt = time.Now()
 
-	lca.logger.Info("plugin disabled", "plugin_id", pluginID)
+	lca.logger.Info("plugin disabled", logging.String("plugin_id", pluginID))
 	return nil
 }
 
@@ -1207,7 +1207,7 @@ func (lca *LangChainAdapter) UpdatePluginConfig(ctx context.Context, pluginID st
 		plugin.UpdatedAt = time.Now()
 	}
 
-	lca.logger.Info("plugin config updated", "plugin_id", pluginID)
+	lca.logger.Info("plugin config updated", logging.String("plugin_id", pluginID))
 	return nil
 }
 

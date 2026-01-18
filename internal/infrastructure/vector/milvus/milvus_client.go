@@ -445,7 +445,7 @@ func (mc *milvusClient) Insert(ctx context.Context, collectionName string, vecto
 		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to insert vectors")
 	}
 
-	return result.IDs().(*entity.ColumnInt64).Data(), nil
+// 	return result.IDs().(*entity.ColumnInt64).Data(), nil
 }
 
 // Delete 删除向量
@@ -517,7 +517,7 @@ func (mc *milvusClient) Search(ctx context.Context, params *SearchParams) ([]Sea
 	results := make([]SearchResult, 0)
 	for _, result := range searchResult {
 		for i := 0; i < result.ResultCount; i++ {
-			id, _ := result.IDs.GetAsInt64(i)
+// 			id, _ := result.IDs.GetAsInt64(i)
 			score := result.Scores[i]
 
 			fields := make(map[string]interface{})

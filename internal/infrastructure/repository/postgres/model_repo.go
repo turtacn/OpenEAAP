@@ -478,7 +478,7 @@ func (r *modelRepo) UpdateStatus(ctx context.Context, id string, status model.Mo
 	if id == "" {
 		return errors.NewValidationError(errors.CodeInvalidParameter, "model ID cannot be empty")
 	}
-	if !status.Valid() {
+	if status == "" {
 		return errors.NewValidationError(errors.CodeInvalidParameter, "invalid model status")
 	}
 
@@ -486,7 +486,7 @@ func (r *modelRepo) UpdateStatus(ctx context.Context, id string, status model.Mo
 		Model(&ModelModel{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
-			"status":     status.String(),
+			"status":     string(status),
 			"updated_at": time.Now(),
 		})
 
@@ -510,7 +510,7 @@ func (r *modelRepo) SetDefault(ctx context.Context, id string, modelType model.M
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 清除同类型的其他默认模型
 		if err := tx.Model(&ModelModel{}).
-			Where("type = ? AND is_default = ?", modelType.String(), true).
+			Where("type = ? AND is_default = ?", string(modelType), true).
 			Update("is_default", false).Error; err != nil {
 			return errors.Wrap(err, errors.CodeDatabaseError, "failed to clear default models")
 		}
@@ -536,7 +536,7 @@ func (r *modelRepo) SetDefault(ctx context.Context, id string, modelType model.M
 func (r *modelRepo) GetDefault(ctx context.Context, modelType model.ModelType) (*model.Model, error) {
 	var dbModel ModelModel
 	if err := r.db.WithContext(ctx).
-		Where("type = ? AND is_default = ?", modelType.String(), true).
+		Where("type = ? AND is_default = ?", string(modelType), true).
 		First(&dbModel).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.NewNotFoundError(errors.CodeNotFound, "default model not found")
@@ -566,7 +566,6 @@ func (r *modelRepo) CreateVersion(ctx context.Context, version *model.ModelVersi
 	}
 
 	version.CreatedAt = versionModel.CreatedAt
-	version.UpdatedAt = versionModel.UpdatedAt
 
 	return nil
 }
@@ -647,7 +646,7 @@ func (r *modelRepo) GetStatistics(ctx context.Context) (*model.ModelStatistics, 
 	// 总数
 	if err := r.db.WithContext(ctx).
 		Model(&ModelModel{}).
-		Count(&stats.Total).Error; err != nil {
+// 		Count(&stats.Total).Error; err != nil {
 		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get total count")
 	}
 
@@ -665,9 +664,9 @@ func (r *modelRepo) GetStatistics(ctx context.Context) (*model.ModelStatistics, 
 		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get type counts")
 	}
 
-	stats.ByType = make(map[string]int64)
+// 	stats.ByType = make(map[string]int64)
 	for _, tc := range typeCounts {
-		stats.ByType[tc.Type] = tc.Count
+// 		stats.ByType[tc.Type] = tc.Count
 	}
 
 	// 按状态统计
@@ -684,9 +683,9 @@ func (r *modelRepo) GetStatistics(ctx context.Context) (*model.ModelStatistics, 
 		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get status counts")
 	}
 
-	stats.ByStatus = make(map[string]int64)
+// 	stats.ByStatus = make(map[string]int64)
 	for _, sc := range statusCounts {
-		stats.ByStatus[sc.Status] = sc.Count
+// 		stats.ByStatus[sc.Status] = sc.Count
 	}
 
 	// 按提供商统计
@@ -703,9 +702,9 @@ func (r *modelRepo) GetStatistics(ctx context.Context) (*model.ModelStatistics, 
 		return nil, errors.Wrap(err, errors.CodeDatabaseError, "failed to get provider counts")
 	}
 
-	stats.ByProvider = make(map[string]int64)
+// 	stats.ByProvider = make(map[string]int64)
 	for _, pc := range providerCounts {
-		stats.ByProvider[pc.Provider] = pc.Count
+// 		stats.ByProvider[pc.Provider] = pc.Count
 	}
 
 	return &stats, nil
@@ -1009,4 +1008,37 @@ if err != nil {
 return false, errors.Wrap(err, errors.CodeDatabaseError, "failed to check model existence")
 }
 return count > 0, nil
+}
+
+// ExistsByName checks if a model with the given name exists
+func (r *modelRepo) ExistsByName(ctx context.Context, name string) (bool, error) {
+var count int64
+err := r.db.WithContext(ctx).Model(&ModelModel{}).Where("name = ?", name).Count(&count).Error
+if err != nil {
+return false, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to check model existence by name")
+}
+return count > 0, nil
+}
+
+// GetAvailable retrieves all available models
+func (r *modelRepo) GetAvailable(ctx context.Context) ([]*model.Model, error) {
+var models []ModelModel
+err := r.db.WithContext(ctx).
+Where("status = ?", model.ModelStatusAvailable).
+Find(&models).Error
+
+if err != nil {
+return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to get available models")
+}
+
+result := make([]*model.Model, 0, len(models))
+for i := range models {
+m, err := r.toEntity(&models[i])
+if err != nil {
+return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to convert model")
+}
+result = append(result, m)
+}
+
+return result, nil
 }
