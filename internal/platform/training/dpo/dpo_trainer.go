@@ -336,7 +336,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 	for epoch := 0; epoch < epochs; epoch++ {
 		// 检查是否被停止
 		if _, exists := t.runningTasks.Load(task.ID); !exists {
-			return errors.New(errors.CodeCancelled, "training task was stopped")
+			return errors.NewInternalError(errors.CodeInternalError, "training task was stopped")
 		}
 
   t.logger.WithContext(ctx).Info("Training epoch", logging.Any("epoch", epoch+1), logging.Any("total_epochs", epochs))
@@ -382,8 +382,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 			if batchCount%t.trainingConfig.LoggingSteps == 0 {
     t.logger.WithContext(ctx).Debug("Batch training", logging.Any("epoch", epoch+1), logging.Any("batch", batchCount), logging.Any("loss", loss))
 
-				t.metricsCollector.ObserveDuration("dpo_batch_loss",
-					loss,
+				t.metricsCollector.ObserveHistogram("dpo_batch_loss", loss,
 					map[string]string{
 						"task_id": task.ID,
 						"epoch":   fmt.Sprintf("%d", epoch+1),
@@ -397,8 +396,7 @@ func (t *dpoTrainer) TrainDPO(ctx context.Context, task *training.TrainingTask, 
 
   t.logger.WithContext(ctx).Info("Epoch completed", logging.Any("epoch", epoch+1), logging.Any("avg_loss", avgEpochLoss))
 
-		t.metricsCollector.ObserveDuration("dpo_epoch_loss",
-			avgEpochLoss,
+		t.metricsCollector.ObserveHistogram("dpo_epoch_loss", avgEpochLoss,
 			map[string]string{
 				"task_id": task.ID,
 				"epoch":   fmt.Sprintf("%d", epoch+1),
@@ -865,8 +863,7 @@ func (t *dpoTrainer) updateTaskProgress(ctx context.Context, task *training.Trai
 
  t.logger.WithContext(ctx).Debug("Task progress updated", logging.Any("task_id", task.ID), logging.Any("progress", task.Progress))
 
-	t.metricsCollector.ObserveDuration("dpo_training_progress",
-		task.Progress,
+	t.metricsCollector.ObserveHistogram("dpo_training_progress", task.Progress,
 		map[string]string{"task_id": task.ID})
 }
 

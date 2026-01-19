@@ -267,7 +267,7 @@ func (e *learningEngine) TriggerOptimization(ctx context.Context, req *Optimizat
 	// 检查是否已有运行中的任务
 	if !req.ForceTrigger {
 		if _, exists := e.runningTasks.Load(req.ModelID); exists {
-			return nil, errors.New(errors.CodeConflict,
+			return nil, errors.NewConflictError(errors.CodeConflict,
 				fmt.Sprintf("optimization task already running for model %s", req.ModelID))
 		}
 	}
@@ -279,7 +279,7 @@ func (e *learningEngine) TriggerOptimization(ctx context.Context, req *Optimizat
 	}
 
 	if stats.PendingFeedbackCount < int64(e.config.MinFeedbackForOptimize) && !req.ForceTrigger {
-		return nil, errors.New(errors.CodePreconditionFailed,
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter,
 			fmt.Sprintf("insufficient feedback count: %d < %d",
 				stats.PendingFeedbackCount, e.config.MinFeedbackForOptimize))
 	}

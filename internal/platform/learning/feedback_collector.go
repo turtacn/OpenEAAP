@@ -414,7 +414,7 @@ func (c *feedbackCollector) publishFeedback(ctx context.Context, feedback *Feedb
 
 	_, err = c.messageQueue.Publish(ctx, &message.PublishRequest{
 		Topic: c.config.QueueTopic,
-		Data:  data,
+		Body:  data,
 	})
 	if err != nil {
 		return errors.Wrap(err, "ERR_INTERNAL", "failed to publish feedback")
@@ -424,20 +424,20 @@ func (c *feedbackCollector) publishFeedback(ctx context.Context, feedback *Feedb
 }
 
 // classifyFeedback 自动分类反馈
-func (c *feedbackCollector) classifyFeedback(feedback *Feedback) string {
+func (c *feedbackCollector) classifyFeedback(feedback *Feedback) types.FeedbackType {
 	// 基于评分分类
 	if feedback.Rating >= 4.0 {
-		return "positive"
+		return types.FeedbackTypeThumbsUp
 	} else if feedback.Rating <= 2.0 {
-		return "negative"
+		return types.FeedbackTypeThumbsDown
 	}
 
-	// 有修正内容视为负面反馈
+	// 有修正内容视为修正类型反馈
 	if feedback.Correction != "" {
-		return "negative"
+		return types.FeedbackTypeCorrection
 	}
 
-	return "neutral"
+	return types.FeedbackTypeRating
 }
 
 // AutoEvaluator 自动评估器接口
@@ -523,7 +523,7 @@ func (e *autoEvaluator) Evaluate(ctx context.Context, input, output string) (*Au
 	totalScore := (relevanceScore + completenessScore + accuracyScore + fluencyScore + metrics["safety"]) / 5.0
 	confidence := e.calculateConfidence(metrics)
 
-	e.metricsCollector.ObserveDuration("auto_evaluation_score", totalScore, nil)
+	e.metricsCollector.ObserveHistogram("auto_evaluation_score", totalScore, nil)
 
 	return &AutoEvaluation{
 		Score:       totalScore,
@@ -608,6 +608,6 @@ func (c *feedbackCollector) GetStats(ctx context.Context, modelID string) (*Feed
 		TotalCount:    0,
 		PositiveCount: 0,
 		NegativeCount: 0,
-		AvgScore:      0.0,
+		AverageRating: 0.0,
 	}, nil
 }

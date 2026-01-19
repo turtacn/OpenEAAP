@@ -609,7 +609,7 @@ func (lca *LangChainAdapter) Shutdown(ctx context.Context) error {
 	case <-done:
 		lca.logger.Info("langchain adapter shutdown completed", logging.String("runtime_id", lca.id))
 	case <-ctx.Done():
-		return errors.NewTimeoutError("shutdown timeout")
+		return errors.NewTimeoutError(errors.CodeTimeout, "shutdown timeout")
 	}
 
 	// 关闭客户端
@@ -679,7 +679,7 @@ func (lca *LangChainAdapter) LoadPlugin(ctx context.Context, plugin *runtime.Plu
 	lca.logger.Info("plugin loaded",
 		logging.String("plugin_id", plugin.ID),
 		logging.String("plugin_name", plugin.Name),
-		logging.String("plugin_type", plugin.Type))
+		logging.String("plugin_type", string(plugin.Type)))
 
 	return nil
 }
@@ -808,8 +808,7 @@ func (lca *LangChainAdapter) ValidatePlugin(ctx context.Context, plugin *runtime
 	}
 
 	if !supported {
-		return errors.New(errors.CodeInvalidParameter,
-			fmt.Sprintf("unsupported plugin type: %s", plugin.Type))
+		return errors.NewValidationError(errors.CodeInvalidParameter, 			fmt.Sprintf("unsupported plugin type: %s", plugin.Type))
 	}
 
 	return nil
@@ -1021,7 +1020,7 @@ func (lca *LangChainAdapter) BuildChainFromConfig(config *ChainConfig) (Chain, e
 	}
 
 	lca.logger.Info("chain created",
-		logging.String("chain_type", config.Type),
+		logging.String("chain_type", string(config.Type)),
 		logging.String("chain_name", config.Name))
 
 	return chain, nil
@@ -1040,7 +1039,7 @@ func (lca *LangChainAdapter) BuildAgentFromConfig(config *AgentConfig) (Agent, e
 	}
 
 	lca.logger.Info("agent created",
-		logging.String("agent_type", config.Type),
+		logging.String("agent_type", string(config.Type)),
 		logging.String("agent_name", config.Name))
 
 	return agent, nil

@@ -933,7 +933,7 @@ func (c *complianceChecker) RemedyViolation(ctx context.Context, violationID str
 	// 获取违规记录
 	value, ok := c.violations.Load(violationID)
 	if !ok {
-		return errors.New(errors.CodeNotFound, "violation not found")
+		return errors.NewValidationError(errors.CodeNotFound, "violation not found")
 	}
 
 	violation := value.(*Violation)

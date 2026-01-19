@@ -352,7 +352,7 @@ func (t *rlhfTrainer) TrainPPO(ctx context.Context, task *training.TrainingTask,
 	for step := 0; step < totalSteps; step++ {
 		// 检查是否被停止
 		if _, exists := t.runningTasks.Load(task.ID); !exists {
-			return errors.New(errors.CodeCancelled, "training task was stopped")
+			return errors.NewInternalError(errors.CodeInternalError, "training task was stopped")
 		}
 
 		// 生成样本
@@ -383,9 +383,9 @@ func (t *rlhfTrainer) TrainPPO(ctx context.Context, task *training.TrainingTask,
 					logging.Float64("kl_divergence", klDiv), 
 					logging.Float64("mean_reward", mean(rewards)))
 
-				t.metricsCollector.ObserveDuration("ppo_loss", loss,
+				t.metricsCollector.ObserveHistogram("ppo_loss", loss,
 					map[string]string{"task_id": task.ID})
-				t.metricsCollector.ObserveDuration("ppo_kl_divergence", klDiv,
+				t.metricsCollector.ObserveHistogram("ppo_kl_divergence", klDiv,
 					map[string]string{"task_id": task.ID})
 				t.metricsCollector.ObserveDuration("ppo_mean_reward", mean(rewards),
 					map[string]string{"task_id": task.ID})
@@ -666,7 +666,7 @@ func (t *rlhfTrainer) ppoUpdate(ctx context.Context, samples []InputOutputPair, 
 	for i := range samples {
 		ratio := 1.0 // 简化：实际应计算新旧策略比率
 		clippedRatio := clip(ratio, 1.0-config.ClipRange, 1.0+config.ClipRange)
-		policyLoss += -min(ratio*advantages[i], clippedRatio*advantages[i])
+		policyLoss += - math.Min(ratio*advantages[i], clippedRatio*advantages[i])
 	}
 	policyLoss /= float64(len(samples))
 
@@ -726,8 +726,7 @@ func (t *rlhfTrainer) updateTaskProgress(ctx context.Context, task *training.Tra
 
  t.logger.WithContext(ctx).Debug("Task progress updated", logging.Any("task_id", task.ID), logging.Any("progress", task.Progress))
 
-	t.metricsCollector.ObserveDuration("rlhf_training_progress",
-		task.Progress,
+	t.metricsCollector.ObserveHistogram("rlhf_training_progress", task.Progress,
 		map[string]string{"task_id": task.ID})
 }
 
@@ -863,8 +862,7 @@ func (b *deepspeedBackend) Train(ctx context.Context, config *TrainingConfig) er
 
 		// 记录指标
 		loss := 2.0 - float64(epoch)*0.1
-		b.metricsCollector.ObserveDuration("deepspeed_training_loss",
-			loss,
+		b.metricsCollector.ObserveHistogram("deepspeed_training_loss", loss,
 			map[string]string{"epoch": fmt.Sprintf("%d", epoch)})
 
 		// 保存检查点
@@ -979,8 +977,7 @@ func (b *megatronBackend) Train(ctx context.Context, config *TrainingConfig) err
 		time.Sleep(100 * time.Millisecond)
 
 		loss := 2.0 - float64(epoch)*0.1
-		b.metricsCollector.ObserveDuration("megatron_training_loss",
-			loss,
+		b.metricsCollector.ObserveHistogram("megatron_training_loss", loss,
 			map[string]string{"epoch": fmt.Sprintf("%d", epoch)})
 	}
 

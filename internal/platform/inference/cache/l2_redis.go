@@ -115,17 +115,17 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 		c.hitCount++
 
 		latency := time.Since(startTime)
-  c.logger.WithContext(ctx).Debug("L2 cache exact hit", logging.Any("key", key), logging.Any("latency_ms", latency.Milliseconds()))
+		c.logger.WithContext(ctx).Debug("L2 cache exact hit", logging.Any("key", key), logging.Any("latency_ms", latency.Milliseconds()))
 
-// 		return entry, nil
-// 	}
+		return entry, nil
+	}
 
-// 	if err != redis.Nil {
-// 		c.logger.WithContext(ctx).Warn("Redis GET error", logging.Error(err))
-// 	}
+	if err != redis.Nil {
+		c.logger.WithContext(ctx).Warn("Redis GET error", logging.Error(err))
+	}
 
 	// Try SimHash fuzzy matching
-	entry, err := c.findBySimilarity(ctx, key)
+	entry, err = c.findBySimilarity(ctx, key)
 	if err != nil {
 		c.logger.WithContext(ctx).Warn("SimHash matching failed", logging.Error(err))
 		c.missCount++
@@ -136,23 +136,23 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 		c.hitCount++
 
 		latency := time.Since(startTime)
-  c.logger.WithContext(ctx).Debug("L2 cache SimHash hit", logging.Any("key", key), logging.Any("latency_ms", latency.Milliseconds()))
+		c.logger.WithContext(ctx).Debug("L2 cache SimHash hit", logging.Any("key", key), logging.Any("latency_ms", latency.Milliseconds()))
 
-// 		return entry, nil
-// 	}
+		return entry, nil
+	}
 
-// 	c.missCount++
+	c.missCount++
 
-	latency := time.Since(startTime)
+	latency = time.Since(startTime)
 	if latency > 10*time.Millisecond {
-  c.logger.WithContext(ctx).Warn("L2 cache GET latency exceeded 10ms", logging.Any("latency_ms", latency.Milliseconds()))
-// 	}
+		c.logger.WithContext(ctx).Warn("L2 cache GET latency exceeded 10ms", logging.Any("latency_ms", latency.Milliseconds()))
+	}
 
-// 	return nil, nil
-// }
+	return nil, nil
+}
 
 // Set stores an entry in L2 Redis cache
-// func (c *L2RedisCache) Set(ctx context.Context, entry *CacheEntry) error {
+func (c *L2RedisCache) Set(ctx context.Context, entry *CacheEntry) error {
 	if entry == nil {
 		return errors.NewValidationError(errors.CodeInvalidArgument, "cache entry cannot be nil")
 	}
@@ -197,17 +197,17 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 
 	latency := time.Since(startTime)
 	if latency > 10*time.Millisecond {
-  c.logger.WithContext(ctx).Warn("L2 cache SET latency exceeded 10ms", logging.Any("latency_ms", latency.Milliseconds()))
-// 	}
+		c.logger.WithContext(ctx).Warn("L2 cache SET latency exceeded 10ms", logging.Any("latency_ms", latency.Milliseconds()))
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 // Delete removes an entry from L2 Redis cache
-// func (c *L2RedisCache) Delete(ctx context.Context, key string) error {
-// 	redisKey := c.buildRedisKey(key)
+func (c *L2RedisCache) Delete(ctx context.Context, key string) error {
+	redisKey := c.buildRedisKey(key)
 
-// 	// Delete exact match
+	// Delete exact match
 	if err := c.client.Del(ctx, redisKey).Err(); err != nil {
 		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to delete from Redis")
 	}
@@ -217,17 +217,17 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 	_ = c.client.Del(ctx, simHashKey)
 
 	return nil
-// }
+}
 
 // Clear removes all entries from L2 Redis cache
-// func (c *L2RedisCache) Clear(ctx context.Context) error {
-// 	pattern := c.keyPrefix + "*"
+func (c *L2RedisCache) Clear(ctx context.Context) error {
+	pattern := c.keyPrefix + "*"
 
-// 	iter := c.client.Scan(ctx, 0, pattern, 1000).Iterator()
-// 	keys := make([]string, 0)
+	iter := c.client.Scan(ctx, 0, pattern, 1000).Iterator()
+	keys := make([]string, 0)
 
-// 	for iter.Next(ctx) {
-// 		keys = append(keys, iter.Val())
+	for iter.Next(ctx) {
+		keys = append(keys, iter.Val())
 	}
 
 	if err := iter.Err(); err != nil {
@@ -242,239 +242,239 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 
 	c.logger.WithContext(ctx).Info("L2 cache cleared", logging.Any("deleted_keys", len(keys)))
 
-// 	return nil
-// }
+	return nil
+}
 
 // Stats returns cache statistics
-// func (c *L2RedisCache) Stats(ctx context.Context) (*CacheStats, error) {
-// 	stats := &CacheStats{
-// 		L2Hits:   c.hitCount,
-// 		L2Misses: c.missCount,
-// 	}
+func (c *L2RedisCache) Stats(ctx context.Context) (*CacheStats, error) {
+	stats := &CacheStats{
+		L2Hits:   c.hitCount,
+		L2Misses: c.missCount,
+	}
 
-// 	total := c.hitCount + c.missCount
-// 	if total > 0 {
-// 		stats.HitRate = float64(c.hitCount) / float64(total)
-// 	}
+	total := c.hitCount + c.missCount
+	if total > 0 {
+		stats.HitRate = float64(c.hitCount) / float64(total)
+	}
 
-// 	return stats, nil
-// }
+	return stats, nil
+}
 
 // Name returns the cache name
-// func (c *L2RedisCache) Name() string {
-// 	return "L2RedisCache"
-// }
+func (c *L2RedisCache) Name() string {
+	return "L2RedisCache"
+}
 
 // Level returns the cache level
-// func (c *L2RedisCache) Level() CacheLevel {
-// 	return LevelL2
-// }
+func (c *L2RedisCache) Level() CacheLevel {
+	return LevelL2
+}
 
 // Close closes the Redis client connection
-// func (c *L2RedisCache) Close() error {
-// 	return c.client.Close()
-// }
+func (c *L2RedisCache) Close() error {
+	return c.client.Close()
+}
 
 // buildRedisKey constructs the full Redis key with prefix
-// func (c *L2RedisCache) buildRedisKey(key string) string {
-// 	return fmt.Sprintf("%s:exact:%s", c.keyPrefix, key)
-// }
+func (c *L2RedisCache) buildRedisKey(key string) string {
+	return fmt.Sprintf("%s:exact:%s", c.keyPrefix, key)
+}
 
 // buildSimHashKey constructs the SimHash Redis key
-// func (c *L2RedisCache) buildSimHashKey(key string) string {
-// 	return fmt.Sprintf("%s:simhash:%s", c.keyPrefix, key)
-// }
+func (c *L2RedisCache) buildSimHashKey(key string) string {
+	return fmt.Sprintf("%s:simhash:%s", c.keyPrefix, key)
+}
 
 // serializeEntry serializes a cache entry to JSON
-// func (c *L2RedisCache) serializeEntry(entry *CacheEntry) ([]byte, error) {
-// 	return json.Marshal(entry)
-// }
+func (c *L2RedisCache) serializeEntry(entry *CacheEntry) ([]byte, error) {
+	return json.Marshal(entry)
+}
 
 // deserializeEntry deserializes a cache entry from JSON
-// func (c *L2RedisCache) deserializeEntry(data []byte) (*CacheEntry, error) {
-// 	var entry CacheEntry
+func (c *L2RedisCache) deserializeEntry(data []byte) (*CacheEntry, error) {
+	var entry CacheEntry
 	if err := json.Unmarshal(data, &entry); err != nil {
 		return nil, err
 	}
 	return &entry, nil
-// }
+}
 
 // storeSimHashMapping stores a SimHash mapping for fuzzy matching
-// func (c *L2RedisCache) storeSimHashMapping(ctx context.Context, key string, entry *CacheEntry, ttl time.Duration) error {
-// 	// Generate SimHash from request
-// 	requestData, err := json.Marshal(entry.Request)
-// 	if err != nil {
-// 		return err
-// 	}
+func (c *L2RedisCache) storeSimHashMapping(ctx context.Context, key string, entry *CacheEntry, ttl time.Duration) error {
+	// Generate SimHash from request
+	requestData, err := json.Marshal(entry.Request)
+	if err != nil {
+		return err
+	}
 
-// 	simHash := c.computeSimHash(string(requestData))
+	simHash := c.computeSimHash(string(requestData))
 
-// 	// Store mapping: simhash -> key
-// 	simHashKey := c.buildSimHashKey(fmt.Sprintf("%d", simHash))
+	// Store mapping: simhash -> key
+	simHashKey := c.buildSimHashKey(fmt.Sprintf("%d", simHash))
 
-// 	// Use ZADD with score as simhash value for range queries
-// 	if err := c.client.ZAdd(ctx, c.keyPrefix+":simhash:index", redis.Z{
-// 		Score:  float64(simHash),
-// 		Member: key,
-// 	}).Err(); err != nil {
-// 		return err
-// 	}
+	// Use ZADD with score as simhash value for range queries
+	if err := c.client.ZAdd(ctx, c.keyPrefix+":simhash:index", redis.Z{
+		Score:  float64(simHash),
+		Member: key,
+	}).Err(); err != nil {
+		return err
+	}
 
-// 	// Set expiration on the simhash key
-// 	if err := c.client.Expire(ctx, simHashKey, ttl).Err(); err != nil {
-// 		return err
-// 	}
+	// Set expiration on the simhash key
+	if err := c.client.Expire(ctx, simHashKey, ttl).Err(); err != nil {
+		return err
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 // findBySimilarity finds a cache entry by SimHash similarity
-// func (c *L2RedisCache) findBySimilarity(ctx context.Context, key string) (*CacheEntry, error) {
+func (c *L2RedisCache) findBySimilarity(ctx context.Context, key string) (*CacheEntry, error) {
 // 	// This is a simplified implementation
 // 	// In production, you'd use more sophisticated SimHash matching
 
 // 	// Generate SimHash for the query key
-// 	simHash := c.computeSimHash(key)
+	simHash := c.computeSimHash(key)
 
 // 	// Define similarity threshold (Hamming distance)
-// 	maxHammingDistance := 3
+	maxHammingDistance := 3
 
 // 	// Search for similar hashes in a range
-// 	minScore := float64(simHash - int64(maxHammingDistance))
-// 	maxScore := float64(simHash + int64(maxHammingDistance))
+	minScore := float64(simHash - int64(maxHammingDistance))
+	maxScore := float64(simHash + int64(maxHammingDistance))
 
-// 	members, err := c.client.ZRangeByScore(ctx, c.keyPrefix+":simhash:index", &redis.ZRangeBy{
-// 		Min: fmt.Sprintf("%f", minScore),
-// 		Max: fmt.Sprintf("%f", maxScore),
-// 	}).Result()
+	members, err := c.client.ZRangeByScore(ctx, c.keyPrefix+":simhash:index", &redis.ZRangeBy{
+		Min: fmt.Sprintf("%f", minScore),
+		Max: fmt.Sprintf("%f", maxScore),
+	}).Result()
 
-// 	if err != nil {
-// 		return nil, err
-// 	}
+	if err != nil {
+		return nil, err
+	}
 
 // 	// Find the best match
-// 	for _, member := range members {
-// 		redisKey := c.buildRedisKey(member)
-// 		data, err := c.client.Get(ctx, redisKey).Bytes()
-// 		if err != nil {
-// 			continue
-// 		}
+	for _, member := range members {
+		redisKey := c.buildRedisKey(member)
+		data, err := c.client.Get(ctx, redisKey).Bytes()
+		if err != nil {
+			continue
+		}
 
-// 		entry, err := c.deserializeEntry(data)
-// 		if err != nil {
-// 			continue
-// 		}
+		entry, err := c.deserializeEntry(data)
+		if err != nil {
+			continue
+		}
 
-// 		// Verify it hasn't expired
-// 		if time.Now().After(entry.ExpiresAt) {
-// 			_ = c.client.Del(ctx, redisKey)
-// 			continue
-// 		}
+		// Verify it hasn't expired
+		if time.Now().After(entry.ExpiresAt) {
+			_ = c.client.Del(ctx, redisKey)
+			continue
+		}
 
-// 		// Calculate actual similarity
-// 		similarity := c.calculateSimilarity(key, member)
-// 		entry.Similarity = similarity
+		// Calculate actual similarity
+		similarity := c.calculateSimilarity(key, member)
+		entry.Similarity = similarity
 
-// 		// Return if similarity is high enough (> 0.95)
-// 		if similarity > 0.95 {
-// 			return entry, nil
-// 		}
-// 	}
+		// Return if similarity is high enough (> 0.95)
+		if similarity > 0.95 {
+			return entry, nil
+		}
+	}
 
-// 	return nil, nil
-// }
+	return nil, nil
+}
 
 // computeSimHash computes a 64-bit SimHash for a string
-// func (c *L2RedisCache) computeSimHash(text string) int64 {
+func (c *L2RedisCache) computeSimHash(text string) int64 {
 // 	// Simplified SimHash implementation
 // 	// In production, use a proper SimHash library
 //
 // 	// Tokenize the text
-// 	tokens := c.tokenize(text)
+	tokens := c.tokenize(text)
 //
 // 	// Initialize bit vector
-// 	v := make([]int, c.simHashBits)
+	v := make([]int, c.simHashBits)
 //
 // 	// Process each token
-// 	for _, token := range tokens {
-// 		// Hash the token
-// 		hash := c.hashToken(token)
+	for _, token := range tokens {
+		// Hash the token
+		hash := c.hashToken(token)
 //
-// 		// Update bit vector
-// 		for i := 0; i < c.simHashBits; i++ {
-// 			bit := (hash >> i) & 1
-// 			if bit == 1 {
-// 				v[i]++
-// 			} else {
-// 				v[i]--
-// 			}
-// 		}
-// 	}
+		// Update bit vector
+		for i := 0; i < c.simHashBits; i++ {
+			bit := (hash >> i) & 1
+			if bit == 1 {
+				v[i]++
+			} else {
+				v[i]--
+			}
+		}
+	}
 //
 // 	// Generate SimHash
-// 	var simHash int64
-// 	for i := 0; i < c.simHashBits; i++ {
-// 		if v[i] > 0 {
-// 			simHash |= (1 << i)
-// 		}
-// 	}
+	var simHash int64
+	for i := 0; i < c.simHashBits; i++ {
+		if v[i] > 0 {
+			simHash |= (1 << i)
+		}
+	}
 //
-// 	return simHash
-// }
+	return simHash
+}
 
 // tokenize splits text into tokens
-// func (c *L2RedisCache) tokenize(text string) []string {
+func (c *L2RedisCache) tokenize(text string) []string {
 // 	// Simple whitespace tokenization
 // 	// In production, use a proper tokenizer
-// 	tokens := make([]string, 0)
-// 	current := ""
+	tokens := make([]string, 0)
+	current := ""
 
-// 	for _, char := range text {
-// 		if char == ' ' || char == '\n' || char == '\t' {
-// 			if current != "" {
-// 				tokens = append(tokens, current)
-// 				current = ""
-// 			}
-// 		} else {
-// 			current += string(char)
-// 		}
-// 	}
+	for _, char := range text {
+		if char == ' ' || char == '\n' || char == '\t' {
+			if current != "" {
+				tokens = append(tokens, current)
+				current = ""
+			}
+		} else {
+			current += string(char)
+		}
+	}
 
-// 	if current != "" {
-// 		tokens = append(tokens, current)
-// 	}
+	if current != "" {
+		tokens = append(tokens, current)
+	}
 
-// 	return tokens
-// }
+	return tokens
+}
 
 // hashToken computes a hash for a token
-// func (c *L2RedisCache) hashToken(token string) int64 {
+func (c *L2RedisCache) hashToken(token string) int64 {
 // 	// Simple FNV-1a hash
-// 	var hash int64 = 2166136261
+	var hash int64 = 2166136261
 
-// 	for _, char := range token {
-// 		hash ^= int64(char)
-// 		hash *= 16777619
-// 	}
+	for _, char := range token {
+		hash ^= int64(char)
+		hash *= 16777619
+	}
 
-// 	return hash
-// }
+	return hash
+}
 
 // calculateSimilarity calculates cosine similarity between two keys
-// func (c *L2RedisCache) calculateSimilarity(key1, key2 string) float64 {
+func (c *L2RedisCache) calculateSimilarity(key1, key2 string) float64 {
 // 	// Compute SimHashes
-// 	hash1 := c.computeSimHash(key1)
-// 	hash2 := c.computeSimHash(key2)
+	hash1 := c.computeSimHash(key1)
+	hash2 := c.computeSimHash(key2)
 
 // 	// Calculate Hamming distance
-// 	xor := hash1 ^ hash2
-// 	hammingDistance := c.countSetBits(xor)
+	xor := hash1 ^ hash2
+	hammingDistance := c.countSetBits(xor)
 //
 // 	// Convert to similarity score (0 to 1)
-// 	similarity := 1.0 - (float64(hammingDistance) / float64(c.simHashBits))
+	similarity := 1.0 - (float64(hammingDistance) / float64(c.simHashBits))
 //
-// 	return similarity
-// }
+	return similarity
+}
 
 // countSetBits counts the number of set bits in an integer
 func (c *L2RedisCache) countSetBits(n int64) int {

@@ -157,65 +157,64 @@ Important:
 
 // NewNativeRuntime 创建原生运行时
 func NewNativeRuntime(
-// 	config *runtime.RuntimeConfig,
-// 	logger logger.Logger,
-// 	llmClient llm.LLMClient,
-// 	toolManager ToolManager,
-// 	memoryManager MemoryManager,
-// ) (*NativeRuntime, error) {
-// 	if config == nil {
-// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "config cannot be nil")
-// 	}
-// 	if logger == nil {
-// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "logger cannot be nil")
-// 	}
-// 	if llmClient == nil {
-// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "llm client cannot be nil")
-// 	}
+	config *runtime.RuntimeConfig,
+	logger logger.Logger,
+	llmClient llm.LLMClient,
+	toolManager ToolManager,
+	memoryManager MemoryManager,
+) (*NativeRuntime, error) {
+	if config == nil {
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "config cannot be nil")
+	}
+	if logger == nil {
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "logger cannot be nil")
+	}
+	if llmClient == nil {
+		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "llm client cannot be nil")
+	}
 
-// 	nr := &NativeRuntime{
-// 		id:            config.ID,
-// 		name:          config.Name,
-// 		version:       config.Version,
-// 		config:        config,
-// 		logger:        logger,
-// 		llmClient:     llmClient,
-// 		toolManager:   toolManager,
-// 		memoryManager: memoryManager,
-// 		status:        runtime.RuntimeStatusInitializing,
-// 		metrics:       &runtimeMetrics{},
-// 		shutdownChan:  make(chan struct{}),
-// 	}
+	nr := &NativeRuntime{
+		id:            config.ID,
+		name:          config.Name,
+		version:       config.Version,
+		config:        config,
+		logger:        logger,
+		llmClient:     llmClient,
+		toolManager:   toolManager,
+		memoryManager: memoryManager,
+		status:        runtime.RuntimeStatusInitializing,
+		metrics:       &runtimeMetrics{},
+		shutdownChan:  make(chan struct{}),
+	}
 
-// 	// 初始化元数据
-// 	nr.metadata = &runtime.RuntimeMetadata{
-// 		ID:          config.ID,
-// 		Type:        runtime.RuntimeTypeNative,
-// 		Name:        config.Name,
-// 		Version:     config.Version,
-// 		Description: "Native ReAct-based Agent Runtime",
-// 		Author:      "OpenEEAP",
-// 		License:     "MIT",
-// 		Capabilities: []string{
-// 			"reasoning",
-// 			"tool_use",
-// 			"memory",
-// 			"streaming",
-// 		},
-// 		Features: &runtime.RuntimeFeatures{
-// 			SupportsStreaming:    config.EnableStreaming,
-// 			SupportsPlugins:      false,
-// 			SupportsMemory:       memoryManager != nil,
-// 			SupportsRetrieval:    false,
-// 			SupportsFunctionCall: true,
-// 			SupportsAsync:        true,
-// 		},
-// 		CreatedAt: time.Now(),
-// 		UpdatedAt: time.Now(),
-// 	}
+	// 初始化元数据
+	nr.metadata = &runtime.RuntimeMetadata{
+		ID:          config.ID,
+		Type:        runtime.RuntimeTypeNative,
+		Name:        config.Name,
+		Version:     config.Version,
+		Description: "Native ReAct-based Agent Runtime",
+		Author:      "OpenEEAP",
+		License:     "MIT",
+		Capabilities: []string{
+			"reasoning",
+			"tool_use",
+			"memory",
+			"streaming",
+		},
+		Features: &runtime.RuntimeFeatures{
+			SupportsStreaming:    config.EnableStreaming,
+			SupportsPlugins:      false,
+			SupportsMemory:       memoryManager != nil,
+			SupportsRetrieval:    false,
+			SupportsFunctionCall: true,
+			SupportsAsync:        true,
+		},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
 //
-// 	return nr, nil
-// }
+	return nr, nil
 
 // ID 获取运行时ID
 func (nr *NativeRuntime) ID() string {

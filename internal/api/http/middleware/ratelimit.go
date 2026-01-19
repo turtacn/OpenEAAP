@@ -289,7 +289,7 @@ func (m *RateLimitMiddleware) cleanupLimiters() {
 	for range ticker.C {
 		now := time.Now()
 		m.limiters.Range(func(key, value interface{}) bool {
-// 			limiter := value.(*rateLimiter)
+			limiter := value.(*rateLimiter)
 			limiter.mu.Lock()
 			inactive := now.Sub(limiter.lastAccess) > 10*time.Minute
 			limiter.mu.Unlock()
