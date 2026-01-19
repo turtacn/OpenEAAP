@@ -462,17 +462,17 @@ func (c *L2RedisCache) hashToken(token string) int64 {
 
 // calculateSimilarity calculates cosine similarity between two keys
 func (c *L2RedisCache) calculateSimilarity(key1, key2 string) float64 {
-// 	// Compute SimHashes
+	// Compute SimHashes
 	hash1 := c.computeSimHash(key1)
 	hash2 := c.computeSimHash(key2)
 
-// 	// Calculate Hamming distance
+	// Calculate Hamming distance
 	xor := hash1 ^ hash2
 	hammingDistance := c.countSetBits(xor)
-//
-// 	// Convert to similarity score (0 to 1)
+
+	// Convert to similarity score (0 to 1)
 	similarity := 1.0 - (float64(hammingDistance) / float64(c.simHashBits))
-//
+
 	return similarity
 }
 

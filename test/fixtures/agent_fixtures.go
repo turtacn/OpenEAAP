@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/openeeap/openeeap/internal/domain/agent"
-	"github.com/openeeap/openeeap/pkg/types"
 )
 
 // AgentFixtures 提供 Agent 相关的测试数据
@@ -22,42 +21,47 @@ func (f *AgentFixtures) DefaultAgent() *agent.Agent {
 	now := time.Now()
 	return &agent.Agent{
 		ID:          uuid.New().String(),
-		Name:        "test-security-analyst",
+		ModelName: "test-security-analyst",
 		Description: "测试用安全分析 Agent",
-		RuntimeType: types.RuntimeTypeNative,
+		RuntimeType: agent.RuntimeTypeLLM,
 		Config: agent.AgentConfig{
-			Model: agent.ModelConfig{
+			SystemPrompt: "You are a security analyst agent.",
+			ModelParams: agent.ModelParams{
 				Provider:    "openai",
-				Name:        "gpt-4",
+				ModelName:   "gpt-4",
 				Temperature: 0.7,
 				MaxTokens:   2000,
 			},
 			Memory: agent.MemoryConfig{
-				Type:     "conversation",
-				MaxTurns: 10,
+				Type:       "short_term",
+				MaxSize:    100,
+				Persistent: false,
 			},
 			Tools: []agent.ToolConfig{
 				{
-					Name:        "threat_intel_query",
+					ModelName: "threat_intel_query",
 					Description: "查询威胁情报数据库",
 					Enabled:     true,
 				},
 				{
-					Name:        "log_analyzer",
+					ModelName: "log_analyzer",
 					Description: "分析安全日志",
 					Enabled:     true,
 				},
 			},
-			Constraints: agent.ExecutionConstraints{
-				MaxExecutionTime: 300,
-				MaxRetries:       3,
-				TimeoutSeconds:   30,
+			Limits: agent.ExecutionLimits{
+				MaxExecutionTime:        300,
+				MaxIterations:           10,
+				MaxTokensPerExecution:   5000,
+				MaxConcurrentExecutions: 1,
 			},
 		},
-		Status:    types.AgentStatusActive,
+		Version: "1.0.0",
+		Status:    agent.AgentStatusActive,
+		OwnerID:   "test-user",
+		Version:   "1.0.0",
 		CreatedAt: now,
 		UpdatedAt: now,
-		CreatedBy: "test-user",
 	}
 }
 
@@ -66,23 +70,26 @@ func (f *AgentFixtures) MinimalAgent() *agent.Agent {
 	now := time.Now()
 	return &agent.Agent{
 		ID:          uuid.New().String(),
-		Name:        "minimal-agent",
+		ModelName: "minimal-agent",
 		Description: "最小配置 Agent",
-		RuntimeType: types.RuntimeTypeNative,
+		RuntimeType: agent.RuntimeTypeLLM,
 		Config: agent.AgentConfig{
-			Model: agent.ModelConfig{
-				Provider: "openai",
-				Name:     "gpt-3.5-turbo",
+			SystemPrompt: "You are a helpful assistant.",
+			ModelParams: agent.ModelParams{
+				Provider:  "openai",
+				ModelName: "gpt-3.5-turbo",
 			},
-			Constraints: agent.ExecutionConstraints{
+			Limits: agent.ExecutionLimits{
 				MaxExecutionTime: 60,
-				MaxRetries:       1,
+				MaxIterations:    5,
 			},
 		},
-		Status:    types.AgentStatusInactive,
+		Version: "1.0.0",
+		Status:    agent.AgentStatusInactive,
+		OwnerID:   "test-user",
+		Version:   "1.0.0",
 		CreatedAt: now,
 		UpdatedAt: now,
-		CreatedBy: "test-user",
 	}
 }
 
@@ -91,23 +98,23 @@ func (f *AgentFixtures) LangChainAgent() *agent.Agent {
 	now := time.Now()
 	return &agent.Agent{
 		ID:          uuid.New().String(),
-		Name:        "langchain-analyst",
+		ModelName: "langchain-analyst",
 		Description: "基于 LangChain 的分析 Agent",
-		RuntimeType: types.RuntimeTypeLangChain,
+		RuntimeType: agent.RuntimeTypeHybrid,
 		Config: agent.AgentConfig{
-			Model: agent.ModelConfig{
+			ModelParams: agent.ModelParams{
 				Provider:    "anthropic",
-				Name:        "claude-3-opus",
+				ModelName: "claude-3-opus",
 				Temperature: 0.5,
 				MaxTokens:   4000,
 			},
 			Memory: agent.MemoryConfig{
 				Type:     "buffer_window",
-				MaxTurns: 20,
+				MaxSize: 20,
 			},
 			Tools: []agent.ToolConfig{
 				{
-					Name:        "web_search",
+					ModelName: "web_search",
 					Description: "网络搜索工具",
 					Enabled:     true,
 					Parameters: map[string]interface{}{
@@ -115,16 +122,15 @@ func (f *AgentFixtures) LangChainAgent() *agent.Agent {
 					},
 				},
 			},
-			Constraints: agent.ExecutionConstraints{
+			Limits: agent.ExecutionLimits{
 				MaxExecutionTime: 600,
-				MaxRetries:       5,
-				TimeoutSeconds:   60,
-			},
+				MaxIterations: 5},
 		},
-		Status:    types.AgentStatusActive,
+		Version: "1.0.0",
+		Status:    agent.AgentStatusActive,
 		CreatedAt: now,
 		UpdatedAt: now,
-		CreatedBy: "test-user",
+		OwnerID: "test-user",
 	}
 }
 
@@ -133,19 +139,19 @@ func (f *AgentFixtures) RAGAgent() *agent.Agent {
 	now := time.Now()
 	return &agent.Agent{
 		ID:          uuid.New().String(),
-		Name:        "rag-knowledge-agent",
+		ModelName: "rag-knowledge-agent",
 		Description: "启用 RAG 的知识库 Agent",
-		RuntimeType: types.RuntimeTypeNative,
+		RuntimeType: agent.RuntimeTypeLLM,
 		Config: agent.AgentConfig{
-			Model: agent.ModelConfig{
+			ModelParams: agent.ModelParams{
 				Provider:    "openai",
-				Name:        "gpt-4-turbo",
+				ModelName: "gpt-4-turbo",
 				Temperature: 0.3,
 				MaxTokens:   3000,
 			},
 			Memory: agent.MemoryConfig{
 				Type:     "conversation",
-				MaxTurns: 15,
+				MaxSize: 15,
 			},
 			RAG: &agent.RAGConfig{
 				Enabled:             true,
@@ -160,21 +166,20 @@ func (f *AgentFixtures) RAGAgent() *agent.Agent {
 			},
 			Tools: []agent.ToolConfig{
 				{
-					Name:        "document_search",
+					ModelName: "document_search",
 					Description: "文档检索工具",
 					Enabled:     true,
 				},
 			},
-			Constraints: agent.ExecutionConstraints{
+			Limits: agent.ExecutionLimits{
 				MaxExecutionTime: 450,
-				MaxRetries:       3,
-				TimeoutSeconds:   45,
-			},
+				MaxIterations: 3},
 		},
-		Status:    types.AgentStatusActive,
+		Version: "1.0.0",
+		Status:    agent.AgentStatusActive,
 		CreatedAt: now,
 		UpdatedAt: now,
-		CreatedBy: "test-user",
+		OwnerID: "test-user",
 	}
 }
 
@@ -183,23 +188,23 @@ func (f *AgentFixtures) MultiToolAgent() *agent.Agent {
 	now := time.Now()
 	return &agent.Agent{
 		ID:          uuid.New().String(),
-		Name:        "multi-tool-agent",
+		ModelName: "multi-tool-agent",
 		Description: "集成多种工具的 Agent",
-		RuntimeType: types.RuntimeTypeNative,
+		RuntimeType: agent.RuntimeTypeLLM,
 		Config: agent.AgentConfig{
-			Model: agent.ModelConfig{
+			ModelParams: agent.ModelParams{
 				Provider:    "openai",
-				Name:        "gpt-4",
+				ModelName: "gpt-4",
 				Temperature: 0.6,
 				MaxTokens:   2500,
 			},
 			Memory: agent.MemoryConfig{
 				Type:     "summary",
-				MaxTurns: 30,
+				MaxSize: 30,
 			},
 			Tools: []agent.ToolConfig{
 				{
-					Name:        "sql_query",
+					ModelName: "sql_query",
 					Description: "SQL 数据库查询",
 					Enabled:     true,
 					Parameters: map[string]interface{}{
@@ -208,7 +213,7 @@ func (f *AgentFixtures) MultiToolAgent() *agent.Agent {
 					},
 				},
 				{
-					Name:        "api_call",
+					ModelName: "api_call",
 					Description: "调用外部 API",
 					Enabled:     true,
 					Parameters: map[string]interface{}{
@@ -217,7 +222,7 @@ func (f *AgentFixtures) MultiToolAgent() *agent.Agent {
 					},
 				},
 				{
-					Name:        "code_executor",
+					ModelName: "code_executor",
 					Description: "执行 Python 代码",
 					Enabled:     false, // 默认禁用
 					Parameters: map[string]interface{}{
@@ -225,16 +230,15 @@ func (f *AgentFixtures) MultiToolAgent() *agent.Agent {
 					},
 				},
 			},
-			Constraints: agent.ExecutionConstraints{
+			Limits: agent.ExecutionLimits{
 				MaxExecutionTime: 900,
-				MaxRetries:       5,
-				TimeoutSeconds:   90,
-			},
+				MaxIterations: 5},
 		},
-		Status:    types.AgentStatusActive,
+		Version: "1.0.0",
+		Status:    agent.AgentStatusActive,
 		CreatedAt: now,
 		UpdatedAt: now,
-		CreatedBy: "test-user",
+		OwnerID: "test-user",
 	}
 }
 
@@ -243,23 +247,24 @@ func (f *AgentFixtures) InactiveAgent() *agent.Agent {
 	now := time.Now()
 	return &agent.Agent{
 		ID:          uuid.New().String(),
-		Name:        "inactive-agent",
+		ModelName: "inactive-agent",
 		Description: "未激活的 Agent",
-		RuntimeType: types.RuntimeTypeNative,
+		RuntimeType: agent.RuntimeTypeLLM,
 		Config: agent.AgentConfig{
-			Model: agent.ModelConfig{
+			ModelParams: agent.ModelParams{
 				Provider: "openai",
-				Name:     "gpt-3.5-turbo",
+				ModelName: "gpt-3.5-turbo",
 			},
-			Constraints: agent.ExecutionConstraints{
+			Limits: agent.ExecutionLimits{
 				MaxExecutionTime: 120,
-				MaxRetries:       2,
+				MaxIterations: 2,
 			},
 		},
-		Status:    types.AgentStatusInactive,
+		Version: "1.0.0",
+		Status:    agent.AgentStatusInactive,
 		CreatedAt: now,
 		UpdatedAt: now,
-		CreatedBy: "test-user",
+		OwnerID: "test-user",
 	}
 }
 
@@ -268,14 +273,15 @@ func (f *AgentFixtures) AgentWithCustomConfig(config agent.AgentConfig) *agent.A
 	now := time.Now()
 	return &agent.Agent{
 		ID:          uuid.New().String(),
-		Name:        "custom-agent",
+		ModelName: "custom-agent",
 		Description: "自定义配置 Agent",
-		RuntimeType: types.RuntimeTypeNative,
+		RuntimeType: agent.RuntimeTypeLLM,
 		Config:      config,
-		Status:      types.AgentStatusActive,
+		Version: "1.0.0",
+		Status:      agent.AgentStatusActive,
 		CreatedAt:   now,
 		UpdatedAt:   now,
-		CreatedBy:   "test-user",
+		OwnerID: "test-user",
 	}
 }
 
@@ -289,21 +295,22 @@ func (f *AgentFixtures) BatchAgents(count int) []*agent.Agent {
 			ID:          uuid.New().String(),
 			Name:        uuid.New().String()[:8] + "-agent",
 			Description: "批量测试 Agent",
-			RuntimeType: types.RuntimeTypeNative,
+			RuntimeType: agent.RuntimeTypeLLM,
 			Config: agent.AgentConfig{
-				Model: agent.ModelConfig{
+				ModelParams: agent.ModelParams{
 					Provider: "openai",
-					Name:     "gpt-3.5-turbo",
+					ModelName: "gpt-3.5-turbo",
 				},
-				Constraints: agent.ExecutionConstraints{
+				Limits: agent.ExecutionLimits{
 					MaxExecutionTime: 60,
-					MaxRetries:       1,
+					MaxIterations: 1,
 				},
 			},
-			Status:    types.AgentStatusActive,
+			Version: "1.0.0",
+		Status:    agent.AgentStatusActive,
 			CreatedAt: now.Add(time.Duration(i) * time.Second),
 			UpdatedAt: now.Add(time.Duration(i) * time.Second),
-			CreatedBy: "test-user",
+			OwnerID: "test-user",
 		}
 	}
 
@@ -406,36 +413,34 @@ func (f *AgentFixtures) AgentValueObjects() struct {
 		MinimalConfig agent.AgentConfig
 	}{
 		ValidConfig: agent.AgentConfig{
-			Model: agent.ModelConfig{
+			ModelParams: agent.ModelParams{
 				Provider:    "openai",
-				Name:        "gpt-4",
+				ModelName: "gpt-4",
 				Temperature: 0.7,
 				MaxTokens:   2000,
 			},
 			Memory: agent.MemoryConfig{
 				Type:     "conversation",
-				MaxTurns: 10,
+				MaxSize: 10,
 			},
-			Constraints: agent.ExecutionConstraints{
+			Limits: agent.ExecutionLimits{
 				MaxExecutionTime: 300,
-				MaxRetries:       3,
-				TimeoutSeconds:   30,
-			},
+				MaxIterations: 3},
 		},
 		InvalidConfig: agent.AgentConfig{
-			Model: agent.ModelConfig{
+			ModelParams: agent.ModelParams{
 				Provider:    "",  // 无效：空提供商
 				Temperature: 2.0, // 无效：温度超出范围
 			},
 		},
 		MinimalConfig: agent.AgentConfig{
-			Model: agent.ModelConfig{
+			ModelParams: agent.ModelParams{
 				Provider: "openai",
-				Name:     "gpt-3.5-turbo",
+				ModelName: "gpt-3.5-turbo",
 			},
-			Constraints: agent.ExecutionConstraints{
+			Limits: agent.ExecutionLimits{
 				MaxExecutionTime: 60,
-				MaxRetries:       1,
+				MaxIterations: 1,
 			},
 		},
 	}
@@ -457,7 +462,7 @@ func (f *AgentFixtures) AgentExecutionResults() struct {
 		Success: agent.ExecutionResult{
 			ExecutionID: uuid.New().String(),
 			AgentID:     uuid.New().String(),
-			Status:      types.ExecutionStatusSuccess,
+			Status:      agent.ExecutionStatusSuccess,
 			Output:      "分析完成：发现 3 个可疑活动",
 			Metadata: map[string]interface{}{
 				"tokens_used":    1500,
@@ -471,7 +476,7 @@ func (f *AgentFixtures) AgentExecutionResults() struct {
 		Failure: agent.ExecutionResult{
 			ExecutionID: uuid.New().String(),
 			AgentID:     uuid.New().String(),
-			Status:      types.ExecutionStatusFailed,
+			Status:      agent.ExecutionStatusFailed,
 			Output:      "",
 			Metadata: map[string]interface{}{
 				"retry_count": 3,
@@ -483,7 +488,7 @@ func (f *AgentFixtures) AgentExecutionResults() struct {
 		Timeout: agent.ExecutionResult{
 			ExecutionID: uuid.New().String(),
 			AgentID:     uuid.New().String(),
-			Status:      types.ExecutionStatusTimeout,
+			Status:      agent.ExecutionStatusTimeout,
 			Output:      "",
 			Metadata: map[string]interface{}{
 				"timeout_seconds": 30,
