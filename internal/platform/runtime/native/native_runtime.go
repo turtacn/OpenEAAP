@@ -208,14 +208,14 @@ func NewNativeRuntime(
 // 			SupportsMemory:       memoryManager != nil,
 // 			SupportsRetrieval:    false,
 // 			SupportsFunctionCall: true,
-			SupportsAsync:        true,
-		},
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-
-	return nr, nil
-}
+// 			SupportsAsync:        true,
+// 		},
+// 		CreatedAt: time.Now(),
+// 		UpdatedAt: time.Now(),
+// 	}
+//
+// 	return nr, nil
+// }
 
 // ID 获取运行时ID
 func (nr *NativeRuntime) ID() string {

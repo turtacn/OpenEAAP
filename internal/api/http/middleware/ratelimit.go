@@ -258,28 +258,28 @@ func (m *RateLimitMiddleware) Handler() gin.HandlerFunc {
 // 	switch m.config.Strategy {
 // 	case StrategyTokenBucket:
 // 		// Token bucket: requests per second, with burst
-		rps := float64(m.config.RequestsLimit) / m.config.WindowDuration.Seconds()
-		limiter = rate.NewLimiter(rate.Limit(rps), m.config.BurstSize)
-
-	case StrategyLeakyBucket:
-		// Leaky bucket: smooth rate with no burst
-		rps := float64(m.config.RequestsLimit) / m.config.WindowDuration.Seconds()
-		limiter = rate.NewLimiter(rate.Limit(rps), 1)
-
-	default:
-		// Default to token bucket
-		rps := float64(m.config.RequestsLimit) / m.config.WindowDuration.Seconds()
-		limiter = rate.NewLimiter(rate.Limit(rps), m.config.BurstSize)
-	}
-
-	rateLimiter := &rateLimiter{
-		limiter:    limiter,
-		lastAccess: time.Now(),
-	}
-
-	actual, _ := m.limiters.LoadOrStore(key, rateLimiter)
-	return actual.(*rateLimiter)
-}
+// 		rps := float64(m.config.RequestsLimit) / m.config.WindowDuration.Seconds()
+// 		limiter = rate.NewLimiter(rate.Limit(rps), m.config.BurstSize)
+//
+// 	case StrategyLeakyBucket:
+// 		// Leaky bucket: smooth rate with no burst
+// 		rps := float64(m.config.RequestsLimit) / m.config.WindowDuration.Seconds()
+// 		limiter = rate.NewLimiter(rate.Limit(rps), 1)
+//
+// 	default:
+// 		// Default to token bucket
+// 		rps := float64(m.config.RequestsLimit) / m.config.WindowDuration.Seconds()
+// 		limiter = rate.NewLimiter(rate.Limit(rps), m.config.BurstSize)
+// 	}
+//
+// 	rateLimiter := &rateLimiter{
+// 		limiter:    limiter,
+// 		lastAccess: time.Now(),
+// 	}
+//
+// 	actual, _ := m.limiters.LoadOrStore(key, rateLimiter)
+// 	return actual.(*rateLimiter)
+// }
 
 // cleanupLimiters removes old, unused limiters to prevent memory leaks
 func (m *RateLimitMiddleware) cleanupLimiters() {

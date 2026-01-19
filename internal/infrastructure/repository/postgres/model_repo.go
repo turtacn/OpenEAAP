@@ -847,18 +847,18 @@ func (r *modelRepo) toEntity(dbModel *ModelModel) (*model.Model, error) {
 // metricsToModel 将指标实体转换为数据库模型
 // func (r *modelRepo) metricsToModel(metrics *model.ModelMetrics) *ModelMetricsModel {
 // 	tagsJSON, _ := json.Marshal(metrics.Tags)
-
-	return &ModelMetricsModel{
-		ID:         metrics.ID,
-		ModelID:    metrics.ModelID,
-		MetricType: metrics.MetricType,
-		Value:      metrics.Value,
-		Unit:       metrics.Unit,
-		Timestamp:  metrics.Timestamp,
-		Tags:       string(tagsJSON),
-		CreatedAt:  time.Now(),
-	}
-}
+//
+// 	return &ModelMetricsModel{
+// 		ID:         metrics.ID,
+// 		ModelID:    metrics.ModelID,
+// 		MetricType: metrics.MetricType,
+// 		Value:      metrics.Value,
+// 		Unit:       metrics.Unit,
+// 		Timestamp:  metrics.Timestamp,
+// 		Tags:       string(tagsJSON),
+// 		CreatedAt:  time.Now(),
+// 	}
+// }
 
 // BatchUpdate updates multiple models
 func (r *modelRepo) BatchUpdate(ctx context.Context, models []*model.Model) error {

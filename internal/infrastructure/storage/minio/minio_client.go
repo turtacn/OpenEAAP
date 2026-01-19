@@ -692,8 +692,8 @@ func (mc *minioClient) DeleteObject(ctx context.Context, req *DeleteObjectReques
 		return errors.WrapInternalError(err, "ERR_INTERNAL", "failed to copy object")
 	}
 
-// 	return nil
-// }
+	return nil
+}
 
 // StatObject 获取对象统计信息
 // func (mc *minioClient) StatObject(ctx context.Context, bucketName, objectName string) (*ObjectInfo, error) {
@@ -703,24 +703,24 @@ func (mc *minioClient) DeleteObject(ctx context.Context, req *DeleteObjectReques
 // 	if objectName == "" {
 // 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
 // 	}
-
+//
 // 	info, err := mc.client.StatObject(ctx, bucketName, objectName, minio.StatObjectOptions{})
 // 	if err != nil {
 // 		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to stat object")
 // 	}
-
-	return &ObjectInfo{
-		Key:          info.Key,
-		Size:         info.Size,
-		ETag:         info.ETag,
-		ContentType:  info.ContentType,
-		LastModified: info.LastModified,
-		VersionID:    info.VersionID,
-		Metadata:     info.UserMetadata,
-		UserTags:     info.UserTags,
-		StorageClass: info.StorageClass,
-	}, nil
-}
+//
+// 	return &ObjectInfo{
+// 		Key:          info.Key,
+// 		Size:         info.Size,
+// 		ETag:         info.ETag,
+// 		ContentType:  info.ContentType,
+// 		LastModified: info.LastModified,
+// 		VersionID:    info.VersionID,
+// 		Metadata:     info.UserMetadata,
+// 		UserTags:     info.UserTags,
+// 		StorageClass: info.StorageClass,
+// 	}, nil
+// }
 
 // ListObjects 列出对象
 func (mc *minioClient) ListObjects(ctx context.Context, req *ListObjectsRequest) (*ListObjectsResponse, error) {
@@ -828,30 +828,30 @@ func (mc *minioClient) ListObjects(ctx context.Context, req *ListObjectsRequest)
 // 	minioPolicy.SetExpires(policy.Expiration)
 
 // 	// 添加条件
-	for _, cond := range policy.Conditions {
-		switch cond.Type {
-		case "eq":
+// 	for _, cond := range policy.Conditions {
+// 		switch cond.Type {
+// 		case "eq":
 // 			minioPolicy.SetCondition(cond.Key, cond.Value.(string))
-		case "starts-with":
-			minioPolicy.SetKeyStartsWith(cond.Value.(string))
-		case "content-length-range":
-			if vals, ok := cond.Value.([]int64); ok && len(vals) == 2 {
-				minioPolicy.SetContentLengthRange(vals[0], vals[1])
-			}
-		}
-	}
-
-	// 生成预签名POST
-	presignedURL, formData, err := mc.client.PresignedPostPolicy(ctx, minioPolicy)
-	if err != nil {
-		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to generate presigned post policy")
-	}
-
-	return &PresignedPostPolicyResponse{
-		URL:      presignedURL.String(),
-		FormData: formData,
-	}, nil
-}
+// 		case "starts-with":
+// 			minioPolicy.SetKeyStartsWith(cond.Value.(string))
+// 		case "content-length-range":
+// 			if vals, ok := cond.Value.([]int64); ok && len(vals) == 2 {
+// 				minioPolicy.SetContentLengthRange(vals[0], vals[1])
+// 			}
+// 		}
+// 	}
+//
+// 	// 生成预签名POST
+// 	presignedURL, formData, err := mc.client.PresignedPostPolicy(ctx, minioPolicy)
+// 	if err != nil {
+// 		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to generate presigned post policy")
+// 	}
+//
+// 	return &PresignedPostPolicyResponse{
+// 		URL:      presignedURL.String(),
+// 		FormData: formData,
+// 	}, nil
+// }
 
 // NewMultipartUpload 新建分片上传
 func (mc *minioClient) NewMultipartUpload(ctx context.Context, req *NewMultipartUploadRequest) (string, error) {
@@ -863,16 +863,16 @@ func (mc *minioClient) NewMultipartUpload(ctx context.Context, req *NewMultipart
 	}
 	if req.ObjectName == "" {
 		return "", errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
-// 	}
+	}
 
-// 	opts := minio.PutObjectOptions{
-// 		ContentType:  req.ContentType,
-// 		UserMetadata: req.Metadata,
-// 	}
+	opts := minio.PutObjectOptions{
+		ContentType:  req.ContentType,
+		UserMetadata: req.Metadata,
+	}
 
-// 	// MinIO SDK 没有直接的 NewMultipartUpload 方法
-// 	// 这里使用内部方法或者返回一个自定义的 uploadID
-// 	// 实际使用时，MinIO 会在第一次 PutObjectPart 时自动创建 multipart upload
+	// MinIO SDK 没有直接的 NewMultipartUpload 方法
+	// 这里使用内部方法或者返回一个自定义的 uploadID
+	// 实际使用时，MinIO 会在第一次 PutObjectPart 时自动创建 multipart upload
 	uploadID := fmt.Sprintf("%s-%d", req.ObjectName, time.Now().UnixNano())
 
 	return uploadID, nil
@@ -883,23 +883,23 @@ func (mc *minioClient) NewMultipartUpload(ctx context.Context, req *NewMultipart
 // 	if req == nil {
 // 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "put object part request cannot be nil")
 // 	}
-	if req.BucketName == "" {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "bucket name cannot be empty")
-	}
-	if req.ObjectName == "" {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
-	}
-	if req.PartNumber <= 0 {
-		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "part number must be positive")
-	}
-
-	// MinIO SDK 的分片上传需要使用 core API
-	// 这里简化处理，实际应该使用 minio.Core 接口
-	return &PutObjectPartResponse{
-		PartNumber: req.PartNumber,
-		ETag:       fmt.Sprintf("etag-%d", req.PartNumber),
-	}, nil
-}
+// 	if req.BucketName == "" {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "bucket name cannot be empty")
+// 	}
+// 	if req.ObjectName == "" {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "object name cannot be empty")
+// 	}
+// 	if req.PartNumber <= 0 {
+// 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "part number must be positive")
+// 	}
+//
+// 	// MinIO SDK 的分片上传需要使用 core API
+// 	// 这里简化处理，实际应该使用 minio.Core 接口
+// 	return &PutObjectPartResponse{
+// 		PartNumber: req.PartNumber,
+// 		ETag:       fmt.Sprintf("etag-%d", req.PartNumber),
+// 	}, nil
+// }
 
 // CompleteMultipartUpload 完成分片上传
 func (mc *minioClient) CompleteMultipartUpload(ctx context.Context, req *CompleteMultipartUploadRequest) error {

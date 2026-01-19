@@ -720,33 +720,20 @@ func (c *complianceChecker) BatchCheck(ctx context.Context, requests []*Complian
 	ctx, span := c.tracer.Start(ctx, "ComplianceChecker.BatchCheck")
 	defer span.End()
 
-// 	c.logger.WithContext(ctx).Info("Batch compliance check", logging.Any("count", len(requests))
+	c.logger.WithContext(ctx).Info("Batch compliance check", logging.String("count", fmt.Sprintf("%d", len(requests))))
 
-// 	results := make([]*ComplianceCheckResult, len(requests))
-// 	var wg sync.WaitGroup
-// 	var mu sync.Mutex
+	results := make([]*ComplianceCheckResult, len(requests))
+	for i, request := range requests {
+		result, err := c.CheckCompliance(ctx, request)
+		if err != nil {
+			c.logger.WithContext(ctx).Error("Batch check item failed", logging.String("request_id", request.RequestID), logging.Error(err))
+			continue
+		}
+		results[i] = result
+	}
 
-// 	for i, request := range requests {
-// 		wg.Add(1)
-		go func(idx int, req *ComplianceCheckRequest) {
-			defer wg.Done()
-
-			result, err := c.CheckCompliance(ctx, req)
-			if err != nil {
-    c.logger.WithContext(ctx).Error("Batch check item failed", logging.Any("request_id", req.RequestID), logging.Error(err))
-				return
-			}
-
-// 			mu.Lock()
-// 			results[idx] = result
-// 			mu.Unlock()
-// 		}(i, request)
-// 	}
-
-// 	wg.Wait()
-
-// 	return results, nil
-// }
+	return results, nil
+}
 
 // GetComplianceStatus 获取合规状态
 func (c *complianceChecker) GetComplianceStatus(ctx context.Context, filter *ComplianceFilter) (*ComplianceStatus, error) {

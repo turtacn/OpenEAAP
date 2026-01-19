@@ -677,23 +677,23 @@ func (mc *milvusClient) mergeSearchResults(allResults [][]SearchResult, params *
 // 	if fieldName == "" {
 // 		return nil, errors.NewValidationError(errors.CodeInvalidParameter, "field name cannot be empty")
 // 	}
-
-	indexes, err := mc.client.DescribeIndex(ctx, collectionName, fieldName)
-	if err != nil {
-		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to describe index")
-	}
-
-	if len(indexes) == 0 {
-		return nil, errors.NewNotFoundError(errors.CodeNotFound, "index not found")
-	}
-
-	idx := indexes[0]
-	return &IndexInfo{
-		IndexType:  idx.IndexType(),
-		MetricType: entity.MetricType(idx.Params()["metric_type"]),
-		Params:     idx.Params(),
-	}, nil
-}
+//
+// 	indexes, err := mc.client.DescribeIndex(ctx, collectionName, fieldName)
+// 	if err != nil {
+// 		return nil, errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to describe index")
+// 	}
+//
+// 	if len(indexes) == 0 {
+// 		return nil, errors.NewNotFoundError(errors.CodeNotFound, "index not found")
+// 	}
+//
+// 	idx := indexes[0]
+// 	return &IndexInfo{
+// 		IndexType:  idx.IndexType(),
+// 		MetricType: entity.MetricType(idx.Params()["metric_type"]),
+// 		Params:     idx.Params(),
+// 	}, nil
+// }
 
 // LoadCollection 加载集合到内存
 func (mc *milvusClient) LoadCollection(ctx context.Context, collectionName string) error {

@@ -388,39 +388,39 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 // func (c *L2RedisCache) computeSimHash(text string) int64 {
 // 	// Simplified SimHash implementation
 // 	// In production, use a proper SimHash library
-
+//
 // 	// Tokenize the text
 // 	tokens := c.tokenize(text)
-
+//
 // 	// Initialize bit vector
-	v := make([]int, c.simHashBits)
-
-	// Process each token
-	for _, token := range tokens {
-		// Hash the token
-		hash := c.hashToken(token)
-
-		// Update bit vector
-		for i := 0; i < c.simHashBits; i++ {
-			bit := (hash >> i) & 1
-			if bit == 1 {
-				v[i]++
-			} else {
-				v[i]--
-			}
-		}
-	}
-
-	// Generate SimHash
-	var simHash int64
-	for i := 0; i < c.simHashBits; i++ {
-		if v[i] > 0 {
-			simHash |= (1 << i)
-		}
-	}
-
-	return simHash
-}
+// 	v := make([]int, c.simHashBits)
+//
+// 	// Process each token
+// 	for _, token := range tokens {
+// 		// Hash the token
+// 		hash := c.hashToken(token)
+//
+// 		// Update bit vector
+// 		for i := 0; i < c.simHashBits; i++ {
+// 			bit := (hash >> i) & 1
+// 			if bit == 1 {
+// 				v[i]++
+// 			} else {
+// 				v[i]--
+// 			}
+// 		}
+// 	}
+//
+// 	// Generate SimHash
+// 	var simHash int64
+// 	for i := 0; i < c.simHashBits; i++ {
+// 		if v[i] > 0 {
+// 			simHash |= (1 << i)
+// 		}
+// 	}
+//
+// 	return simHash
+// }
 
 // tokenize splits text into tokens
 // func (c *L2RedisCache) tokenize(text string) []string {
@@ -468,13 +468,13 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 
 // 	// Calculate Hamming distance
 // 	xor := hash1 ^ hash2
-	hammingDistance := c.countSetBits(xor)
-
-	// Convert to similarity score (0 to 1)
-	similarity := 1.0 - (float64(hammingDistance) / float64(c.simHashBits))
-
-	return similarity
-}
+// 	hammingDistance := c.countSetBits(xor)
+//
+// 	// Convert to similarity score (0 to 1)
+// 	similarity := 1.0 - (float64(hammingDistance) / float64(c.simHashBits))
+//
+// 	return similarity
+// }
 
 // countSetBits counts the number of set bits in an integer
 func (c *L2RedisCache) countSetBits(n int64) int {

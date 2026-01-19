@@ -298,7 +298,7 @@ func (t *dpoTrainer) PreparePreferenceData(ctx context.Context, feedbacks []*Fee
 		CreatedAt:       time.Now(),
 	}
 
- t.logger.WithContext(ctx).Info("Preference dataset prepared", logging.Any("total_pairs", len(pairs))
+	t.logger.WithContext(ctx).Info("Preference dataset prepared", logging.String("total_pairs", fmt.Sprintf("%d", len(pairs))))
 
 	return dataset, nil
 }
@@ -543,11 +543,11 @@ func (t *dpoTrainer) EvaluatePreferences(ctx context.Context, dataset *Preferenc
 	ctx, span := t.tracer.Start(ctx, "DPOTrainer.EvaluatePreferences")
 	defer span.End()
 
-// 	t.logger.WithContext(ctx).Info("Evaluating preferences", logging.Any("test_samples", len(dataset.TestSplit))
+	t.logger.WithContext(ctx).Info("Evaluating preferences", logging.String("test_samples", fmt.Sprintf("%d", len(dataset.TestSplit))))
 
-// 	policyModel := NewSimplePolicyModel(t.logger)
-// 	if err := policyModel.Load(ctx, fmt.Sprintf("%s/final_model", t.trainingConfig.OutputPath)); err != nil {
-// 		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to load final model")
+	policyModel := NewSimplePolicyModel(t.logger)
+	if err := policyModel.Load(ctx, fmt.Sprintf("%s/final_model", t.trainingConfig.OutputPath)); err != nil {
+		return nil, errors.WrapInternalError(err, "ERR_INTERNAL", "failed to load final model")
 	}
 
 	correct := 0

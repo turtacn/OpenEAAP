@@ -376,7 +376,12 @@ func (t *rlhfTrainer) TrainPPO(ctx context.Context, task *training.TrainingTask,
 
 			// 记录指标
 			if step%t.config.SFTConfig.LoggingSteps == 0 {
-    t.logger.WithContext(ctx).Info("PPO training progress", logging.Any("step", step), logging.Any("epoch", epoch), logging.Any("loss", loss), logging.Any("kl_divergence", klDiv), logging.Any("mean_reward", mean(rewards))
+				t.logger.WithContext(ctx).Info("PPO training progress", 
+					logging.Int("step", step), 
+					logging.Int("epoch", epoch), 
+					logging.Float64("loss", loss), 
+					logging.Float64("kl_divergence", klDiv), 
+					logging.Float64("mean_reward", mean(rewards)))
 
 				t.metricsCollector.ObserveDuration("ppo_loss", loss,
 					map[string]string{"task_id": task.ID})
@@ -416,7 +421,10 @@ func (t *rlhfTrainer) TrainPPO(ctx context.Context, task *training.TrainingTask,
 			if err != nil {
 				t.logger.WithContext(ctx).Warn("Evaluation failed", logging.Error(err))
 			} else {
-    t.logger.WithContext(ctx).Info("Evaluation results", logging.Any("step", step), logging.Any("accuracy", evalResult.Accuracy), logging.Any("reward_score", evalResult.RewardScore))
+				t.logger.WithContext(ctx).Info("Evaluation results", 
+					logging.Int("step", step), 
+					logging.Float64("accuracy", evalResult.Accuracy), 
+					logging.Float64("reward_score", evalResult.RewardScore))
 			}
 		}
 
