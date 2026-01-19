@@ -1,0 +1,227 @@
+# github.com/openeeap/openeeap/internal/platform/inference
+internal/platform/inference/gateway.go:153:7: span.SetAttribute undefined (type "go.opentelemetry.io/otel/trace".Span has no field or method SetAttribute)
+internal/platform/inference/gateway.go:154:7: span.SetAttribute undefined (type "go.opentelemetry.io/otel/trace".Span has no field or method SetAttribute)
+internal/platform/inference/gateway.go:163:7: span.SetAttribute undefined (type "go.opentelemetry.io/otel/trace".Span has no field or method SetAttribute)
+internal/platform/inference/gateway.go:164:7: span.SetAttribute undefined (type "go.opentelemetry.io/otel/trace".Span has no field or method SetAttribute)
+internal/platform/inference/gateway.go:174:34: undefined: errors.CodeRateLimitExceeded
+internal/platform/inference/gateway.go:174:57: not enough arguments in call to errors.New
+	have (unknown type, string)
+	want (string, "github.com/openeeap/openeeap/pkg/errors".ErrorType, string, int)
+internal/platform/inference/gateway.go:180:40: g.privacyGateway.FilterRequest undefined (type *privacy.PrivacyGateway has no field or method FilterRequest)
+internal/platform/inference/gateway.go:195:9: span.SetAttribute undefined (type "go.opentelemetry.io/otel/trace".Span has no field or method SetAttribute)
+internal/platform/inference/gateway.go:197:15: cachedResp.Cached undefined (type interface{} has no field or method Cached)
+internal/platform/inference/gateway.go:198:15: cachedResp.Latency undefined (type interface{} has no field or method Latency)
+internal/platform/inference/gateway.go:198:15: too many errors
+# github.com/openeeap/openeeap/internal/infrastructure/repository/postgres
+internal/infrastructure/repository/postgres/agent_repo.go:117:39: undefined: errors.CodeNotImplemented
+internal/infrastructure/repository/postgres/agent_repo.go:319:9: not enough return values
+	have (nil)
+	want ([]*agent.Agent, error)
+internal/infrastructure/repository/postgres/model_repo.go:101:9: cannot use &modelRepo{…} (value of type *modelRepo) as model.ModelRepository value in return statement: *modelRepo does not implement model.ModelRepository (missing method GetByTags)
+internal/infrastructure/repository/postgres/model_repo.go:561:41: undefined: versionModel
+internal/infrastructure/repository/postgres/model_repo.go:568:22: undefined: versionModel
+internal/infrastructure/repository/postgres/model_repo.go:589:21: r.versionToEntity undefined (type *modelRepo has no field or method versionToEntity)
+internal/infrastructure/repository/postgres/model_repo.go:605:20: r.metricsToModel undefined (type *modelRepo has no field or method metricsToModel)
+internal/infrastructure/repository/postgres/model_repo.go:919:3: unknown field ID in struct literal of type model.ModelMetrics
+internal/infrastructure/repository/postgres/model_repo.go:920:3: unknown field ModelID in struct literal of type model.ModelMetrics
+internal/infrastructure/repository/postgres/model_repo.go:921:3: unknown field MetricType in struct literal of type model.ModelMetrics
+internal/infrastructure/repository/postgres/model_repo.go:921:3: too many errors
+FAIL	github.com/openeeap/openeeap/cmd/cli [build failed]
+# github.com/openeeap/openeeap/internal/api/http/middleware
+internal/api/http/middleware/ratelimit.go:7:2: "net/http" imported and not used
+internal/api/http/middleware/ratelimit.go:14:2: "github.com/openeeap/openeeap/pkg/errors" imported and not used
+# github.com/openeeap/openeeap/internal/infrastructure/vector/milvus
+internal/infrastructure/vector/milvus/milvus_client.go:221:9: cannot use mc (variable of type *milvusClient) as MilvusClient value in return statement: *milvusClient does not implement MilvusClient (missing method CreateIndex)
+internal/infrastructure/vector/milvus/milvus_client.go:582:9: undefined: mergedResults
+internal/infrastructure/vector/milvus/milvus_client.go:582:26: undefined: params
+internal/infrastructure/vector/milvus/milvus_client.go:583:3: undefined: mergedResults
+internal/infrastructure/vector/milvus/milvus_client.go:583:34: undefined: params
+internal/infrastructure/vector/milvus/milvus_client.go:586:9: undefined: mergedResults
+# github.com/openeeap/openeeap/internal/infrastructure/storage/minio
+internal/infrastructure/storage/minio/minio_client.go:7:2: "path/filepath" imported and not used
+internal/infrastructure/storage/minio/minio_client.go:313:6: declared and not used: creds
+internal/infrastructure/storage/minio/minio_client.go:342:12: undefined: mc
+internal/infrastructure/storage/minio/minio_client.go:342:20: undefined: ctx
+internal/infrastructure/storage/minio/minio_client.go:346:9: undefined: mc
+internal/infrastructure/storage/minio/minio_client.go:834:39: not enough arguments in call to minioPolicy.SetCondition
+	have (string, string)
+	want (string, string, string)
+internal/infrastructure/storage/minio/minio_client.go:868:2: declared and not used: opts
+internal/infrastructure/storage/minio/minio_client.go:1129:43: undefined: errors.CodeNotImplemented
+# github.com/openeeap/openeeap/internal/platform/learning
+internal/platform/learning/learning_engine.go:220:4: cannot use float64(time.Since(startTime).Milliseconds()) (value of type float64) as time.Time value in argument to e.metricsCollector.ObserveDuration
+internal/platform/learning/learning_engine.go:297:17: cannot use trainingData (variable of type *TrainingDataset) as *training.TrainingDataset value in struct literal
+internal/platform/learning/learning_engine.go:380:49: cannot use "error" (untyped string constant) as logging.Field value in argument to e.logger.Error
+internal/platform/learning/learning_engine.go:380:58: cannot use err (variable of interface type error) as logging.Field value in argument to e.logger.Error
+internal/platform/learning/learning_engine.go:400:63: cannot use "error" (untyped string constant) as logging.Field value in argument to e.logger.Error
+internal/platform/learning/learning_engine.go:400:72: cannot use err (variable of interface type error) as logging.Field value in argument to e.logger.Error
+internal/platform/learning/learning_engine.go:420:53: cannot use "error" (untyped string constant) as logging.Field value in argument to e.logger.Error
+internal/platform/learning/learning_engine.go:420:62: cannot use err (variable of interface type error) as logging.Field value in argument to e.logger.Error
+internal/platform/learning/learning_engine.go:428:9: too many return values
+	have (message.Subscription, error)
+	want (error)
+internal/platform/learning/learning_engine.go:428:51: too many arguments in call to e.messageQueue.Subscribe
+	have (context.Context, string, func(msg []byte) error)
+	want (context.Context, *message.SubscribeRequest)
+internal/platform/learning/learning_engine.go:428:9: too many errors
+FAIL	github.com/openeeap/openeeap/cmd/server [build failed]
+FAIL	github.com/openeeap/openeeap/cmd/worker [build failed]
+FAIL	github.com/openeeap/openeeap/internal/api/cli [build failed]
+FAIL	github.com/openeeap/openeeap/internal/api/cli/commands [build failed]
+FAIL	github.com/openeeap/openeeap/internal/api/grpc [build failed]
+FAIL	github.com/openeeap/openeeap/internal/api/grpc/handler [build failed]
+FAIL	github.com/openeeap/openeeap/internal/api/http [build failed]
+FAIL	github.com/openeeap/openeeap/internal/api/http/handler [build failed]
+FAIL	github.com/openeeap/openeeap/internal/api/http/middleware [build failed]
+?   	github.com/openeeap/openeeap/internal/app/dto	[no test files]
+FAIL	github.com/openeeap/openeeap/internal/app/service [build failed]
+?   	github.com/openeeap/openeeap/internal/domain/agent	[no test files]
+?   	github.com/openeeap/openeeap/internal/domain/knowledge	[no test files]
+?   	github.com/openeeap/openeeap/internal/domain/model	[no test files]
+?   	github.com/openeeap/openeeap/internal/domain/workflow	[no test files]
+?   	github.com/openeeap/openeeap/internal/governance/audit	[no test files]
+# github.com/openeeap/openeeap/internal/governance/compliance
+internal/governance/compliance/compliance_checker.go:564:9: cannot use checker (variable of type *complianceChecker) as ComplianceChecker value in return statement: *complianceChecker does not implement ComplianceChecker (missing method ValidateOperation)
+internal/governance/compliance/compliance_checker.go:661:12: no new variables on left side of :=
+internal/governance/compliance/compliance_checker.go:664:86: undefined: operation
+internal/governance/compliance/compliance_checker.go:666:9: no new variables on left side of :=
+internal/governance/compliance/compliance_checker.go:666:12: cannot use &ValidationResult{…} (value of type *ValidationResult) as *ComplianceCheckResult value in assignment
+internal/governance/compliance/compliance_checker.go:682:15: undefined: operation
+internal/governance/compliance/compliance_checker.go:693:11: result.IsValid undefined (type *ComplianceCheckResult has no field or method IsValid)
+internal/governance/compliance/compliance_checker.go:711:13: result.IsValid undefined (type *ComplianceCheckResult has no field or method IsValid)
+internal/governance/compliance/compliance_checker.go:712:10: result.Message undefined (type *ComplianceCheckResult has no field or method Message)
+internal/governance/compliance/compliance_checker.go:1202:4: not enough arguments in call to errors.New
+	have (string, string)
+	want (string, "github.com/openeeap/openeeap/pkg/errors".ErrorType, string, int)
+internal/governance/compliance/compliance_checker.go:1202:4: too many errors
+FAIL	github.com/openeeap/openeeap/internal/governance/compliance [build failed]
+?   	github.com/openeeap/openeeap/internal/governance/policy	[no test files]
+?   	github.com/openeeap/openeeap/internal/infrastructure/message	[no test files]
+?   	github.com/openeeap/openeeap/internal/infrastructure/message/kafka	[no test files]
+FAIL	github.com/openeeap/openeeap/internal/infrastructure/repository/postgres [build failed]
+?   	github.com/openeeap/openeeap/internal/infrastructure/repository/redis	[no test files]
+?   	github.com/openeeap/openeeap/internal/infrastructure/storage	[no test files]
+FAIL	github.com/openeeap/openeeap/internal/infrastructure/storage/minio [build failed]
+?   	github.com/openeeap/openeeap/internal/infrastructure/vector	[no test files]
+FAIL	github.com/openeeap/openeeap/internal/infrastructure/vector/milvus [build failed]
+?   	github.com/openeeap/openeeap/internal/observability/logging	[no test files]
+?   	github.com/openeeap/openeeap/internal/observability/metrics	[no test files]
+?   	github.com/openeeap/openeeap/internal/observability/trace	[no test files]
+FAIL	github.com/openeeap/openeeap/internal/platform/inference [build failed]
+?   	github.com/openeeap/openeeap/internal/platform/inference/cache	[no test files]
+?   	github.com/openeeap/openeeap/internal/platform/inference/privacy	[no test files]
+?   	github.com/openeeap/openeeap/internal/platform/inference/vllm	[no test files]
+FAIL	github.com/openeeap/openeeap/internal/platform/learning [build failed]
+FAIL	github.com/openeeap/openeeap/internal/platform/orchestrator [build failed]
+?   	github.com/openeeap/openeeap/internal/platform/rag	[no test files]
+?   	github.com/openeeap/openeeap/internal/platform/runtime	[no test files]
+# github.com/openeeap/openeeap/internal/platform/runtime/plugin
+internal/platform/runtime/plugin/loader.go:495:85: syntax error: unexpected ||, expected expression
+# github.com/openeeap/openeeap/internal/platform/runtime/native
+internal/platform/runtime/native/native_runtime.go:161:9: undefined: logger
+internal/platform/runtime/native/native_runtime.go:162:12: undefined: llm
+internal/platform/runtime/native/native_runtime.go:182:3: unknown field llmClient in struct literal of type NativeRuntime
+internal/platform/runtime/native/native_runtime.go:493:74: cannot use err (variable of interface type error) as string value in argument to logging.String
+internal/platform/runtime/native/native_runtime.go:531:6: undefined: err
+internal/platform/runtime/native/native_runtime.go:532:28: undefined: err
+internal/platform/runtime/native/native_runtime.go:535:18: undefined: llmResp
+internal/platform/runtime/native/native_runtime.go:536:32: undefined: llmResp
+internal/platform/runtime/native/native_runtime.go:539:15: undefined: llmResp
+internal/platform/runtime/native/native_runtime.go:589:69: cannot use err (variable of interface type error) as string value in argument to logging.String
+internal/platform/runtime/native/native_runtime.go:589:69: too many errors
+# github.com/openeeap/openeeap/internal/platform/runtime/langchain
+internal/platform/runtime/langchain/langchain_adapter.go:461:33: cannot use output.TokensUsed (variable of type int) as string value in argument to logging.String
+FAIL	github.com/openeeap/openeeap/internal/platform/runtime/langchain [build failed]
+FAIL	github.com/openeeap/openeeap/internal/platform/runtime/native [build failed]
+FAIL	github.com/openeeap/openeeap/internal/platform/runtime/plugin [build failed]
+?   	github.com/openeeap/openeeap/internal/platform/training	[no test files]
+# github.com/openeeap/openeeap/internal/platform/training/dpo
+internal/platform/training/dpo/dpo_trainer.go:123:28: undefined: training.DistributedBackend
+internal/platform/training/dpo/dpo_trainer.go:155:19: undefined: training.DistributedBackend
+internal/platform/training/dpo/dpo_trainer.go:181:4: cannot use duration.Seconds() (value of type float64) as time.Time value in argument to t.metricsCollector.ObserveDuration
+internal/platform/training/dpo/dpo_trainer.go:189:30: undefined: training.DistributedConfig
+internal/platform/training/dpo/dpo_trainer.go:278:2: undefined: pairs
+internal/platform/training/dpo/dpo_trainer.go:278:17: undefined: pairs
+internal/platform/training/dpo/dpo_trainer.go:278:26: t.generatePairsFromCorrections undefined (type *dpoTrainer has no field or method generatePairsFromCorrections)
+internal/platform/training/dpo/dpo_trainer.go:281:2: undefined: pairs
+internal/platform/training/dpo/dpo_trainer.go:281:17: undefined: pairs
+internal/platform/training/dpo/dpo_trainer.go:281:26: t.generatePairsByComparison undefined (type *dpoTrainer has no field or method generatePairsByComparison)
+internal/platform/training/dpo/dpo_trainer.go:281:2: too many errors
+FAIL	github.com/openeeap/openeeap/internal/platform/training/dpo [build failed]
+# github.com/openeeap/openeeap/internal/platform/training/rlhf
+internal/platform/training/rlhf/rlhf_trainer.go:194:4: cannot use duration.Seconds() (value of type float64) as time.Time value in argument to t.metricsCollector.ObserveDuration
+internal/platform/training/rlhf/rlhf_trainer.go:390:59: cannot use mean(rewards) (value of type float64) as time.Time value in argument to t.metricsCollector.ObserveDuration
+internal/platform/training/rlhf/rlhf_trainer.go:829:43: not enough arguments in call to errors.New
+	have (func(message string) *"github.com/openeeap/openeeap/pkg/errors".AppError, string)
+	want (string, "github.com/openeeap/openeeap/pkg/errors".ErrorType, string, int)
+internal/platform/training/rlhf/rlhf_trainer.go:947:43: not enough arguments in call to errors.New
+	have (func(message string) *"github.com/openeeap/openeeap/pkg/errors".AppError, string)
+	want (string, "github.com/openeeap/openeeap/pkg/errors".ErrorType, string, int)
+FAIL	github.com/openeeap/openeeap/internal/platform/training/rlhf [build failed]
+?   	github.com/openeeap/openeeap/pkg/config	[no test files]
+?   	github.com/openeeap/openeeap/pkg/errors	[no test files]
+?   	github.com/openeeap/openeeap/pkg/types	[no test files]
+?   	github.com/openeeap/openeeap/pkg/utils	[no test files]
+?   	github.com/openeeap/openeeap/pkg/validator	[no test files]
+# github.com/openeeap/openeeap/test/fixtures
+test/fixtures/agent_fixtures.go:30:5: unknown field Provider in struct literal of type agent.ModelParams
+test/fixtures/agent_fixtures.go:31:5: unknown field ModelName in struct literal of type agent.ModelParams
+test/fixtures/agent_fixtures.go:78:5: unknown field Provider in struct literal of type agent.ModelParams
+test/fixtures/agent_fixtures.go:79:5: unknown field ModelName in struct literal of type agent.ModelParams
+# github.com/openeeap/openeeap/test/unit/domain_test [github.com/openeeap/openeeap/test/unit/domain.test]
+test/unit/domain/agent_test.go:5:2: "time" imported and not used
+# github.com/openeeap/openeeap/test/e2e [github.com/openeeap/openeeap/test/e2e.test]
+test/e2e/api_test.go:346:16: cannot use "Updated description" (untyped string constant) as *string value in struct literal
+test/e2e/api_test.go:385:16: undefined: dto.WorkflowStepRequest
+test/e2e/api_test.go:443:15: undefined: dto.ModelResponse
+test/e2e/api_test.go:450:21: undefined: dto.RegisterModelRequest
+test/e2e/api_test.go:464:23: undefined: dto.ModelResponse
+FAIL	github.com/openeeap/openeeap/test/e2e [build failed]
+FAIL	github.com/openeeap/openeeap/test/fixtures [build failed]
+FAIL	github.com/openeeap/openeeap/test/integration [build failed]
+FAIL	github.com/openeeap/openeeap/test/unit/domain [build failed]
+=== RUN   TestArchiveMethod
+=== RUN   TestArchiveMethod/Archive_existing_agent_successfully
+=== RUN   TestArchiveMethod/Archive_non-existent_agent_returns_error
+=== RUN   TestArchiveMethod/Archive_with_empty_ID_returns_error
+--- PASS: TestArchiveMethod (0.00s)
+    --- PASS: TestArchiveMethod/Archive_existing_agent_successfully (0.00s)
+    --- PASS: TestArchiveMethod/Archive_non-existent_agent_returns_error (0.00s)
+    --- PASS: TestArchiveMethod/Archive_with_empty_ID_returns_error (0.00s)
+=== RUN   TestGetArchivedMethod
+=== RUN   TestGetArchivedMethod/Get_archived_agents_successfully
+=== RUN   TestGetArchivedMethod/Get_archived_agents_with_no_results
+--- PASS: TestGetArchivedMethod (0.00s)
+    --- PASS: TestGetArchivedMethod/Get_archived_agents_successfully (0.00s)
+    --- PASS: TestGetArchivedMethod/Get_archived_agents_with_no_results (0.00s)
+=== RUN   TestBatchUpdateMethod
+=== RUN   TestBatchUpdateMethod/Batch_update_multiple_agents_successfully
+=== RUN   TestBatchUpdateMethod/Batch_update_with_empty_slice_succeeds
+=== RUN   TestBatchUpdateMethod/Batch_update_fails_on_error
+--- PASS: TestBatchUpdateMethod (0.00s)
+    --- PASS: TestBatchUpdateMethod/Batch_update_multiple_agents_successfully (0.00s)
+    --- PASS: TestBatchUpdateMethod/Batch_update_with_empty_slice_succeeds (0.00s)
+    --- PASS: TestBatchUpdateMethod/Batch_update_fails_on_error (0.00s)
+=== RUN   TestBatchDeleteMethod
+=== RUN   TestBatchDeleteMethod/Batch_delete_multiple_agents_successfully
+=== RUN   TestBatchDeleteMethod/Batch_delete_with_empty_slice_succeeds
+=== RUN   TestBatchDeleteMethod/Batch_delete_with_large_batch
+--- PASS: TestBatchDeleteMethod (0.00s)
+    --- PASS: TestBatchDeleteMethod/Batch_delete_multiple_agents_successfully (0.00s)
+    --- PASS: TestBatchDeleteMethod/Batch_delete_with_empty_slice_succeeds (0.00s)
+    --- PASS: TestBatchDeleteMethod/Batch_delete_with_large_batch (0.00s)
+=== RUN   TestCountMethod
+=== RUN   TestCountMethod/Count_agents_successfully
+=== RUN   TestCountMethod/Count_with_filter_returns_filtered_count
+=== RUN   TestCountMethod/Count_with_no_results_returns_zero
+--- PASS: TestCountMethod (0.00s)
+    --- PASS: TestCountMethod/Count_agents_successfully (0.00s)
+    --- PASS: TestCountMethod/Count_with_filter_returns_filtered_count (0.00s)
+    --- PASS: TestCountMethod/Count_with_no_results_returns_zero (0.00s)
+=== RUN   TestRepositoryMethodIntegration
+=== RUN   TestRepositoryMethodIntegration/Create,_Archive,_and_GetArchived_workflow
+--- PASS: TestRepositoryMethodIntegration (0.00s)
+    --- PASS: TestRepositoryMethodIntegration/Create,_Archive,_and_GetArchived_workflow (0.00s)
+PASS
+ok  	github.com/openeeap/openeeap/test/unit/repository	(cached)
+FAIL

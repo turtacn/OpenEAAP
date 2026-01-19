@@ -492,7 +492,7 @@ func (pl *PluginLoader) DiscoverPlugins(ctx context.Context) ([]*LoadedPlugin, e
 			}
 
 			// 只处理.so文件（Linux）或.dylib文件（macOS）
-			if info.IsDir() || (filepath.Ext(path) != "" && (filepath.Ext(path) == ".so" &&  || filepath.Ext(path) == ".dylib")) {
+			if info.IsDir() || (filepath.Ext(path) != ".so" && filepath.Ext(path) != ".dylib") {
 				return nil
 			}
 
