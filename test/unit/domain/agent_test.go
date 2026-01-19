@@ -102,7 +102,7 @@ func TestAgentCreation(t *testing.T) {
 		a := agent.NewAgent(
 			"TestAgent",
 			"Test agent description",
-			agent.RuntimeTypeNative,
+			agent.RuntimeTypeLLM,
 			"user-123",
 		)
 
@@ -110,7 +110,7 @@ func TestAgentCreation(t *testing.T) {
 		assert.NotEmpty(t, a.ID)
 		assert.Equal(t, "TestAgent", a.Name)
 		assert.Equal(t, "Test agent description", a.Description)
-		assert.Equal(t, agent.RuntimeTypeNative, a.RuntimeType)
+		assert.Equal(t, agent.RuntimeTypeLLM, a.RuntimeType)
 		assert.Equal(t, "user-123", a.OwnerID)
 		assert.Equal(t, agent.AgentStatusDraft, a.Status)
 		assert.NotZero(t, a.CreatedAt)
@@ -121,7 +121,7 @@ func TestAgentCreation(t *testing.T) {
 		a := agent.NewAgent(
 			"TestAgent",
 			"Description",
-			agent.RuntimeTypeNative,
+			agent.RuntimeTypeLLM,
 			"user-123",
 		)
 
@@ -137,7 +137,7 @@ func TestAgentValidation(t *testing.T) {
 		a := agent.NewAgent(
 			"ValidAgent",
 			"Valid description",
-			agent.RuntimeTypeNative,
+			agent.RuntimeTypeLLM,
 			"user-123",
 		)
 
@@ -149,7 +149,7 @@ func TestAgentValidation(t *testing.T) {
 		a := agent.NewAgent(
 			"",
 			"Description",
-			agent.RuntimeTypeNative,
+			agent.RuntimeTypeLLM,
 			"user-123",
 		)
 
@@ -161,7 +161,7 @@ func TestAgentValidation(t *testing.T) {
 		a := agent.NewAgent(
 			"TestAgent",
 			"Description",
-			agent.RuntimeTypeNative,
+			agent.RuntimeTypeLLM,
 			"",
 		)
 
@@ -176,7 +176,7 @@ func TestAgentClone(t *testing.T) {
 		original := agent.NewAgent(
 			"OriginalAgent",
 			"Original description",
-			agent.RuntimeTypeNative,
+			agent.RuntimeTypeLLM,
 			"user-123",
 		)
 		original.Tags = []string{"tag1", "tag2"}
@@ -200,7 +200,7 @@ func BenchmarkAgentCreation(b *testing.B) {
 		agent.NewAgent(
 			"TestAgent",
 			"Test description",
-			agent.RuntimeTypeNative,
+			agent.RuntimeTypeLLM,
 			"user-123",
 		)
 	}
@@ -211,7 +211,7 @@ func BenchmarkAgentValidation(b *testing.B) {
 	a := agent.NewAgent(
 		"TestAgent",
 		"Test description",
-		agent.RuntimeTypeNative,
+		agent.RuntimeTypeLLM,
 		"user-123",
 	)
 

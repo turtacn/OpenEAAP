@@ -235,8 +235,8 @@ func TestGetArchivedMethod(t *testing.T) {
 		filter := agent.NewAgentFilter()
 
 		archivedAgents := []*agent.Agent{
-			agent.NewAgent("Archived1", "Desc1", agent.RuntimeTypeNative, "user1"),
-			agent.NewAgent("Archived2", "Desc2", agent.RuntimeTypeNative, "user2"),
+			agent.NewAgent("Archived1", "Desc1", agent.RuntimeTypeLLM, "user1"),
+			agent.NewAgent("Archived2", "Desc2", agent.RuntimeTypeLLM, "user2"),
 		}
 
 		mockRepo.On("GetArchived", ctx, filter).Return(archivedAgents, nil)
@@ -270,8 +270,8 @@ func TestBatchUpdateMethod(t *testing.T) {
 		ctx := context.Background()
 
 		agents := []*agent.Agent{
-			agent.NewAgent("Agent1", "Desc1", agent.RuntimeTypeNative, "user1"),
-			agent.NewAgent("Agent2", "Desc2", agent.RuntimeTypeNative, "user2"),
+			agent.NewAgent("Agent1", "Desc1", agent.RuntimeTypeLLM, "user1"),
+			agent.NewAgent("Agent2", "Desc2", agent.RuntimeTypeLLM, "user2"),
 		}
 
 		mockRepo.On("BatchUpdate", ctx, agents).Return(nil)
@@ -299,7 +299,7 @@ func TestBatchUpdateMethod(t *testing.T) {
 		ctx := context.Background()
 
 		agents := []*agent.Agent{
-			agent.NewAgent("Agent1", "Desc1", agent.RuntimeTypeNative, "user1"),
+			agent.NewAgent("Agent1", "Desc1", agent.RuntimeTypeLLM, "user1"),
 		}
 
 		mockRepo.On("BatchUpdate", ctx, agents).Return(assert.AnError)
@@ -409,7 +409,7 @@ func TestRepositoryMethodIntegration(t *testing.T) {
 		ctx := context.Background()
 
 		// Create agent
-		testAgent := agent.NewAgent("TestAgent", "Description", agent.RuntimeTypeNative, "user1")
+		testAgent := agent.NewAgent("TestAgent", "Description", agent.RuntimeTypeLLM, "user1")
 		mockRepo.On("Create", ctx, testAgent).Return(nil)
 
 		// Archive agent

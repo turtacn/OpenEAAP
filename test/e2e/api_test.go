@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/openeeap/openeeap/internal/app/dto"
-	"github.com/openeeap/openeeap/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -312,11 +311,8 @@ func (s *E2ETestSuite) TestAgentLifecycle() {
 	createReq := dto.CreateAgentRequest{
 		Name:        "Test E2E Agent",
 		Description: "Agent created in E2E test",
-		RuntimeType: "native",
-		Config: map[string]interface{}{
-			"model":       "gpt-4",
-			"temperature": 0.7,
-		},
+		Type: "task_oriented",
+		Config: nil,
 	}
 
 	resp, err := s.makeRequest(http.MethodPost, agentsEndpoint, createReq)
@@ -390,10 +386,7 @@ func (s *E2ETestSuite) TestWorkflowExecution() {
 			{
 				Name: "step1",
 				Type: "agent",
-				Config: map[string]interface{}{
-					"agent_id": "test-agent-id",
-					"prompt":   "Hello",
-				},
+				Config: nil,
 			},
 		},
 	}
@@ -459,9 +452,7 @@ func (s *E2ETestSuite) TestModelManagement() {
 		Type:     "llm",
 		Version:  "v1.0.0",
 		Endpoint: "http://localhost:8000",
-		Config: map[string]interface{}{
-			"max_tokens": 2048,
-		},
+		Config: nil,
 	}
 
 	resp, err = s.makeRequest(http.MethodPost, modelsEndpoint, registerReq)
@@ -498,7 +489,7 @@ func (s *E2ETestSuite) TestConcurrentRequests() {
 			createReq := dto.CreateAgentRequest{
 				Name:        fmt.Sprintf("Concurrent Agent %d", index),
 				Description: "Agent created in concurrent test",
-				RuntimeType: "native",
+				Type: "task_oriented",
 			}
 
 			resp, err := s.makeRequest(http.MethodPost, agentsEndpoint, createReq)
