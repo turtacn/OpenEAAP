@@ -724,9 +724,9 @@ func (r *modelRepo) toModel(mdl *model.Model) (*ModelModel, error) {
 	}
 
 // // 	limitsJSON, err := json.Marshal(mdl.Limits)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal limits: %w", err)
-	}
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to marshal limits: %w", err)
+// 	}
 
 	pricingJSON, err := json.Marshal(mdl.Pricing)
 	if err != nil {
@@ -819,8 +819,8 @@ func (r *modelRepo) toEntity(dbModel *ModelModel) (*model.Model, error) {
 // 		Capabilities: capabilities,
 // 		CreatedAt:    dbModel.CreatedAt,
 // 		UpdatedAt:    dbModel.UpdatedAt,
-// 	}, nil
-// }
+	}, nil
+}
 
 // versionToEntity 将数据库模型转换为版本实体
 // func (r *modelRepo) versionToEntity(versionModel *ModelVersionModel) (*model.ModelVersion, error) {

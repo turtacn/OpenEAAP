@@ -595,36 +595,36 @@ func (mc *milvusClient) mergeSearchResults(allResults [][]SearchResult, params *
 		weight := float32(1.0)
 		if i < len(params.VectorSearches) && params.VectorSearches[i].Weight > 0 {
 			weight = params.VectorSearches[i].Weight
-// 		}
+		}
 
-// 		for _, result := range results {
-// 			if existing, ok := resultMap[result.ID]; ok {
-// 				// 加权合并分数
-// 				existing.Score += result.Score * weight
-// 			} else {
-// 				result.Score *= weight
-// 				resultMap[result.ID] = &result
-// 			}
-// 		}
-// 	}
+		for _, result := range results {
+			if existing, ok := resultMap[result.ID]; ok {
+				// 加权合并分数
+				existing.Score += result.Score * weight
+			} else {
+				result.Score *= weight
+				resultMap[result.ID] = &result
+			}
+		}
+	}
 
 	// 转换为切片并排序
-// 	merged := make([]SearchResult, 0, len(resultMap))
-// 	for _, result := range resultMap {
-// 		merged = append(merged, *result)
-// 	}
+	merged := make([]SearchResult, 0, len(resultMap))
+	for _, result := range resultMap {
+		merged = append(merged, *result)
+	}
 
-// 	// 按分数降序排序
-// 	for i := 0; i < len(merged)-1; i++ {
-// 		for j := i + 1; j < len(merged); j++ {
-// 			if merged[j].Score > merged[i].Score {
-// 				merged[i], merged[j] = merged[j], merged[i]
-// 			}
-// 		}
-// 	}
-//
-// 	return merged
-// }
+	// 按分数降序排序
+	for i := 0; i < len(merged)-1; i++ {
+		for j := i + 1; j < len(merged); j++ {
+			if merged[j].Score > merged[i].Score {
+				merged[i], merged[j] = merged[j], merged[i]
+			}
+		}
+	}
+
+	return merged
+}
 
 // CreateIndex 创建索引
 // func (mc *milvusClient) CreateIndex(ctx context.Context, collectionName string, fieldName string, indexConfig *IndexConfig) error {
@@ -648,9 +648,9 @@ func (mc *milvusClient) mergeSearchResults(allResults [][]SearchResult, params *
 // 	if err != nil {
 // 		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to create index")
 // 	}
-
-	return nil
-}
+//
+// 	return nil
+// }
 
 // DropIndex 删除索引
 // func (mc *milvusClient) DropIndex(ctx context.Context, collectionName string, fieldName string) error {
@@ -658,14 +658,14 @@ func (mc *milvusClient) mergeSearchResults(allResults [][]SearchResult, params *
 // 		return errors.NewValidationError(errors.CodeInvalidParameter, "collection name cannot be empty")
 // 	}
 // 	if fieldName == "" {
-		return errors.NewValidationError(errors.CodeInvalidParameter, "field name cannot be empty")
+// 		return errors.NewValidationError(errors.CodeInvalidParameter, "field name cannot be empty")
 // 	}
-
+//
 // 	err := mc.client.DropIndex(ctx, collectionName, fieldName)
 // 	if err != nil {
 // 		return errors.WrapDatabaseError(err, errors.CodeDatabaseError, "failed to drop index")
 // 	}
-
+//
 // 	return nil
 // }
 

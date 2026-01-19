@@ -92,13 +92,15 @@ func NewL2RedisCache(logger logging.Logger, config *RedisConfig) (*L2RedisCache,
 // Get retrieves an entry from L2 Redis cache
 func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error) {
 	startTime := time.Now()
+	var entry *CacheEntry
+	var latency time.Duration
 
 	redisKey := c.buildRedisKey(key)
 
 	// Try exact match first
 	data, err := c.client.Get(ctx, redisKey).Bytes()
 	if err == nil {
-		entry, err := c.deserializeEntry(data)
+		entry, err = c.deserializeEntry(data)
 		if err != nil {
 			c.logger.WithContext(ctx).Warn("failed to deserialize cache entry", logging.Error(err))
 			c.missCount++
@@ -114,7 +116,7 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 
 		c.hitCount++
 
-		latency := time.Since(startTime)
+		latency = time.Since(startTime)
 		c.logger.WithContext(ctx).Debug("L2 cache exact hit", logging.Any("key", key), logging.Any("latency_ms", latency.Milliseconds()))
 
 		return entry, nil
@@ -135,7 +137,7 @@ func (c *L2RedisCache) Get(ctx context.Context, key string) (*CacheEntry, error)
 	if entry != nil {
 		c.hitCount++
 
-		latency := time.Since(startTime)
+		latency = time.Since(startTime)
 		c.logger.WithContext(ctx).Debug("L2 cache SimHash hit", logging.Any("key", key), logging.Any("latency_ms", latency.Milliseconds()))
 
 		return entry, nil

@@ -324,8 +324,8 @@ func (c *L1LocalCache) Warmup(ctx context.Context, entries []*CacheEntry) error 
 
 	c.logger.WithContext(ctx).Info("L1 cache warmup completed", logging.Any("count", len(entries)))
 
-// 	return nil
-// }
+	return nil
+}
 
 // Snapshot returns a snapshot of all current cache entries
 // func (c *L1LocalCache) Snapshot() []*CacheEntry {
@@ -343,6 +343,3 @@ func (c *L1LocalCache) Warmup(ctx context.Context, entries []*CacheEntry) error 
 //
 // 	return snapshot
 // }
-
-//Personal.AI order the ending
-}

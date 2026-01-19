@@ -468,8 +468,8 @@ func (c *L3VectorCache) searchSimilar(ctx context.Context, embedding []float32) 
 		return []*vectorCacheEntry{}, nil
 	}
 
-	results := make([]*vectorCacheEntry, 0)
-
+// 	results := make([]*vectorCacheEntry, 0)
+//
 // 	for _, result := range searchResult[0].Fields {
 // 		entries := c.parseSearchResult(result)
 // 		for i, entry := range entries {
@@ -481,8 +481,10 @@ func (c *L3VectorCache) searchSimilar(ctx context.Context, embedding []float32) 
 // 			results = append(results, entry)
 // 		}
 // 	}
-
+//
 // 	return results, nil
+
+	return []*vectorCacheEntry{}, nil
 }
 
 // parseSearchResult parses Milvus search &results

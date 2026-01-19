@@ -91,7 +91,7 @@ func (m *RateLimitMiddleware) Handler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 // 		ctx, span := m.tracer.StartSpan(c.Request.Context(), "RateLimitMiddleware.Handler")
 // 		defer span.End()
-
+//
 // 		// Extract rate limit key based on strategy
 // 		key := m.extractKey(c)
 // 		if key == "" {
@@ -99,10 +99,10 @@ func (m *RateLimitMiddleware) Handler() gin.HandlerFunc {
 // 			c.Next()
 // 			return
 // 		}
-
+//
 // 		span.SetAttribute("ratelimit.key", key)
 // 		span.SetAttribute("ratelimit.strategy", string(m.config.Strategy))
-
+//
 // 		// Check rate limit
 // 		allowed, remaining, resetTime, err := m.checkRateLimit(ctx, key)
 // 		if err != nil {
@@ -112,19 +112,19 @@ func (m *RateLimitMiddleware) Handler() gin.HandlerFunc {
 // 			c.Next()
 // 			return
 // 		}
-
+//
 // 		// Add rate limit headers
 // 		c.Header("X-RateLimit-Limit", fmt.Sprintf("%d", m.config.RequestsLimit))
 // 		c.Header("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
 // 		c.Header("X-RateLimit-Reset", fmt.Sprintf("%d", resetTime.Unix()))
-
+//
 // 		if !allowed {
 // 			m.logger.WithContext(ctx).Warn("Rate limit exceeded", logging.Any(logging.String("key", key)), logging.Any(logging.String("limit", m.config.RequestsLimit)))
 // 			span.SetAttribute("ratelimit.exceeded", true)
-
+//
 // 			retryAfter := time.Until(resetTime).Seconds()
 // 			c.Header("Retry-After", fmt.Sprintf("%.0f", retryAfter))
-
+//
 // 			c.JSON(http.StatusTooManyRequests, gin.H{
 // 				"code":        errors.ErrRateLimitExceeded,
 // 				"message":     "Rate limit exceeded",
@@ -133,11 +133,11 @@ func (m *RateLimitMiddleware) Handler() gin.HandlerFunc {
 // 			c.Abort()
 // 			return
 // 		}
-
+//
 // 		span.SetAttribute("ratelimit.remaining", remaining)
-// 		c.Next()
-// 	}
-// }
+		c.Next()
+	}
+}
 
 // extractKey extracts the rate limit key from the request
 // func (m *RateLimitMiddleware) extractKey(c *gin.Context) string {
@@ -214,45 +214,45 @@ func (m *RateLimitMiddleware) Handler() gin.HandlerFunc {
 // checkLocalRateLimit uses in-memory rate limiter
 // func (m *RateLimitMiddleware) checkLocalRateLimit(ctx context.Context, key string) (allowed bool, remaining int, resetTime time.Time, err error) {
 // 	limiter := m.getLimiter(key)
-
+//
 // 	// Clean up old limiters periodically
 // 	go m.cleanupLimiters()
-
-	// Update last access time
-	limiter.mu.Lock()
-	limiter.lastAccess = time.Now()
-	limiter.mu.Unlock()
-
-	// Check if request is allowed
-	reservation := limiter.limiter.Reserve()
-	if !reservation.OK() {
-		return false, 0, time.Time{}, nil
-	}
-
-	delay := reservation.Delay()
-	if delay > 0 {
-		reservation.Cancel()
-		resetTime = time.Now().Add(delay)
-		return false, 0, resetTime, nil
-	}
-
-	// Calculate remaining tokens
-	tokens := limiter.limiter.Tokens()
-	remaining = int(tokens)
-	if remaining < 0 {
-		remaining = 0
-	}
-
-	resetTime = time.Now().Add(m.config.WindowDuration)
-	return true, remaining, resetTime, nil
-}
+//
+// 	// Update last access time
+// 	limiter.mu.Lock()
+// 	limiter.lastAccess = time.Now()
+// 	limiter.mu.Unlock()
+//
+// 	// Check if request is allowed
+// 	reservation := limiter.limiter.Reserve()
+// 	if !reservation.OK() {
+// 		return false, 0, time.Time{}, nil
+// 	}
+//
+// 	delay := reservation.Delay()
+// 	if delay > 0 {
+// 		reservation.Cancel()
+// 		resetTime = time.Now().Add(delay)
+// 		return false, 0, resetTime, nil
+// 	}
+//
+// 	// Calculate remaining tokens
+// 	tokens := limiter.limiter.Tokens()
+// 	remaining = int(tokens)
+// 	if remaining < 0 {
+// 		remaining = 0
+// 	}
+//
+// 	resetTime = time.Now().Add(m.config.WindowDuration)
+// 	return true, remaining, resetTime, nil
+// }
 
 // getLimiter retrieves or creates a rate limiter for the given key
 // func (m *RateLimitMiddleware) getLimiter(key string) *rateLimiter {
 // 	if val, ok := m.limiters.Load(key); ok {
 // 		return val.(*rateLimiter)
 // 	}
-
+//
 // 	// Create new limiter based on strategy
 // 	var limiter *rate.Limiter
 // 	switch m.config.Strategy {

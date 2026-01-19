@@ -219,7 +219,7 @@ func (g *Gateway) Infer(ctx context.Context, req *InferenceRequest) (*InferenceR
 	// Perform inference
 	resp, err := engine.Infer(ctx, req)
 	if err != nil {
-		g.logger.WithContext(ctx).Error("inference failed", logging.Error(err), logging.Any("engine", engine.Name())
+		g.logger.WithContext(ctx).Error("inference failed", logging.Error(err), logging.Any("engine", engine.Name()))
 		g.recordMetrics("infer", "inference_failed", time.Since(startTime))
 		return nil, errors.Wrap(err, "ERR_INTERNAL", "inference failed")
 	}
@@ -259,7 +259,7 @@ func (g *Gateway) Infer(ctx context.Context, req *InferenceRequest) (*InferenceR
 			"type":  "total",
 		})
 
- g.logger.WithContext(ctx).Info("inference completed", logging.Any("model", req.Model), logging.Any("latency_ms", resp.Latency.Milliseconds())
+	g.logger.WithContext(ctx).Info("inference completed", logging.Any("model", req.Model), logging.Any("latency_ms", resp.Latency.Milliseconds()))
 
 	return resp, nil
 }
@@ -319,7 +319,7 @@ func (g *Gateway) InferStream(ctx context.Context, req *InferenceRequest) (<-cha
 	// Perform streaming inference
 	chunkChan, err := engine.InferStream(ctx, req)
 	if err != nil {
-		g.logger.WithContext(ctx).Error("streaming inference failed", logging.Error(err), logging.Any("engine", engine.Name())
+		g.logger.WithContext(ctx).Error("streaming inference failed", logging.Error(err), logging.Any("engine", engine.Name()))
 		g.recordMetrics("infer_stream", "inference_failed", time.Since(startTime))
 		return nil, errors.Wrap(err, "ERR_INTERNAL", "streaming inference failed")
 	}
@@ -373,7 +373,7 @@ func (g *Gateway) InferStream(ctx context.Context, req *InferenceRequest) (<-cha
 				})
 		}
 
-  g.logger.WithContext(ctx).Info("streaming inference completed", logging.Any("model", req.Model), logging.Any("latency_ms", totalLatency.Milliseconds())
+		g.logger.WithContext(ctx).Info("streaming inference completed", logging.Any("model", req.Model), logging.Any("latency_ms", totalLatency.Milliseconds()))
 	}()
 
 	return wrappedChan, nil
@@ -433,7 +433,7 @@ func (g *Gateway) HealthCheck(ctx context.Context) error {
 		}
 	}
 
-	g.logger.WithContext(ctx).Info("all engines healthy", logging.Any("count", len(engines))
+	g.logger.WithContext(ctx).Info("all engines healthy", logging.Any("count", len(engines)))
 	return nil
 }
 

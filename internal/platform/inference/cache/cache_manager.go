@@ -343,10 +343,10 @@ func (cm *CacheManager) Invalidate(ctx context.Context, req interface{}) error {
 
 // InvalidatePattern invalidates all entries matching a pattern
 // func (cm *CacheManager) InvalidatePattern(ctx context.Context, pattern string) error {
-	cm.logger.WithContext(ctx).Info("invalidating cache pattern", logging.Any("pattern", pattern))
-
-	// This would require cache implementations to support pattern matching
-	// For now, just clear all caches
+// 	cm.logger.WithContext(ctx).Info("invalidating cache pattern", logging.Any("pattern", pattern))
+//
+// 	// This would require cache implementations to support pattern matching
+// 	// For now, just clear all caches
 // 	return cm.ClearAll(ctx)
 // }
 

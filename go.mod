@@ -15,7 +15,7 @@ require (
 
 	// Utilities
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.5.1 // indirect
+	github.com/jackc/pgx/v5 v5.5.4 // indirect
 
 	// Vector Database
 	github.com/milvus-io/milvus-sdk-go/v2 v2.3.4

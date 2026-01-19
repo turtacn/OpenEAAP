@@ -213,8 +213,9 @@ func NewNativeRuntime(
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-//
+
 	return nr, nil
+}
 
 // ID 获取运行时ID
 func (nr *NativeRuntime) ID() string {
