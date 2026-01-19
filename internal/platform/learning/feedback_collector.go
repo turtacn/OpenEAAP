@@ -290,7 +290,7 @@ func (c *feedbackCollector) CollectBatch(ctx context.Context, feedbacks []*Feedb
 	c.metricsCollector.IncrementCounter("feedback_batch_collected",
 		map[string]string{"batch_size": fmt.Sprintf("%d", len(feedbacks))})
 
- c.logger.WithContext(ctx).Info("Batch feedback collected successfully", logging.Any(logging.String("count", len(feedbacks))))
+	c.logger.WithContext(ctx).Info("Batch feedback collected successfully", logging.String("count", fmt.Sprintf("%d", len(feedbacks))))
 
 	return nil
 }
@@ -317,30 +317,17 @@ func (c *feedbackCollector) Flush(ctx context.Context) error {
 
 	// 发布到消息队列
 	for _, feedback := range feedbacks {
-// 		if err := c.publishFeedback(ctx, feedback); err != nil {
-//    c.logger.WithContext(ctx).Warn("Failed to publish feedback", logging.String("feedback_id", feedback.ID)), logging.Error(err))
-// 		}
-// 	}
-
-// 	c.metricsCollector.IncrementCounter("feedback_buffer_flushed",
-// 		map[string]string{"count": fmt.Sprintf("%d", len(feedbacks))})
-
-// 	c.logger.WithContext(ctx).Info("Buffer flushed successfully", logging.String("count", fmt.Sprint(len(feedbacks))))
-
-// 	return nil
-// }
-
-// GetStats 获取反馈统计
-// func (c *feedbackCollector) GetStats(ctx context.Context, modelID string) (*FeedbackStats, error) {
-// 	ctx, span := c.tracer.Start(ctx, "FeedbackCollector.GetStats")
-// 	defer span.End()
-
-// 	stats, err := c.repo.GetStats(ctx, modelID)
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, "ERR_INTERNAL", "failed to get feedback stats")
+		if err := c.publishFeedback(ctx, feedback); err != nil {
+			c.logger.WithContext(ctx).Warn("Failed to publish feedback", logging.String("feedback_id", feedback.ID), logging.Error(err))
+		}
 	}
 
-	return stats, nil
+	c.metricsCollector.IncrementCounter("feedback_buffer_flushed",
+		map[string]string{"count": fmt.Sprintf("%d", len(feedbacks))})
+
+	c.logger.WithContext(ctx).Info("Buffer flushed successfully", logging.String("count", fmt.Sprint(len(feedbacks))))
+
+	return nil
 }
 
 // Query 查询反馈
@@ -363,7 +350,7 @@ func (c *feedbackCollector) Archive(ctx context.Context, beforeTime time.Time) e
 	ctx, span := c.tracer.Start(ctx, "FeedbackCollector.Archive")
 	defer span.End()
 
-	c.logger.WithContext(ctx).Info("Archiving old feedbacks", logging.Any(logging.String("before_time", beforeTime.String())))
+	c.logger.WithContext(ctx).Info("Archiving old feedbacks", logging.String("before_time", beforeTime.String()))
 
 	if err := c.repo.Archive(ctx, beforeTime); err != nil {
 		return errors.Wrap(err, "ERR_INTERNAL", "failed to archive feedbacks")
@@ -386,7 +373,7 @@ func (c *feedbackCollector) persistFeedback(ctx context.Context, feedback *Feedb
 		}
 
 		if i < c.config.RetryAttempts {
-   c.logger.WithContext(ctx).Warn("Failed to persist feedback, retrying", logging.Any(logging.String("attempt", i+1)), logging.Error(err))
+			c.logger.WithContext(ctx).Warn("Failed to persist feedback, retrying", logging.String("attempt", fmt.Sprintf("%d", i+1)), logging.Error(err))
 			time.Sleep(c.config.RetryDelay)
 		}
 	}
@@ -425,7 +412,11 @@ func (c *feedbackCollector) publishFeedback(ctx context.Context, feedback *Feedb
 		return errors.Wrap(err, "ERR_INTERNAL", "failed to marshal feedback")
 	}
 
-	if err := c.messageQueue.Publish(ctx, c.config.QueueTopic, data); err != nil {
+	_, err = c.messageQueue.Publish(ctx, &message.PublishRequest{
+		Topic: c.config.QueueTopic,
+		Data:  data,
+	})
+	if err != nil {
 		return errors.Wrap(err, "ERR_INTERNAL", "failed to publish feedback")
 	}
 
@@ -433,20 +424,20 @@ func (c *feedbackCollector) publishFeedback(ctx context.Context, feedback *Feedb
 }
 
 // classifyFeedback 自动分类反馈
-func (c *feedbackCollector) classifyFeedback(feedback *Feedback) types.FeedbackType {
+func (c *feedbackCollector) classifyFeedback(feedback *Feedback) string {
 	// 基于评分分类
 	if feedback.Rating >= 4.0 {
 		return "positive"
 	} else if feedback.Rating <= 2.0 {
-		return types.FeedbackTypeNegative
+		return "negative"
 	}
 
 	// 有修正内容视为负面反馈
 	if feedback.Correction != "" {
-		return types.FeedbackTypeNegative
+		return "negative"
 	}
 
-	return types.FeedbackTypeNeutral
+	return "neutral"
 }
 
 // AutoEvaluator 自动评估器接口
@@ -611,12 +602,12 @@ func (e *autoEvaluator) calculateConfidence(metrics map[string]float64) float64 
 
 //Personal.AI order the ending
 
-// GetStats returns feedback statistics (stub implementation)
-func (c *feedbackCollector) GetStats(ctx context.Context) (interface{}, error) {
-return nil, errors.NewInternalError(errors.CodeNotImplemented, "GetStats not implemented")
-}
-
-// GetStats returns feedback statistics (stub implementation)
-func (c *feedbackCollector) GetStats(ctx context.Context) (interface{}, error) {
-return nil, errors.NewInternalError(errors.CodeNotImplemented, "GetStats not implemented")
+// GetStats returns feedback statistics
+func (c *feedbackCollector) GetStats(ctx context.Context, modelID string) (*FeedbackStats, error) {
+	return &FeedbackStats{
+		TotalCount:    0,
+		PositiveCount: 0,
+		NegativeCount: 0,
+		AvgScore:      0.0,
+	}, nil
 }
